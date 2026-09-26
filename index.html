@@ -252,6 +252,13 @@ tfoot td{font-weight:800;background:var(--card2)}
 .r-row.click:hover .g-lab{background:var(--card2)}
 .r-fact{position:absolute;top:34px;height:9px;border-radius:3px;background:var(--green);z-index:1}
 @media (max-width:860px){.frow4{grid-template-columns:1fr 1fr}}
+.task{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--line2);border-radius:10px;margin-bottom:6px;cursor:pointer;font-size:13px}
+.task.on{border-color:var(--brand);background:var(--brandBg)}
+.task small{display:block;color:var(--text3);font-weight:600;font-size:11.5px}
+.task input{accent-color:var(--brand)}
+.scheme{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--card2)}
+.sh-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}.sh-row .fi{max-width:130px;padding:7px 9px}.sh-n{width:34px;font-size:12.5px}
+.act-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}.act-row .act-n{flex:1}.act-row .act-c{max-width:140px}
 </style>
 </head>
 <body>
@@ -505,9 +512,9 @@ function planRange(f,t,lineId){ let s=0; for(let d=pd(f); iso(d)<=t; d=addD(d,1)
 function metrics(recs,f,t){
   const good=recs.reduce((s,r)=>s+(+r.good||0),0), defect=recs.reduce((s,r)=>s+(+r.defect||0),0);
   const down=recs.reduce((s,r)=>s+(+r.downtime||0),0), setup=recs.reduce((s,r)=>s+(+r.setup||0),0);
-  const shiftsN=new Set(recs.map(r=>r.date+'|'+r.shift+'|'+r.lineId)).size, shiftMin=(DB.settings.shiftHours||8)*60, plan=planRange(f,t);
+  const smap={}; recs.forEach(r=>{ const k=r.date+'|'+r.shift+'|'+r.lineId; smap[k]=Math.max(smap[k]||0,+r.shiftMin||(DB.settings.shiftHours||8)*60); }); const shiftsN=Object.keys(smap).length, totMin=Object.values(smap).reduce((a,b)=>a+b,0), plan=planRange(f,t);
   return {good,defect,down,setup,shiftsN,plan, planPct:plan?good/plan*100:0, defPct:good+defect?defect/(good+defect)*100:0,
-    perShift:shiftsN?good/shiftsN:0, setupPct:shiftsN?setup/(shiftsN*shiftMin)*100:0, avail:shiftsN?(1-(down+setup)/(shiftsN*shiftMin))*100:0};
+    perShift:shiftsN?good/shiftsN:0, setupPct:shiftsN?setup/totMin*100:0, avail:shiftsN?(1-(down+setup)/totMin)*100:0};
 }
 function delta(cur,prev,lowerBetter){
   if(!prev) return `<div class="kd flat">нет данных за пред. период</div>`;
@@ -528,19 +535,21 @@ const hm = s => { const [h,m]=String(s||'0:0').split(':').map(Number); return (h
 const LIVE = {id:'live'};
 const ctxItems = ctx => ctx&&ctx.items ? ctx.items : DB.plan;
 const ctxDowns = ctx => ctx&&ctx.downs ? ctx.downs : DB.downs;
-function shiftDefs(){ return A(DB.settings.shifts).length ? A(DB.settings.shifts) : DEFAULT_SETTINGS.shifts; }
+function shiftSchemes(){ const s=A(DB.settings.shiftSchemes).filter(x=>x&&A(x.shifts).length); return s.length?s:DEFAULT_SETTINGS.shiftSchemes; }
+function lineScheme(lineId){ const l=byId(DB.lines,lineId), sc=shiftSchemes(); return sc.find(x=>x.id===l?.scheme)||sc[0]; }
+function lineShiftDefs(lineId){ return A(lineScheme(lineId).shifts).map((s,i)=>({...s,n:i+1})); }
 function lineCfg(lineId,ctx){
   const l=byId(DB.lines,lineId)||{}, ov=ctx&&ctx.lineShifts?A(ctx.lineShifts[lineId]):[];
-  const sh=ov.length?ov:A(l.workShifts);
-  return {shifts:sh.length?sh.map(Number):[1,2,3], days:A(l.workDays).length?A(l.workDays).map(Number):[0,1,2,3,4,5,6], restart:+l.restartMin||0};
+  const all=lineShiftDefs(lineId).map(s=>s.n), sh=(ov.length?ov:A(l.workShifts)).map(Number).filter(n=>all.includes(n));
+  return {shifts:sh.length?sh:all, days:A(l.workDays).length?A(l.workDays).map(Number):[0,1,2,3,4,5,6], restart:+l.restartMin||0};
 }
-const shiftLabel = (lineId,ctx) => { const c=lineCfg(lineId,ctx); return c.shifts.length===3?'3 смены':c.shifts.length===1?`только ${c.shifts[0]}-я смена`:`смены ${c.shifts.join('+')}`; };
+const shiftLabel = (lineId,ctx) => { const c=lineCfg(lineId,ctx), all=lineShiftDefs(lineId).length; return `${lineScheme(lineId).name} · ${c.shifts.length===all?(all===1?'1 смена':'все '+all+' смены'):c.shifts.length===1?'только '+c.shifts[0]+'-я смена':'смены '+c.shifts.join('+')}`; };
 function lineWindows(lineId,from,to,ctx){
   const cfg=lineCfg(lineId,ctx), w=[], d=new Date(from); d.setHours(0,0,0,0); d.setDate(d.getDate()-1);
   for(; d.getTime()<to; d.setDate(d.getDate()+1)){
     if(!cfg.days.includes(d.getDay())) continue;
     const base=d.getTime();
-    shiftDefs().forEach(s=>{ if(!cfg.shifts.includes(+s.n)) return; const a=base+hm(s.from)*60e3; let b=base+hm(s.to)*60e3; if(b<=a) b+=864e5; w.push([a,b]); });
+    lineShiftDefs(lineId).forEach(s=>{ if(!cfg.shifts.includes(+s.n)) return; const a=base+hm(s.from)*60e3; let b=base+hm(s.to)*60e3; if(b<=a) b+=864e5; w.push([a,b]); });
   }
   w.sort((x,y)=>x[0]-y[0]); const m=[];
   w.forEach(x=>{ const l=m[m.length-1]; if(l&&x[0]<=l[1]) l[1]=Math.max(l[1],x[1]); else m.push([x[0],x[1]]); });
@@ -764,66 +773,196 @@ function renderDashboard(){
 }
 
 // ═════════════════════════════════════════════
-//  OUTPUT JOURNAL
+//  OUTPUT JOURNAL — отчёт за смену: сменное задание, хронометраж по часам, выпуск
 // ═════════════════════════════════════════════
-function shiftWindow(date,shift){ const s=shiftDefs().find(x=>+x.n===+shift)||shiftDefs()[0], base=pd(date).getTime(), a=base+hm(s.from)*60e3; let b=base+hm(s.to)*60e3; if(b<=a) b+=864e5; return [a,b]; }
-const hhmm = ms => { if(!isFinite(ms)||ms==null) return '—'; const d=new Date(ms); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
-function curShiftDate(){ const now=Date.now(); for(const back of [0,-1]) for(const s of shiftDefs()){ const d=iso(addD(new Date(),back)), [a,b]=shiftWindow(d,s.n); if(now>=a&&now<b) return {date:d,shift:+s.n}; } return {date:iso(new Date()),shift:1}; }
+const ACAT={work:{n:'Работа',c:'#1fa971'},setup:{n:'Наладка',c:'#3b7cf6'},down:{n:'Простой',c:'#e5484d'},break:{n:'Перерыв',c:'#98a1b1'}};
+function acts(){ const a=A(DB.settings.activities); return a.length?a:DEFAULT_SETTINGS.activities; }
+const actById = id => acts().find(a=>a.id===id)||{id,name:id||'—',cat:'down'};
+function shiftWindow(date,n,lineId){ const defs=lineShiftDefs(lineId), s=defs.find(x=>+x.n===+n)||defs[0], base=pd(date).getTime(), a=base+hm(s.from)*60e3; let b=base+hm(s.to)*60e3; if(b<=a) b+=864e5; return [a,b]; }
+const hhmm = ms => { if(ms==null||!isFinite(ms)) return '—'; const d=new Date(ms); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+const r5 = ms => Math.round(ms/300e3)*300e3;
+const minTxt = m => { m=Math.round(m||0); const h=Math.floor(m/60), mm=m%60; return h?`${h} ч${mm?' '+mm+' мин':''}`:`${mm} мин`; };
+function curShiftDate(lineId){ const now=Date.now(); for(const back of [0,-1]) for(const s of lineShiftDefs(lineId)){ const d=iso(addD(new Date(),back)), [a,b]=shiftWindow(d,s.n,lineId); if(now>=a&&now<b) return {date:d,shift:+s.n}; } return {date:iso(new Date()),shift:1}; }
+const shiftName = (lineId,n) => { const s=lineShiftDefs(lineId).find(x=>+x.n===+n); return s?`${n} (${s.from}–${s.to})`:String(n); };
+// сменное задание: что по действующему плану линия должна сделать в эту смену
+function shiftTasks(lineId,a,b){
+  return DB.plan.filter(i=>i.lineId===lineId&&itemStart(i)<b&&endMs(i)>a).map(it=>{
+    const segs=itemSegs(it), runTot=segs.filter(x=>x[2]==='r').reduce((s,x)=>s+x[1]-x[0],0); let run=0, setup=0, fa=null, fb=null;
+    segs.forEach(([sa,sb,k])=>{ const ov=Math.max(0,Math.min(sb,b)-Math.max(sa,a)); if(ov<=0) return; if(k==='r') run+=ov; else setup+=ov; const u=Math.max(sa,a), v=Math.min(sb,b); fa=fa==null?u:Math.min(fa,u); fb=fb==null?v:Math.max(fb,v); });
+    return {it,p:byId(DB.projects,it.projectId),qty:runTot?(+it.qty||0)*run/runTot:0,setupMin:setup/60e3,runMin:run/60e3,from:fa,to:fb};
+  }).filter(x=>x.runMin+x.setupMin>1).sort((x,y)=>x.from-y.from);
+}
+// перевод «чч:мм» внутри смены в абсолютное время (ночная смена переходит через полночь)
+function tlAbs(od,t){ const [A0]=od.win, d=new Date(A0); d.setHours(0,0,0,0); let ms=d.getTime()+hm(t)*60e3; if(ms<A0-60e3) ms+=864e5; return ms; }
+function tlCalc(od){
+  const [A0,B0]=od.win, rows=od.rows.map((r,i)=>{ const a=tlAbs(od,r.from); let b=tlAbs(od,r.to); if(b<=a&&r.to) b+=864e5; return {...r,i,a,b}; }).filter(r=>r.from&&r.to).sort((x,y)=>x.a-y.a);
+  const errs=[], warns=[], gaps=[], byAct={}, byCat={work:0,setup:0,down:0,break:0}, byProj={};
+  let cur=A0;
+  rows.forEach(r=>{
+    if(r.b<=r.a){ errs.push(`Интервал ${r.from}–${r.to}: окончание раньше начала`); return; }
+    if(r.a<A0-60e3||r.b>B0+60e3) errs.push(`Интервал ${r.from}–${r.to} выходит за пределы смены`);
+    if(r.a>cur+60e3) gaps.push([cur,r.a]); else if(r.a<cur-60e3) errs.push(`Интервалы накладываются около ${hhmm(r.a)}`);
+    cur=Math.max(cur,r.b);
+    const m=(Math.min(r.b,B0)-Math.max(r.a,A0))/60e3, ac=actById(r.act); if(m<=0) return;
+    byAct[ac.id]=(byAct[ac.id]||0)+m; byCat[ac.cat]=(byCat[ac.cat]||0)+m;
+    if(ac.cat==='work'||ac.cat==='setup'){ const pid=r.projectId||od.projectId; byProj[pid]=byProj[pid]||{work:0,setup:0,a:r.a,b:r.b}; byProj[pid][ac.cat]+=m; byProj[pid].a=Math.min(byProj[pid].a,r.a); byProj[pid].b=Math.max(byProj[pid].b,r.b); }
+  });
+  const ongoing=Date.now()<B0;
+  if(cur<B0-60e3){ if(ongoing) warns.push(`Смена ещё идёт — заполнено до ${hhmm(cur)}`); else gaps.push([cur,B0]); }
+  gaps.forEach(([a,b])=>errs.push(`Не заполнено время ${hhmm(a)}–${hhmm(b)}`));
+  const total=(B0-A0)/60e3, filled=Object.values(byCat).reduce((s,v)=>s+v,0);
+  return {rows,errs,warns,gaps,byAct,byCat,byProj,total,filled,ongoing,end:cur};
+}
+function defaultRows(od){
+  const [A0,B0]=od.win, t=od.tasks.find(x=>x.it.id===od.taskId), rows=[];
+  if(t&&t.setupMin>=5){ const s=r5(Math.max(A0,t.from||A0)), e=r5(s+t.setupMin*60e3); if(s>A0+60e3) rows.push({from:hhmm(A0),to:hhmm(s),act:'other',projectId:'',note:''}); rows.push({from:hhmm(s),to:hhmm(e),act:'setup',projectId:'',note:''}); rows.push({from:hhmm(e),to:hhmm(B0),act:'work',projectId:'',note:''}); }
+  else rows.push({from:hhmm(A0),to:hhmm(B0),act:'work',projectId:'',note:''});
+  return rows;
+}
+function odWindow(od){ od.win=shiftWindow(od.date,od.shift,od.lineId); od.tasks=shiftTasks(od.lineId,od.win[0],od.win[1]); }
+function openOutputModal(id){
+  if(!can('output')) return toast('Нет прав на внесение выпуска');
+  let od;
+  if(id){
+    const r0=byId(DB.output,id), grp=r0.reportId?DB.output.filter(r=>r.reportId===r0.reportId):[r0], main=grp.find(r=>A(r.timeline).length)||grp[0];
+    od={id:main.reportId||main.id,recs:grp.map(r=>r.id),date:main.date,lineId:main.lineId,shift:main.shift,projectId:main.projectId,orderId:main.orderId||'',taskId:main.planItemId||'',operator:main.operator||'',outs:{}};
+    grp.forEach(r=>od.outs[r.projectId]={good:r.good,defect:r.defect,reason:r.reason||''});
+    odWindow(od);
+    if(A(main.timeline).length) od.rows=A(main.timeline).map(x=>({...x}));
+    else { // старая запись без хронометража — восстанавливаем примерно
+      const a=isFinite(tms(main.startAt))?tms(main.startAt):od.win[0], b=isFinite(tms(main.endAt))?tms(main.endAt):od.win[1], s=a+(+main.setup||0)*60e3, dn=Math.max(s,b-(+main.downtime||0)*60e3); od.rows=[];
+      if(a>od.win[0]+60e3) od.rows.push({from:hhmm(od.win[0]),to:hhmm(a),act:'other',projectId:'',note:''});
+      if(+main.setup) od.rows.push({from:hhmm(a),to:hhmm(s),act:'setup',projectId:'',note:''});
+      od.rows.push({from:hhmm(s),to:hhmm(dn),act:'work',projectId:'',note:''});
+      if(+main.downtime) od.rows.push({from:hhmm(dn),to:hhmm(b),act:'other',projectId:'',note:''});
+      if(b<od.win[1]-60e3) od.rows.push({from:hhmm(b),to:hhmm(od.win[1]),act:'other',projectId:'',note:''});
+    }
+  } else {
+    const lineId=DB.lines[0]?.id, cs=curShiftDate(lineId);
+    od={id:uid(),recs:[],date:cs.date,lineId,shift:cs.shift,projectId:'',orderId:'',taskId:'',operator:state.me.name,outs:{}};
+    odWindow(od); odAutoTask(od); od.rows=defaultRows(od);
+  }
+  state.od=od; $('#modalC').classList.add('wide');
+  modal(id?'Отчёт за смену':'Выпуск за смену','',()=>odSave(),'Сохранить отчёт', id&&can('edit')?`<button class="btn btn-d" type="button" onclick="odDelete()">Удалить</button>`:'');
+  odRender();
+}
+function odAutoTask(od){
+  const t=od.tasks.slice().sort((x,y)=>y.runMin+y.setupMin-(x.runMin+x.setupMin))[0];
+  od.taskId=t?t.it.id:''; if(t){ od.projectId=t.it.projectId; od.orderId=t.it.orderId||''; }
+}
+function odSet(k,v){
+  const od=state.od, untouched=JSON.stringify(od.rows)===JSON.stringify(defaultRows(od));
+  od[k]=v;
+  if(k==='lineId'){ const cs=curShiftDate(v); if(!lineShiftDefs(v).some(s=>+s.n===+od.shift)) od.shift=cs.shift; }
+  if(['date','lineId','shift'].includes(k)){ odWindow(od); odAutoTask(od); if(untouched||!od.recs.length) od.rows=defaultRows(od); }
+  if(k==='taskId'){ const t=od.tasks.find(x=>x.it.id===v); if(t){ od.projectId=t.it.projectId; od.orderId=t.it.orderId||''; } if(untouched) od.rows=defaultRows(od); }
+  if(k==='projectId'){ const t=od.tasks.find(x=>x.it.projectId===v); od.taskId=t?t.it.id:''; if(t&&t.it.orderId) od.orderId=t.it.orderId; }
+  odRender();
+}
+function odRow(i,k,v){ state.od.rows[i][k]=v; if(k!=='note') odRender(); }
+function odAddRow(from,to,act){ const od=state.od, c=tlCalc(od), last=c.rows[c.rows.length-1]; const a=from||(last?last.to:hhmm(od.win[0])); od.rows.push({from:a,to:to||hhmm(od.win[1]),act:act||'work',projectId:'',note:''}); odRender(); }
+function odAllWork(){ const od=state.od; od.rows=[{from:hhmm(od.win[0]),to:hhmm(od.win[1]),act:'work',projectId:'',note:''}]; odRender(); }
+function odSplit(i){ const od=state.od, r=od.rows[i], a=tlAbs(od,r.from); let b=tlAbs(od,r.to); if(b<=a) b+=864e5; const m=r5(a+(b-a)/2); od.rows.splice(i+1,0,{...r,from:hhmm(m),note:''}); r.to=hhmm(m); odRender(); }
+function tlBar(od,c,h=26){
+  const [A0,B0]=od.win, W=B0-A0, pct=ms=>((ms-A0)/W*100).toFixed(3)+'%';
+  const segs=c.rows.map(r=>{ const ac=actById(r.act), a=Math.max(r.a,A0), b=Math.min(r.b,B0); if(b<=a) return ''; return `<div style="position:absolute;top:0;bottom:0;left:${pct(a)};width:calc(${pct(b)} - ${pct(a)});background:${ACAT[ac.cat].c};${ac.cat==='setup'?'background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.4) 0 3px,transparent 3px 7px);':''}border-right:1px solid var(--card)" data-tip="${hhmm(r.a)}–${hhmm(r.b)} · ${esc(ac.name)}${r.projectId&&r.projectId!==od.projectId?' · '+esc(projName(r.projectId)):''}${r.note?'<br>'+esc(r.note):''}"></div>`; }).join('');
+  const gaps=c.gaps.map(([a,b])=>`<div style="position:absolute;top:0;bottom:0;left:${pct(a)};width:calc(${pct(b)} - ${pct(a)});background:repeating-linear-gradient(135deg,rgba(229,72,77,.35) 0 4px,transparent 4px 8px);border:1px dashed var(--red)" data-tip="Не заполнено ${hhmm(a)}–${hhmm(b)}"></div>`).join('');
+  const hrs=[]; for(let t=Math.ceil(A0/H)*H; t<=B0; t+=H) hrs.push(`<span style="position:absolute;left:${pct(t)};transform:translateX(-50%);font-size:10px;color:var(--text3);font-weight:700">${new Date(t).getHours()}</span>`);
+  return `<div style="position:relative;height:${h}px;border-radius:7px;overflow:hidden;background:var(--card2);border:1px solid var(--line)">${segs}${gaps}</div><div style="position:relative;height:14px;margin-top:2px">${hrs.join('')}</div>`;
+}
+function odRender(){
+  const od=state.od, c=tlCalc(od), ro=!can('output'), main=byId(DB.projects,od.projectId), t=od.tasks.find(x=>x.it.id===od.taskId);
+  const actOpts=sel=>Object.entries(ACAT).map(([k,v])=>`<optgroup label="${v.n}">${acts().filter(a=>a.cat===k).map(a=>`<option value="${a.id}" ${a.id===sel?'selected':''}>${esc(a.name)}</option>`).join('')}</optgroup>`).join('');
+  const projs=[...new Set([od.projectId,...od.rows.filter(r=>['work','setup'].includes(actById(r.act).cat)&&r.projectId).map(r=>r.projectId)].filter(Boolean))];
+  const taskHtml=od.tasks.length?od.tasks.map(x=>`<label class="task ${x.it.id===od.taskId?'on':''}"><input type="radio" name="odTask" ${x.it.id===od.taskId?'checked':''} onchange="odSet('taskId','${x.it.id}')">
+      <span class="sw" style="background:${pColor(x.p)}"></span><span style="flex:1;min-width:0"><b>${esc(x.p?.name||'—')}</b><small>${hhmm(x.from)}–${hhmm(x.to)} · ${x.it.orderId?'заказ '+esc(byId(DB.orders,x.it.orderId)?.no||'')+' · ':''}${esc(x.p?.client||'')}</small></span>
+      <span style="text-align:right"><b>${N(x.qty)} шт</b><small>${x.setupMin>=1?'наладка '+minTxt(x.setupMin)+' · ':''}работа ${minTxt(x.runMin)}</small></span></label>`).join('')
+    :'<div class="hint">На эту смену в действующем плане для линии ничего не запланировано — выберите проект вручную.</div>';
+  const rows=od.rows.map((r,i)=>{ const ac=actById(r.act), pj=['work','setup'].includes(ac.cat);
+    return `<tr><td><span class="sw" style="background:${ACAT[ac.cat].c};width:10px;height:28px;border-radius:3px;margin:0"></span></td>
+      <td><input class="fi" type="time" step="300" value="${r.from}" ${ro?'disabled':''} onchange="odRow(${i},'from',this.value)" style="width:120px"></td>
+      <td><input class="fi" type="time" step="300" value="${r.to}" ${ro?'disabled':''} onchange="odRow(${i},'to',this.value)" style="width:120px"></td>
+      <td><select class="fi" ${ro?'disabled':''} onchange="odRow(${i},'act',this.value)" style="min-width:190px">${actOpts(r.act)}</select></td>
+      <td>${pj?`<select class="fi" ${ro?'disabled':''} onchange="odRow(${i},'projectId',this.value)" style="min-width:150px"><option value="">${esc(main?.name||'основной проект')}</option>${DB.projects.filter(p=>p.id!==od.projectId&&p.status!=='Архив').map(p=>`<option value="${p.id}" ${p.id===r.projectId?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`:'<span class="muted">—</span>'}</td>
+      <td><input class="fi" value="${esc(r.note||'')}" ${ro?'disabled':''} oninput="odRow(${i},'note',this.value)" placeholder="что случилось…" style="min-width:140px"></td>
+      <td style="white-space:nowrap">${ro?'':`<button type="button" class="btn btn-s btn-sm" title="Разделить пополам" onclick="odSplit(${i})">⇹</button> <button type="button" class="btn btn-s btn-sm" onclick="state.od.rows.splice(${i},1);odRender()">✕</button>`}</td></tr>`; }).join('');
+  const good=projs.reduce((s,p)=>s+(+od.outs[p]?.good||0),0), defect=projs.reduce((s,p)=>s+(+od.outs[p]?.defect||0),0), speed=c.byCat.work?(good+defect)/c.byCat.work:0;
+  const outRows=projs.map(pid=>{ const o=od.outs[pid]||(od.outs[pid]={good:'',defect:0,reason:''}), p=byId(DB.projects,pid);
+    return `<div class="${projs.length>1?'card':''}" style="${projs.length>1?'padding:12px;margin-bottom:8px;box-shadow:none':''}">${projs.length>1?`<div style="font-weight:800;margin-bottom:8px"><span class="sw" style="background:${pColor(p)}"></span>${esc(p?.name||'—')} <span class="muted" style="font-weight:600">· работа ${minTxt(c.byProj[pid]?.work)}</span></div>`:''}
+      <div class="frow3"><div class="fg"><label class="fl">Годные, шт</label><input class="fi" type="number" min="0" inputmode="numeric" value="${o.good}" ${ro?'disabled':''} onchange="state.od.outs['${pid}'].good=this.value;odRender()"></div>
+      <div class="fg"><label class="fl">Брак, шт</label><input class="fi" type="number" min="0" inputmode="numeric" value="${o.defect}" ${ro?'disabled':''} onchange="state.od.outs['${pid}'].defect=this.value;odRender()"></div>
+      <div class="fg"><label class="fl">Основная причина брака</label><select class="fi" ${ro?'disabled':''} onchange="state.od.outs['${pid}'].reason=this.value"><option value="">—</option>${(DB.settings.defectReasons||[]).map(x=>`<option ${x===o.reason?'selected':''}>${esc(x)}</option>`).join('')}</select></div></div></div>`; }).join('');
+  const downList=Object.entries(c.byAct).filter(([id])=>actById(id).cat==='down').sort((a,b)=>b[1]-a[1]);
+  const planQty=projs.reduce((s,pid)=>s+od.tasks.filter(x=>x.it.projectId===pid).reduce((a,x)=>a+x.qty,0),0);
+  const stat=(l,v,col)=>`<div class="stat"><span>${col?`<span class="sw" style="background:${col};width:10px;height:10px"></span>`:''}${l}</span><b>${v}</b></div>`;
+  $('#mBody').innerHTML=`
+    <div class="frow3"><div class="fg"><label class="fl">Дата смены</label><input class="fi" type="date" value="${od.date}" onchange="odSet('date',this.value)"></div>
+    <div class="fg"><label class="fl">Линия</label><select class="fi" onchange="odSet('lineId',this.value)">${opts(DB.lines,od.lineId)}</select></div>
+    <div class="fg"><label class="fl">Смена · ${esc(lineScheme(od.lineId).name)}</label><select class="fi" onchange="odSet('shift',this.value)">${lineShiftDefs(od.lineId).map(s=>`<option value="${s.n}" ${+od.shift===+s.n?'selected':''}>${s.n}-я · ${s.from}–${s.to}</option>`).join('')}</select></div></div>
+    <div class="fg"><label class="fl">Сменное задание по плану <span class="muted">(${hhmm(od.win[0])}–${hhmm(od.win[1])})</span></label>${taskHtml}</div>
+    <div class="frow"><div class="fg"><label class="fl">Проект</label><select class="fi" onchange="odSet('projectId',this.value)">${opts(DB.projects.filter(p=>p.status!=='Архив'||p.id===od.projectId),od.projectId,p=>p.name+(p.client?' · '+p.client:''),'— выберите —')}</select></div>
+    <div class="fg"><label class="fl">Заказ</label><select class="fi" onchange="state.od.orderId=this.value">${opts(DB.orders.filter(o=>o.projectId===od.projectId||o.id===od.orderId),od.orderId,o=>o.no+' · срок '+fdate(o.due),'— без заказа —')}</select></div></div>
+    <div class="card-h" style="margin:6px 0 8px"><div class="card-t">Хронометраж смены</div><div class="card-s">все часы смены должны быть закрыты</div><div class="sp"></div>
+      ${ro?'':`<button type="button" class="btn btn-s btn-sm" onclick="odAllWork()">Вся смена — работа</button><button type="button" class="btn btn-s btn-sm" onclick="odAddRow()">+ Интервал</button>`}</div>
+    ${tlBar(od,c)}
+    <div class="tw ed" style="margin:8px 0 0;border:1px solid var(--line);border-radius:10px"><table><tr><th></th><th>С</th><th>По</th><th>Что делали</th><th>Проект</th><th>Комментарий</th><th></th></tr>${rows}</table></div>
+    ${c.errs.length?`<div class="msg err" style="margin-top:10px">${c.errs.map(esc).join('<br>')}${c.gaps.length&&!ro?`<div style="margin-top:6px">${c.gaps.map(([a,b])=>`<button type="button" class="btn btn-s btn-sm" onclick="odAddRow('${hhmm(a)}','${hhmm(b)}','other')">+ заполнить ${hhmm(a)}–${hhmm(b)}</button>`).join(' ')}</div>`:''}</div>`:''}
+    ${c.warns.length?`<div class="msg" style="display:block;background:var(--amberBg);color:var(--amber);margin-top:10px">${c.warns.map(esc).join('<br>')}</div>`:''}
+    <div class="grid g2" style="margin-top:14px;align-items:start">
+      <div><div class="card-t" style="margin-bottom:8px">Выпуск за смену</div>${outRows||'<div class="hint">Выберите проект</div>'}
+        <div class="fg"><label class="fl">Оператор</label><input class="fi" value="${esc(od.operator||'')}" oninput="state.od.operator=this.value"></div></div>
+      <div class="card" style="box-shadow:none;padding:14px"><div class="card-t" style="margin-bottom:6px">Итог смены</div>
+        ${stat('Работа',minTxt(c.byCat.work),ACAT.work.c)}${stat('Наладка',minTxt(c.byCat.setup),ACAT.setup.c)}${stat('Простои',minTxt(c.byCat.down),ACAT.down.c)}
+        ${downList.map(([id,m])=>`<div class="stat" style="padding:4px 0 4px 18px;font-size:12px"><span class="muted">${esc(actById(id).name)}</span><span>${minTxt(m)}</span></div>`).join('')}
+        ${c.byCat.break?stat('Перерывы',minTxt(c.byCat.break),ACAT.break.c):''}
+        ${stat('Заполнено',`${minTxt(c.filled)} из ${minTxt(c.total)} · ${P(c.filled/c.total*100,0)}`)}
+        ${stat('Годные / брак',`${N(good)} / ${N(defect)}${good+defect?' · брак '+P(defect/(good+defect)*100):''}`)}
+        ${planQty?stat('План на смену',`${N(planQty)} шт · ${P(good/planQty*100,0)}`):''}
+        ${stat('Скорость в работе',speed?`${N(speed)} шт/мин${main?.speed?` <span class="muted">(норма ${N(main.speed)})</span>`:''}`:'—')}
+      </div></div>`;
+}
+async function odSave(){
+  const od=state.od, c=tlCalc(od);
+  if(!od.projectId){ toast('Выберите проект'); return false; }
+  if(c.errs.length){ toast(c.errs[0]); return false; }
+  const projs=[...new Set([od.projectId,...c.rows.filter(r=>['work','setup'].includes(actById(r.act).cat)&&r.projectId).map(r=>r.projectId)])];
+  if(projs.some(p=>od.outs[p]?.good===''||od.outs[p]?.good==null)){ toast('Укажите количество годных'+(projs.length>1?' по каждому проекту':'')); return false; }
+  const timeline=od.rows.filter(r=>r.from&&r.to).map(r=>({from:r.from,to:r.to,act:r.act,projectId:r.projectId||'',note:r.note||''})).sort((x,y)=>tlAbs(od,x.from)-tlAbs(od,y.from));
+  const downBy={}; Object.entries(c.byAct).forEach(([id,m])=>{ const a=actById(id); if(a.cat==='down') downBy[a.name]=Math.round(m); });
+  const oldRecs=od.recs.map(id=>byId(DB.output,id)).filter(Boolean), list=[];
+  projs.forEach((pid,k)=>{
+    const bp=c.byProj[pid]||{work:0,setup:0,a:c.rows[0]?.a,b:c.end}, isMain=pid===od.projectId, task=od.tasks.find(x=>x.it.projectId===pid), old=oldRecs.find(r=>r.projectId===pid);
+    list.push({col:'output',obj:{...(old||{}),id:old?.id||uid(),reportId:od.id,date:od.date,shift:+od.shift,shiftScheme:lineScheme(od.lineId).id,shiftMin:Math.round(c.total),lineId:od.lineId,projectId:pid,
+      planItemId:isMain&&od.taskId?od.taskId:(task?.it.id||''),orderId:isMain?od.orderId:(task?.it.orderId||''),
+      startAt:toDT(isMain?c.rows[0]?.a??od.win[0]:bp.a),endAt:toDT(isMain?c.end:bp.b),good:+od.outs[pid].good||0,defect:+od.outs[pid].defect||0,reason:od.outs[pid].reason||'',
+      workMin:Math.round(bp.work),setup:Math.round(bp.setup),downtime:isMain?Math.round(c.byCat.down):0,breakMin:isMain?Math.round(c.byCat.break):0,downBy:isMain?downBy:{},timeline:isMain?timeline:[],
+      operator:od.operator,ts:Date.now(),by:state.me.id}});
+  });
+  oldRecs.filter(r=>!projs.includes(r.projectId)).forEach(r=>list.push({col:'output',id:r.id,del:true}));
+  await Store.batch(list); toast('Отчёт за смену сохранён');
+}
+async function odDelete(){ if(!confirm('Удалить отчёт за смену?')) return; const list=state.od.recs.map(id=>({col:'output',id,del:true})); closeModal(); await Store.batch(list); toast('Удалено'); }
+function miniTL(r){
+  const main=r.reportId?DB.output.find(x=>x.reportId===r.reportId&&A(x.timeline).length):null, tl=A((main||r).timeline);
+  if(!tl.length) return r.startAt?`${hhmm(tms(r.startAt))} — ${hhmm(tms(r.endAt))}`:'<span class="muted">—</span>';
+  const od={win:shiftWindow(r.date,r.shift,r.lineId),rows:tl,projectId:(main||r).projectId};
+  return `<div style="width:170px">${tlBar(od,tlCalc(od),12).replace(/<div style="position:relative;height:14px[\s\S]*$/,'')}</div>`;
+}
 function renderOutput(){
   const recs=filtered(inRange(state.from,state.to)).sort((a,b)=>b.date.localeCompare(a.date)||b.shift-a.shift||(b.ts||0)-(a.ts||0));
   const m=metrics(recs,state.from,state.to), shown=recs.slice(0,300);
   $('#content').innerHTML = periodBar() + `
   <div class="toolbar">${lineFilter()}<span class="muted" style="font-weight:600">${recs.length} записей · ${N(m.good)} годных · брак ${P(m.defPct)}</span><div class="sp"></div>
-    ${can('output')?`<button class="btn btn-p" onclick="openOutputModal()">+ Внести выпуск</button>`:''}</div>
+    ${can('output')?`<button class="btn btn-p" onclick="openOutputModal()">+ Выпуск за смену</button>`:''}</div>
   <div class="card">${shown.length?`<div class="tw flush"><table>
-    <tr><th>Дата</th><th>Смена</th><th>Линия</th><th>Проект</th><th>Факт: начали — закончили</th><th class="num">Годные</th><th class="num">Брак</th><th>Причина</th><th class="num">Наладка</th><th class="num">Простой</th><th>Оператор</th><th></th></tr>
-    ${shown.map(r=>`<tr><td>${fdate(r.date)}</td><td>${r.shift}</td><td>${esc(lineName(r.lineId))}</td><td>${esc(projName(r.projectId))}${r.planItemId?'':' <span class="tag t-gray" data-tip="Запись не привязана к позиции плана">вне плана</span>'}</td>
-      <td>${r.startAt?`${hhmm(tms(r.startAt))} — ${hhmm(tms(r.endAt))}`:'<span class="muted">—</span>'}</td>
-      <td class="num"><b>${N(r.good)}</b></td><td class="num">${N(r.defect)}</td><td class="muted">${r.defect?esc(r.reason||'—'):''}</td><td class="num">${r.setup?r.setup+' мин':'—'}</td><td class="num">${r.downtime?r.downtime+' мин':'—'}</td><td>${esc(r.operator||'')}</td>
-      <td>${can('edit')?`<button class="btn btn-s btn-sm" onclick="openOutputModal('${r.id}')">✎</button> <button class="btn btn-d btn-sm" onclick="delItem('output','${r.id}')">✕</button>`:''}</td></tr>`).join('')}
+    <tr><th>Дата</th><th>Смена</th><th>Линия</th><th>Проект</th><th>Хронометраж</th><th class="num">Годные</th><th class="num">Брак</th><th class="num">Работа</th><th class="num">Наладка</th><th class="num">Простои</th><th>Оператор</th><th></th></tr>
+    ${shown.map(r=>`<tr class="${can('output')?'click':''}" ${can('output')?`onclick="if(!event.target.closest('button'))openOutputModal('${r.id}')"`:''}><td>${fdate(r.date)}</td><td>${esc(shiftName(r.lineId,r.shift))}</td><td>${esc(lineName(r.lineId))}</td><td>${esc(projName(r.projectId))}${r.planItemId?'':' <span class="tag t-gray" data-tip="Не по сменному заданию">вне плана</span>'}</td>
+      <td>${miniTL(r)}</td><td class="num"><b>${N(r.good)}</b></td><td class="num">${N(r.defect)}</td><td class="num">${r.workMin!=null?minTxt(r.workMin):'—'}</td><td class="num">${r.setup?minTxt(r.setup):'—'}</td>
+      <td class="num">${r.downtime?`<span data-tip="${Object.entries(r.downBy||{}).map(([k,v])=>esc(k)+': '+minTxt(v)).join('<br>')||'без детализации'}">${minTxt(r.downtime)}</span>`:'—'}</td><td>${esc(r.operator||'')}</td>
+      <td>${can('edit')?`<button class="btn btn-d btn-sm" onclick="delItem('output','${r.id}')">✕</button>`:''}</td></tr>`).join('')}
   </table></div>${recs.length>300?`<div class="muted" style="padding:14px 0 0;font-size:12px">Показаны последние 300 записей.</div>`:''}`:'<div class="empty">Нет записей за выбранный период</div>'}</div>`;
 }
 function opts(arr,sel,label=x=>x.name,empty=''){ return (empty?`<option value="">${empty}</option>`:'')+arr.map(x=>`<option value="${x.id}" ${x.id===sel?'selected':''}>${esc(label(x))}</option>`).join(''); }
-function outItemOpts(lineId,date,sel){
-  const d0=pd(date).getTime(), its=DB.plan.filter(i=>i.lineId===lineId&&itemStart(i)<d0+2*864e5&&endMs(i)>d0-864e5).sort((a,b)=>itemStart(a)-itemStart(b));
-  return `<option value="">— вне плана —</option>`+its.map(i=>`<option value="${i.id}" ${i.id===sel?'selected':''}>${esc(projName(i.projectId))} · ${fdt(itemStart(i))} → ${fdt(endMs(i))}</option>`).join('');
-}
-function outRefresh(which){
-  const F=$('#mForm').elements;
-  if(which==='shift'){ const [a,b]=shiftWindow(F.date.value,F.shift.value); F.startAt.value=toDT(a); F.endAt.value=toDT(b); }
-  if(which!=='item') F.planItemId.innerHTML=outItemOpts(F.lineId.value,F.date.value,F.planItemId.value);
-  const it=byId(DB.plan,F.planItemId.value); if(it&&(which==='item'||which==='line')){ F.projectId.value=it.projectId; if(it.orderId) F.orderId.value=it.orderId; }
-}
-function openOutputModal(id){
-  if(!can('output')) return toast('Нет прав на внесение выпуска');
-  let r;
-  if(id) r=byId(DB.output,id);
-  else { const cs=curShiftDate(), [a,b]=shiftWindow(cs.date,cs.shift); r={date:cs.date,shift:cs.shift,lineId:DB.lines[0]?.id,operator:state.me.name,good:'',defect:0,setup:0,downtime:0,startAt:toDT(a),endAt:toDT(Math.min(b,Math.max(a,Date.now())))};
-    const it=DB.plan.find(i=>i.lineId===r.lineId&&itemStart(i)<=Date.now()&&endMs(i)>Date.now()); if(it){ r.planItemId=it.id; r.projectId=it.projectId; r.orderId=it.orderId; } }
-  if(!r.startAt){ const [a,b]=shiftWindow(r.date,r.shift); r.startAt=toDT(a); r.endAt=toDT(b); }
-  const openOrders=DB.orders.filter(o=>!['shipped','done'].includes(orderStatus(o))||o.id===r.orderId);
-  modal(id?'Редактировать запись':'Выпуск за смену',`
-    <div class="frow3"><div class="fg"><label class="fl">Дата смены</label><input class="fi" type="date" name="date" value="${r.date}" onchange="outRefresh('shift')"></div>
-    <div class="fg"><label class="fl">Смена</label><select class="fi" name="shift" onchange="outRefresh('shift')">${shiftDefs().map(s=>`<option value="${s.n}" ${+r.shift===+s.n?'selected':''}>${s.n} (${s.from}–${s.to})</option>`).join('')}</select></div>
-    <div class="fg"><label class="fl">Линия</label><select class="fi" name="lineId" onchange="outRefresh('line')">${opts(DB.lines,r.lineId)}</select></div></div>
-    <div class="fg"><label class="fl">Позиция действующего плана</label><select class="fi" name="planItemId" onchange="outRefresh('item')">${outItemOpts(r.lineId,r.date,r.planItemId)}</select></div>
-    <div class="frow"><div class="fg"><label class="fl">Проект</label><select class="fi" name="projectId">${opts(DB.projects.filter(p=>p.status!=='Архив'||p.id===r.projectId),r.projectId,p=>p.name)}</select></div>
-    <div class="fg"><label class="fl">Заказ</label><select class="fi" name="orderId">${opts(openOrders,r.orderId,o=>o.no+' · '+projName(o.projectId),'— без заказа —')}</select></div></div>
-    <div class="frow"><div class="fg"><label class="fl">Факт: приступили</label><input class="fi" type="datetime-local" name="startAt" value="${r.startAt}"></div>
-    <div class="fg"><label class="fl">Факт: закончили</label><input class="fi" type="datetime-local" name="endAt" value="${r.endAt}"></div></div>
-    <div class="frow"><div class="fg"><label class="fl">Годные, шт</label><input class="fi" type="number" min="0" name="good" value="${r.good}" inputmode="numeric"></div>
-    <div class="fg"><label class="fl">Брак, шт</label><input class="fi" type="number" min="0" name="defect" value="${r.defect||0}" inputmode="numeric"></div></div>
-    <div class="fg"><label class="fl">Основная причина брака</label><select class="fi" name="reason"><option value="">—</option>${(DB.settings.defectReasons||[]).map(x=>`<option ${x===r.reason?'selected':''}>${esc(x)}</option>`).join('')}</select></div>
-    <div class="frow"><div class="fg"><label class="fl">Наладка, мин</label><input class="fi" type="number" min="0" name="setup" value="${r.setup||0}"></div>
-    <div class="fg"><label class="fl">Прочий простой, мин</label><input class="fi" type="number" min="0" name="downtime" value="${r.downtime||0}"></div></div>
-    <div class="fg"><label class="fl">Оператор</label><input class="fi" name="operator" value="${esc(r.operator||'')}"></div>`,
-  async f=>{
-    if(f.good===''){ toast('Укажите количество годных'); return false; }
-    if(f.startAt&&f.endAt&&tms(f.endAt)<=tms(f.startAt)){ toast('Время окончания должно быть позже начала'); return false; }
-    const rec={...(id?r:{}),id:id||uid(),date:f.date,shift:+f.shift,lineId:f.lineId,planItemId:f.planItemId||'',projectId:f.projectId,orderId:f.orderId||'',startAt:f.startAt,endAt:f.endAt,good:+f.good,defect:+f.defect||0,reason:f.reason,setup:+f.setup||0,downtime:+f.downtime||0,operator:f.operator,ts:Date.now(),by:state.me.id};
-    await Store.put('output',rec); toast('Выпуск сохранён');
-  });
-}
 
 // ═════════════════════════════════════════════
 //  QUALITY
@@ -845,6 +984,11 @@ function renderQuality(){
     <div class="card"><div class="card-h"><div class="card-t">Причины брака</div></div>${donut(groupSum(recs,r=>r.reason||'Не указана').filter(x=>x.v>0).slice(0,8))}</div>
     <div class="card"><div class="card-h"><div class="card-t">Брак по линиям</div></div>${byLine.map(x=>`<div class="hb"><div class="hb-top"><b>${esc(x.l.name)}</b><span>${N(x.d)} шт · ${P(x.p)}</span></div><div class="track"><div class="fill" style="width:${x.p/maxP*100}%;background:${x.p>target?'var(--red)':'var(--green)'}"></div></div></div>`).join('')}</div>
   </div>
+  ${(()=>{ const agg={}, T={work:0,setup:0,down:0,break:0}; recs.forEach(r=>{ const by=r.downBy&&Object.keys(r.downBy).length?r.downBy:(+r.downtime?{'Без детализации':+r.downtime}:{}); Object.entries(by).forEach(([k,v])=>agg[k]=(agg[k]||0)+(+v||0));
+      T.work+=r.workMin!=null?+r.workMin:0; T.setup+=+r.setup||0; T.down+=+r.downtime||0; T.break+=+r.breakMin||0; });
+    const tot=Object.values(T).reduce((a,b)=>a+b,0)||1;
+    return `<div class="grid g11 row-gap"><div class="card"><div class="card-h"><div class="card-t">Простои по видам</div><div class="card-s">из хронометража смен</div></div>${donut(Object.entries(agg).map(([k,v])=>({k,v:Math.round(v)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,8),'мин простоя')}</div>
+    <div class="card"><div class="card-h"><div class="card-t">Структура времени смен</div></div>${Object.entries(T).map(([k,v])=>`<div class="hb"><div class="hb-top"><b><span class="sw" style="background:${ACAT[k].c}"></span>${ACAT[k].n}</b><span>${minTxt(v)} · ${P(v/tot*100,0)}</span></div><div class="track"><div class="fill" style="width:${v/tot*100}%;background:${ACAT[k].c}"></div></div></div>`).join('')}</div></div>`; })()}
   <div class="card"><div class="card-h"><div class="card-t">Проекты с наибольшим браком</div><div class="card-s">и главное из заметок по качеству</div></div>${byProj?`<div class="tw"><table><tr><th>Проект</th><th class="num">Брак, шт</th><th class="num">Доля</th><th>Главная причина</th><th>На что обратить внимание</th></tr>${byProj}</table></div>`:'<div class="empty">Брака нет</div>'}</div>`;
 }
 
@@ -1023,7 +1167,7 @@ function stMove(i,dir){ const s=state.draft.stations, j=i+dir; if(j<0||j>=s.leng
 function stPick(i,v){ if(v==='__new'){ state.back={sec:'projectEdit',draft:state.draft,station:i}; openSemi(null,state.back); return; } DS(i,'semiId',v); renderProjectEdit(); }
 function renderProjectEdit(){
   const d=state.draft; if(!d) return go('projects');
-  const ro=!can('edit'), line=byId(DB.lines,d.lineId), sh=(DB.settings.shiftHours||8);
+  const ro=!can('edit'), line=byId(DB.lines,d.lineId), s0=lineShiftDefs(d.lineId)[0], sh=(((hm(s0.to)-hm(s0.from)+1440)%1440)||1440)/60;
   const tares=DB.raw.filter(r=>(r.cat||'').toLowerCase().includes('тара')||r.unit==='шт');
   const cost=projectCost1000(d), kg=projectKg1000(d);
   const semiOpts=sel=>`<option value="">— выберите рецептуру —</option>`+DB.semis.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<option value="${s.id}" ${s.id===sel?'selected':''}>${esc(s.name)}${s.pantone&&s.pantone!=='—'?' · '+esc(s.pantone):''}</option>`).join('')+(ro?'':'<option value="__new">＋ Создать новую рецептуру…</option>');
@@ -1185,7 +1329,7 @@ function pullJournal(){
   if(!recs.length) return toast('В журнале нет записей по этой позиции / датам');
   const g=recs.reduce((a,r)=>a+(+r.good||0),0), df=recs.reduce((a,r)=>a+(+r.defect||0),0), su=recs.reduce((a,r)=>a+(+r.setup||0),0), dn=recs.reduce((a,r)=>a+(+r.downtime||0),0);
   const st=recs.map(r=>tms(r.startAt)).filter(isFinite), en=recs.map(r=>tms(r.endAt)).filter(isFinite);
-  const workMin=recs.reduce((a,r)=>{ const x=tms(r.startAt), y=tms(r.endAt); return a+(isFinite(x)&&isFinite(y)?(y-x)/60e3:(DB.settings.shiftHours||8)*60); },0)-su-dn;
+  const workMin=recs.reduce((a,r)=>{ if(r.workMin!=null) return a+(+r.workMin||0); const x=tms(r.startAt), y=tms(r.endAt); return a+(isFinite(x)&&isFinite(y)?(y-x)/60e3:(DB.settings.shiftHours||8)*60)-(+r.setup||0)-(+r.downtime||0); },0);
   Object.assign(d,{qtyGood:g,qtyDefect:df,setupFact:su,speedFact:workMin>0?Math.round((g+df)/workMin):''});
   if(st.length){ d.startAt=toDT(Math.min(...st)); d.endAt=toDT(Math.max(...en)); d.dateFrom=d.startAt.slice(0,10); d.dateTo=d.endAt.slice(0,10); }
   renderRunEdit(); toast(`Подтянуто ${recs.length} смен из журнала`);
@@ -1274,19 +1418,23 @@ function renderLines(){
     <div class="hint" style="margin-top:12px">Мощность для плана по умолчанию: ${short(l.cap)} шт/смену · Проекты: ${ps.length?ps.map(p=>esc(p.name)).join(', '):'—'}</div></div>`; }).join('')||'<div class="card"><div class="empty">Линий пока нет</div></div>'}</div>`;
 }
 function openLineModal(id){
-  const l=id?byId(DB.lines,id):{name:'',type:'',stations:7,cap:30000,workShifts:[1,2,3],workDays:[1,2,3,4,5,6,0],restartMin:30};
-  const ws=A(l.workShifts).length?A(l.workShifts).map(Number):[1,2,3], wd=A(l.workDays).length?A(l.workDays).map(Number):[0,1,2,3,4,5,6];
+  const l=id?byId(DB.lines,id):{name:'',type:'',stations:7,cap:30000,workDays:[1,2,3,4,5,6,0],restartMin:30};
+  const scId=id?lineScheme(id).id:shiftSchemes()[0].id, ws=id?lineCfg(id).shifts:null, wd=A(l.workDays).length?A(l.workDays).map(Number):[0,1,2,3,4,5,6];
   modal(id?'Линия':'Новая линия',`<div class="fg"><label class="fl">Название</label><input class="fi" name="name" value="${esc(l.name)}" autofocus></div>
     <div class="frow"><div class="fg"><label class="fl">Технология</label><input class="fi" name="type" value="${esc(l.type||'')}" placeholder="Пистолетная покраска, печь, УФ…"></div>
     <div class="fg"><label class="fl">Станций (пистолетов)</label><input class="fi" type="number" min="1" name="stations" value="${l.stations||7}"></div></div>
-    <div class="fg"><label class="fl">Работающие смены</label><div style="display:flex;gap:6px;flex-wrap:wrap">${shiftDefs().map(s=>`<label class="chip ${ws.includes(+s.n)?'on':''}" style="cursor:pointer"><input type="checkbox" name="sh_${s.n}" style="display:none" ${ws.includes(+s.n)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${s.n}-я · ${s.from}–${s.to}</label>`).join('')}</div></div>
+    <div class="frow"><div class="fg"><label class="fl">Схема смен <button type="button" class="link" onclick="closeModal();go('settings')">(конструктор)</button></label><select class="fi" name="scheme" onchange="document.getElementById('lnSh').innerHTML=lineShiftChips(this.value)">${shiftSchemes().map(s=>`<option value="${esc(s.id)}" ${s.id===scId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Работающие смены</label><div id="lnSh" style="display:flex;gap:6px;flex-wrap:wrap">${lineShiftChips(scId,ws)}</div></div></div>
     <div class="fg"><label class="fl">Рабочие дни</label><div style="display:flex;gap:6px;flex-wrap:wrap">${[1,2,3,4,5,6,0].map(x=>`<label class="chip ${wd.includes(x)?'on':''}" style="cursor:pointer"><input type="checkbox" name="d_${x}" style="display:none" ${wd.includes(x)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${DAYN[x]}</label>`).join('')}</div></div>
     <div class="frow"><div class="fg"><label class="fl">Наладка при перезапуске, мин</label><input class="fi" type="number" min="0" name="restartMin" value="${l.restartMin??30}"><div class="hint" style="margin-top:4px">Добавляется каждый раз, когда линия возобновляет работу после нерабочей смены или простоя. В проекте можно задать своё значение.</div></div>
     <div class="fg"><label class="fl">Мощность, шт/смену</label><input class="fi" type="number" name="cap" value="${l.cap}"><div class="hint" style="margin-top:4px">Для плана по умолчанию, пока месяц не утверждён.</div></div></div>`,
   async f=>{ if(!f.name.trim()) return false;
-    const workShifts=shiftDefs().map(s=>+s.n).filter(n=>f['sh_'+n]), workDays=[0,1,2,3,4,5,6].filter(x=>f['d_'+x]);
+    const sc=shiftSchemes().find(x=>x.id===f.scheme)||shiftSchemes()[0], workShifts=A(sc.shifts).map((_,i)=>i+1).filter(n=>f['sh_'+n]), workDays=[0,1,2,3,4,5,6].filter(x=>f['d_'+x]);
     if(!workShifts.length||!workDays.length){ toast('Выберите хотя бы одну смену и один день'); return false; }
-    await Store.put('lines',{...(id?l:{}),id:id||uid(),name:f.name.trim(),type:f.type,stations:+f.stations||1,cap:+f.cap||0,shifts:workShifts.length,workShifts,workDays,restartMin:+f.restartMin||0}); });
+    await Store.put('lines',{...(id?l:{}),id:id||uid(),name:f.name.trim(),type:f.type,stations:+f.stations||1,cap:+f.cap||0,shifts:workShifts.length,scheme:sc.id,workShifts,workDays,restartMin:+f.restartMin||0}); });
+}
+function lineShiftChips(schemeId,active){ const sc=shiftSchemes().find(x=>x.id===schemeId)||shiftSchemes()[0];
+  return A(sc.shifts).map((s,i)=>{ const n=i+1, on=!active||active.includes(n); return `<label class="chip ${on?'on':''}" style="cursor:pointer"><input type="checkbox" name="sh_${n}" style="display:none" ${on?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${n}-я · ${s.from}–${s.to}</label>`; }).join('');
 }
 
 // ═════════════════════════════════════════════
@@ -1465,7 +1613,7 @@ async function fixOverlaps(){
 function openDown(id,scnId){
   if(!can('edit')) return;
   const scn=scnId?byId(DB.scenarios,scnId):null, list=scn?A(scn.downs):DB.downs, dn=id?list.find(x=>x.id===id):null;
-  const tm=addD(new Date(),1), [a,b]=shiftWindow(iso(tm),1);
+  const tm=addD(new Date(),1), [a,b]=shiftWindow(iso(tm),1,DB.lines[0]?.id);
   const r=dn||{lineId:DB.lines[0]?.id,start:toDT(a),end:toDT(b),reason:(DB.settings.downReasons||DEFAULT_SETTINGS.downReasons)[0],note:''};
   modal((id?'Простой':'Новый простой')+(scn?' · сценарий':''),`<div class="hint" style="margin-bottom:12px">Линия в это время не работает. Позиции плана автоматически растянутся, а после простоя добавится наладка при перезапуске.</div>
     <div class="frow"><div class="fg"><label class="fl">Линия</label><select class="fi" name="lineId">${opts(DB.lines,r.lineId)}</select></div>
@@ -1542,7 +1690,7 @@ function renderModel(){
   const ctx=scnCtx(scn), mk=state.planMonth, cur=monthItems(ctx.items,mk,ctx).sort((a,b)=>itemStart(a,ctx)-itemStart(b,ctx));
   const A1=planStats(DB.plan,LIVE,mk), B=planStats(ctx.items,ctx,mk), chk=planMaterialCheck(ctx);
   const cmp=(l,a,b,fmt,lowerBetter)=>{ const d=b-a, good=lowerBetter?d<0:d>0; return `<div class="card kpi"><div class="kl">${l}</div><div class="kv">${fmt(b)}</div><div class="kd ${Math.abs(d)<1e-6?'flat':good?'up':'down'}">сейчас ${fmt(a)}${Math.abs(d)<1e-6?'':` · ${d>0?'+':''}${fmt(d)}`}</div></div>`; };
-  const shiftsCard=DB.lines.map(l=>{ const c=lineCfg(l.id,ctx), base=lineCfg(l.id,LIVE); return `<div class="stat"><span><b>${esc(l.name)}</b><div class="muted" style="font-size:12px">сейчас: ${esc(shiftLabel(l.id,LIVE))}</div></span><span style="display:flex;gap:6px">${[1,2,3].map(n=>`<label class="chip ${c.shifts.includes(n)?'on':''}" style="cursor:pointer;padding:5px 10px"><input type="checkbox" style="display:none" ${c.shifts.includes(n)?'checked':''} ${ce?'':'disabled'} onchange="setScnShift('${scn.id}','${l.id}',${n},this.checked)">${n} см.</label>`).join('')}</span></div>`; }).join('');
+  const shiftsCard=DB.lines.map(l=>{ const c=lineCfg(l.id,ctx), base=lineCfg(l.id,LIVE); return `<div class="stat"><span><b>${esc(l.name)}</b><div class="muted" style="font-size:12px">сейчас: ${esc(shiftLabel(l.id,LIVE))}</div></span><span style="display:flex;gap:6px">${lineShiftDefs(l.id).map(s=>s.n).map(n=>`<label class="chip ${c.shifts.includes(n)?'on':''}" style="cursor:pointer;padding:5px 10px"><input type="checkbox" style="display:none" ${c.shifts.includes(n)?'checked':''} ${ce?'':'disabled'} onchange="setScnShift('${scn.id}','${l.id}',${n},this.checked)">${n} см.</label>`).join('')}</span></div>`; }).join('');
   const ords=DB.orders.map(o=>({o,a:orderFinish(o,LIVE),b:orderFinish(o,ctx)})).filter(x=>x.a||x.b).filter(x=>x.a!==x.b||x.b>pd(x.o.due).getTime()+864e5||x.a>pd(x.o.due).getTime()+864e5).sort((x,y)=>x.o.due.localeCompare(y.o.due));
   const fa=demandForecast(LIVE), fb=demandForecast(ctx), raws=DB.raw.filter(r=>fa[r.id]?.deficitDate||fb[r.id]?.deficitDate);
   const onTime=(e,o)=>!e?'<span class="muted">не в плане</span>':e>pd(o.due).getTime()+864e5?`<span class="tag t-red">${fdt(e)}</span>`:`<span class="tag t-green">${fdt(e)}</span>`;
@@ -1808,34 +1956,54 @@ async function removeMember(id){ if(!confirm('Удалить сотрудник�
 // ═════════════════════════════════════════════
 //  SETTINGS
 // ═════════════════════════════════════════════
+const schemeBlock = s => `<div class="scheme" data-id="${esc(s.id)}"><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input class="fi sc-name" value="${esc(s.name)}" style="font-weight:800" placeholder="Название схемы, например «12 часов»">
+    <span class="muted" style="font-size:12px;white-space:nowrap">${DB.lines.filter(l=>lineScheme(l.id).id===s.id).map(l=>esc(l.name)).join(', ')||'не используется'}</span>
+    <button type="button" class="btn btn-s btn-sm" onclick="schemeDel(this)">✕</button></div>
+  <div class="sc-rows">${A(s.shifts).map(shRow).join('')}</div>
+  <button type="button" class="btn btn-s btn-sm" onclick="this.previousElementSibling.insertAdjacentHTML('beforeend',shRow({from:'07:00',to:'15:00'}));scRenum(this.closest('.scheme'))">+ Смена</button></div>`;
+const shRow = (x,i) => `<div class="sh-row"><b class="sh-n">${(i??0)+1}-я</b><input class="fi sh-f" type="time" value="${x.from}"><span>—</span><input class="fi sh-t" type="time" value="${x.to}"><span class="muted sh-len" style="font-size:12px;min-width:44px"></span><button type="button" class="btn btn-s btn-sm" onclick="const s=this.closest('.scheme');this.parentNode.remove();scRenum(s)">✕</button></div>`;
+function scRenum(s){ s.querySelectorAll('.sh-row').forEach((r,i)=>{ r.querySelector('.sh-n').textContent=(i+1)+'-я'; const a=hm(r.querySelector('.sh-f').value), b=hm(r.querySelector('.sh-t').value); r.querySelector('.sh-len').textContent=(((b-a+1440)%1440)||1440)/60+' ч'; }); }
+function schemeDel(btn){ const s=btn.closest('.scheme'), id=s.dataset.id; if(DB.lines.some(l=>lineScheme(l.id).id===id)) return toast('Схема используется на линии — сначала переключите линию на другую схему'); if(document.querySelectorAll('.scheme').length<2) return toast('Нужна хотя бы одна схема'); s.remove(); }
+const actRow = a => `<div class="act-row" data-id="${esc(a.id||'')}"><span class="sw" style="background:${ACAT[a.cat||'down'].c};width:10px;height:26px;border-radius:3px;margin:0"></span><input class="fi act-n" value="${esc(a.name||'')}" placeholder="Название"><select class="fi act-c" onchange="this.parentNode.querySelector('.sw').style.background=ACAT[this.value].c">${Object.entries(ACAT).map(([k,v])=>`<option value="${k}" ${k===(a.cat||'down')?'selected':''}>${v.n}</option>`).join('')}</select><button type="button" class="btn btn-s btn-sm" onclick="this.parentNode.remove()">✕</button></div>`;
 function renderSettings(){
-  const s=DB.settings, wd=s.workDays||[1,2,3,4,5], sh=shiftDefs();
+  const s=DB.settings, wd=s.workDays||[1,2,3,4,5];
   $('#content').innerHTML = `<div class="grid g11">
-  <div class="card"><div class="card-h"><div class="card-t">Производство</div></div>
+  <div>
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Конструктор смен</div><div class="card-s">схему назначаете линии в разделе «Линии»</div><div class="sp"></div><button class="btn btn-s btn-sm" onclick="document.getElementById('schemes').insertAdjacentHTML('beforeend',schemeBlock({id:'sc'+uid(),name:'Новая схема',shifts:[{from:'07:00',to:'19:00'},{from:'19:00',to:'07:00'}]}));scRenumAll()">+ Схема смен</button></div>
+    <div id="schemes">${shiftSchemes().map(schemeBlock).join('')}</div></div>
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Виды работ и простоев</div><div class="card-s">для хронометража смены</div><div class="sp"></div><button class="btn btn-s btn-sm" onclick="document.getElementById('acts').insertAdjacentHTML('beforeend',actRow({cat:'down'}))">+ Вид</button></div>
+    <div class="hint" style="margin-bottom:10px">Категория определяет, куда пойдёт время в итогах: <b style="color:${ACAT.work.c}">работа</b>, <b style="color:${ACAT.setup.c}">наладка</b>, <b style="color:${ACAT.down.c}">простой</b> или <b style="color:${ACAT.break.c}">перерыв</b>.</div>
+    <div id="acts">${acts().map(actRow).join('')}</div></div>
+  </div>
+  <div>
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Производство</div></div>
     <div class="frow"><div class="fg"><label class="fl">Название предприятия</label><input class="fi" id="sOrg" value="${esc(s.orgName||'')}"></div>
     <div class="fg"><label class="fl">Валюта</label><select class="fi" id="sCur">${['€','₴','$','zł','Kč','₸','₽'].map(c=>`<option ${c===(s.currency||'€')?'selected':''}>${c}</option>`).join('')}</select></div></div>
-    <div class="fg"><label class="fl">Время смен</label>${sh.map((x,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><b style="width:70px">${x.n}-я смена</b><input class="fi sShF" type="time" value="${x.from}" style="max-width:130px"><span>—</span><input class="fi sShT" type="time" value="${x.to}" style="max-width:130px"></div>`).join('')}</div>
-    <div class="frow"><div class="fg"><label class="fl">Коэфф. плана от мощности</label><input class="fi" id="sK" type="number" step="0.01" min="0.1" max="1.2" value="${s.planFactor??.85}"></div>
-    <div class="fg"><label class="fl">Длительность смены, ч (для расчётов выработки)</label><input class="fi" id="sH" type="number" value="${s.shiftHours||8}"></div></div>
     <div class="frow"><div class="fg"><label class="fl">Цель по переналадке, %</label><input class="fi" id="sSet" type="number" step="0.5" value="${s.setupTarget??5}"></div>
     <div class="fg"><label class="fl">Цель по браку, %</label><input class="fi" id="sDef" type="number" step="0.1" value="${s.defectTarget??2}"></div></div>
-    <div class="fg"><label class="fl">Рабочие дни (для плана по мощности, если месяц не утверждён)</label><div style="display:flex;gap:6px;flex-wrap:wrap">${WD.map((d,i)=>{ const n=(i+1)%7; return `<label class="chip ${wd.includes(n)?'on':''}" style="cursor:pointer"><input type="checkbox" value="${n}" ${wd.includes(n)?'checked':''} style="display:none" class="sWD" onchange="this.parentNode.classList.toggle('on',this.checked)">${d}</label>`; }).join('')}</div></div>
-    <div class="frow"><div class="fg"><label class="fl">Причины брака (по одной в строке)</label><textarea class="fi" id="sR" rows="7">${esc((s.defectReasons||[]).join('\n'))}</textarea></div>
-    <div class="fg"><label class="fl">Причины простоев (по одной в строке)</label><textarea class="fi" id="sDR" rows="7">${esc((s.downReasons||DEFAULT_SETTINGS.downReasons).join('\n'))}</textarea></div></div>
-    <div class="fg"><label class="fl">Параметры машины для тех. отчёта (по одному в строке)</label><textarea class="fi" id="sM" rows="6">${esc((s.machineParams||[]).join('\n'))}</textarea></div>
-    <button class="btn btn-p" onclick="saveSettings()">Сохранить</button></div>
+    <div class="frow"><div class="fg"><label class="fl">Коэфф. плана от мощности</label><input class="fi" id="sK" type="number" step="0.01" min="0.1" max="1.2" value="${s.planFactor??.85}"></div>
+    <div class="fg"><label class="fl">Рабочие дни (план по мощности)</label><div style="display:flex;gap:4px;flex-wrap:wrap">${WD.map((d,i)=>{ const n=(i+1)%7; return `<label class="chip ${wd.includes(n)?'on':''}" style="cursor:pointer;padding:6px 8px"><input type="checkbox" value="${n}" ${wd.includes(n)?'checked':''} style="display:none" class="sWD" onchange="this.parentNode.classList.toggle('on',this.checked)">${d}</label>`; }).join('')}</div></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Причины брака</label><textarea class="fi" id="sR" rows="7">${esc((s.defectReasons||[]).join('\n'))}</textarea></div>
+    <div class="fg"><label class="fl">Причины простоев линии (для плана)</label><textarea class="fi" id="sDR" rows="7">${esc((s.downReasons||DEFAULT_SETTINGS.downReasons).join('\n'))}</textarea></div></div>
+    <div class="fg"><label class="fl">Параметры машины для тех. отчёта</label><textarea class="fi" id="sM" rows="5">${esc((s.machineParams||[]).join('\n'))}</textarea></div></div>
   <div class="card"><div class="card-h"><div class="card-t">Подключение и данные</div></div>
     <div class="hint" style="margin-bottom:14px">${state.mode==='demo'?'Сейчас <b>локальный демо-режим</b>: данные тестовые и хранятся только в этом браузере.':'Подключено к общей базе. Все изменения сразу видны всем сотрудникам.'}</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-s" onclick="exportJSON()">⬇ Резервная копия (JSON)</button>
-      ${state.mode==='demo'?`<button class="btn btn-s" onclick="resetDemo()">↺ Сбросить демо-данные</button>`:`<button class="btn btn-s" onclick="seedLive()">Заполнить примером</button><button class="btn btn-d" onclick="clearLive()">Очистить все данные</button>`}
-    </div></div></div>`;
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-s" onclick="exportJSON()">⬇ Резервная копия (JSON)</button>
+      ${state.mode==='demo'?`<button class="btn btn-s" onclick="resetDemo()">↺ Сбросить демо-данные</button>`:`<button class="btn btn-s" onclick="seedLive()">Заполнить примером</button><button class="btn btn-d" onclick="clearLive()">Очистить все данные</button>`}</div></div>
+  </div></div>
+  <div style="position:sticky;bottom:12px;margin-top:14px;display:flex;justify-content:flex-end"><button class="btn btn-p" style="box-shadow:0 6px 20px rgba(226,70,44,.35)" onclick="saveSettings()">Сохранить настройки</button></div>`;
+  scRenumAll();
 }
+function scRenumAll(){ document.querySelectorAll('.scheme').forEach(scRenum); }
 async function saveSettings(){
-  const lines=id=>$(id).value.split('\n').map(x=>x.trim()).filter(Boolean), F=[...document.querySelectorAll('.sShF')], T=[...document.querySelectorAll('.sShT')];
-  const s={...DB.settings,orgName:$('#sOrg').value.trim(),currency:$('#sCur').value,planFactor:+$('#sK').value||.85,shiftHours:+$('#sH').value||8,setupTarget:+$('#sSet').value||5,defectTarget:+$('#sDef').value||2,
-    workDays:[...document.querySelectorAll('.sWD:checked')].map(x=>+x.value),defectReasons:lines('#sR'),downReasons:lines('#sDR'),machineParams:lines('#sM'),
-    shifts:shiftDefs().map((x,i)=>({n:x.n,from:F[i].value||x.from,to:T[i].value||x.to}))};
+  const lines=id=>$(id).value.split('\n').map(x=>x.trim()).filter(Boolean);
+  const schemes=[...document.querySelectorAll('.scheme')].map(b=>({id:b.dataset.id,name:b.querySelector('.sc-name').value.trim()||'Схема',shifts:[...b.querySelectorAll('.sh-row')].map(r=>({from:r.querySelector('.sh-f').value,to:r.querySelector('.sh-t').value})).filter(x=>x.from&&x.to)}));
+  if(schemes.some(s=>!s.shifts.length)) return toast('В каждой схеме должна быть хотя бы одна смена');
+  const activities=[...document.querySelectorAll('.act-row')].map(r=>({id:r.dataset.id||('a'+uid()),name:r.querySelector('.act-n').value.trim(),cat:r.querySelector('.act-c').value})).filter(a=>a.name);
+  if(!activities.some(a=>a.cat==='work')) return toast('Нужен хотя бы один вид с категорией «Работа»');
+  const s={...DB.settings,orgName:$('#sOrg').value.trim(),currency:$('#sCur').value,planFactor:+$('#sK').value||.85,setupTarget:+$('#sSet').value||5,defectTarget:+$('#sDef').value||2,
+    workDays:[...document.querySelectorAll('.sWD:checked')].map(x=>+x.value),defectReasons:lines('#sR'),downReasons:lines('#sDR'),machineParams:lines('#sM'),shiftSchemes:schemes,activities};
+  delete s.shifts;
   await Store.settings(s); toast('Настройки сохранены');
 }
 function exportJSON(){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(DB,null,1)],{type:'application/json'})); a.download=`proizvodstvo-backup-${iso(new Date())}.json`; a.click(); }
@@ -1929,7 +2097,9 @@ const Store = {
 //  DEMO DATA — завод декорирования стеклянной тары
 // ═════════════════════════════════════════════
 const DEFAULT_SETTINGS = {orgName:'Моё производство', currency:'€', planFactor:.85, shiftHours:8, setupTarget:5, defectTarget:2, workDays:[1,2,3,4,5,6,0],
-  shifts:[{n:1,from:'06:00',to:'14:00'},{n:2,from:'14:00',to:'22:00'},{n:3,from:'22:00',to:'06:00'}],
+  shiftSchemes:[{id:'s8',name:'8 часов',shifts:[{from:'07:00',to:'15:00'},{from:'15:00',to:'23:00'},{from:'23:00',to:'07:00'}]},{id:'s12',name:'12 часов',shifts:[{from:'07:00',to:'19:00'},{from:'19:00',to:'07:00'}]}],
+  activities:[{id:'work',name:'Работа (наработка)',cat:'work'},{id:'setup',name:'Наладка',cat:'setup'},{id:'change',name:'Переналадка / смена цвета',cat:'setup'},{id:'wash',name:'Мойка / чистка',cat:'setup'},
+    {id:'brk',name:'Поломка / ремонт',cat:'down'},{id:'staff',name:'Нет персонала',cat:'down'},{id:'mat',name:'Нет сырья / тары',cat:'down'},{id:'wait',name:'Ожидание (ОТК, согласование)',cat:'down'},{id:'lunch',name:'Перерыв / обед',cat:'break'},{id:'other',name:'Прочее',cat:'down'}],
   rawCats:['Основы и лаки','Пигменты','Эффектные пигменты','Добавки','Растворители','Тара','Упаковка','Прочее'],
   downReasons:['Нет персонала','Плановый ремонт (ППР)','Аварийный ремонт','Нет сырья','Санитарный день / уборка','Праздник / выходной','Прочее'],
   defectReasons:['Потёки / наплывы','Непрокрас, просвет','Включения, пыль, сорность','Разнотон, цвет вне допуска','Плохая адгезия','Дефект стекла от поставщика','Царапины, сколы при съёме'],
@@ -1938,9 +2108,9 @@ function genDemo(){
   let seed=11; const rnd=()=>(seed=seed*16807%2147483647)/2147483647, pick=a=>a[Math.floor(rnd()*a.length)];
   const now=new Date(), NOW=now.getTime(), T=iso(now), R3=v=>Math.round(v*1000)/1000;
   const lines=[
-    {id:'L1',name:'Линия 1 · Покраска',type:'Пистолетная покраска + УФ-сушка',stations:7,cap:36000,shifts:3,workShifts:[1,2,3],workDays:[0,1,2,3,4,5,6],restartMin:40},
-    {id:'L2',name:'Линия 2 · Покраска',type:'Пистолетная покраска + печь',stations:9,cap:33000,shifts:2,workShifts:[1,2],workDays:[1,2,3,4,5,6],restartMin:35},
-    {id:'L3',name:'Линия 3 · Шелкография',type:'Трафаретная печать',stations:4,cap:26000,shifts:1,workShifts:[1],workDays:[1,2,3,4,5],restartMin:25}];
+    {id:'L1',name:'Линия 1 · Покраска',type:'Пистолетная покраска + УФ-сушка',stations:7,cap:36000,shifts:3,scheme:'s8',workShifts:[1,2,3],workDays:[0,1,2,3,4,5,6],restartMin:40},
+    {id:'L2',name:'Линия 2 · Покраска',type:'Пистолетная покраска + печь',stations:9,cap:50000,shifts:2,scheme:'s12',workShifts:[1,2],workDays:[1,2,3,4,5,6],restartMin:35},
+    {id:'L3',name:'Линия 3 · Шелкография',type:'Трафаретная печать',stations:4,cap:26000,shifts:1,scheme:'s8',workShifts:[1],workDays:[1,2,3,4,5],restartMin:25}];
   const raw=[
     ['R1','Лак-связующее УФ, прозрачный','Основы и лаки','кг',8.4,900,300,'ChemCoat',10],
     ['R2','Паста пигментная белая TiO2','Пигменты','кг',12.5,160,80,'PigmentPro',14],
@@ -1999,9 +2169,9 @@ function genDemo(){
   const at=(ds,h)=>ds+'T'+String(h).padStart(2,'0')+':00';
   const dn1=nextWork('L1',addD(m0,6)), dn2=nextWork('L2',addD(now,1)), dn3=nextWork('L3',addD(now,4));
   const downs=[
-    {id:'DN1',lineId:'L1',start:at(dn1,6),end:at(dn1,14),reason:'Нет персонала',note:'Два оператора на больничном',by:'Ольга Петренко'},
-    {id:'DN2',lineId:'L2',start:at(dn2,14),end:at(dn2,22),reason:'Нет персонала',note:'2-я смена не укомплектована',by:'Ольга Петренко'},
-    {id:'DN3',lineId:'L3',start:at(dn3,6),end:at(dn3,14),reason:'Плановый ремонт (ППР)',note:'Замена ракельного узла',by:'Марина Коваль'}];
+    {id:'DN1',lineId:'L1',start:at(dn1,7),end:at(dn1,15),reason:'Нет персонала',note:'Два оператора на больничном',by:'Ольга Петренко'},
+    {id:'DN2',lineId:'L2',start:at(dn2,19),end:at(iso(addD(pd(dn2),1)),7),reason:'Нет персонала',note:'Ночная смена не укомплектована',by:'Ольга Петренко'},
+    {id:'DN3',lineId:'L3',start:at(dn3,7),end:at(dn3,15),reason:'Плановый ремонт (ППР)',note:'Замена ракельного узла',by:'Марина Коваль'}];
   const keep=DB; DB=normalize({...emptyDB(),lines,projects,raw,semis,settings,downs,orders}); _sch.clear();
   // план: позиции подряд по календарю каждой линии
   const plan=[]; let pn=0;
@@ -2023,10 +2193,10 @@ function genDemo(){
     logAt(d,9,'Ольга Петренко','Оперативка: Линия 1 — замена форсунки ст.5 и чистка камеры, сдвиг на 14 ч. Заказчик предупреждён.','meeting');
     logAt(d,9,'Ольга Петренко',`«${projects.find(p=>p.id===x.projectId).name}» и далее на Линии 1: сдвиг +14 ч`); }
   const l2=byLine('L2'); if(l2.length>2){ const x=l2[1], old=x.qty; x.qty=Math.round(old*1.2/1000)*1000; logAt(pd(x.start.slice(0,10)),9,'Марина Коваль',`«${projects.find(p=>p.id===x.projectId).name}»: кол-во ${N(old)} → ${N(x.qty)} (клиент увеличил заказ)`); }
-  logAt(pd(dn1),8,'Ольга Петренко',`Добавил простой Линия 1 · Покраска: ${fdate(dn1)} 1-я смена, Нет персонала (два оператора на больничном)`);
+  logAt(pd(dn1),8,'Ольга Петренко',`Добавил простой Линия 1 · Покраска: ${fdate(dn1)} 07:00–15:00, Нет персонала (два оператора на больничном)`);
   _sch.clear(); lines.forEach(l=>pushOverlaps(plan,l.id,LIVE));
-  logAt(now,9,'Ольга Петренко',`Оперативка: ${fdate(dn2)} на Линии 2 не будет 2-й смены — нет людей, поставили простой, план сдвинулся. Золото Au-7 заканчивается — снабжению ускорить поставку.`,'meeting');
-  logAt(now,9,'Ольга Петренко',`Добавил простой Линия 2 · Покраска: ${fdate(dn2)} 2-я смена, Нет персонала`);
+  logAt(now,9,'Ольга Петренко',`Оперативка: ${fdate(dn2)} на Линии 2 не будет ночной смены — нет людей, поставили простой, план сдвинулся. Золото Au-7 заканчивается — снабжению ускорить поставку.`,'meeting');
+  logAt(now,9,'Ольга Петренко',`Добавил простой Линия 2 · Покраска: ${fdate(dn2)} 19:00 → 07:00, Нет персонала`);
   plan.filter(x=>!x.orderId&&sched(x,LIVE).end>NOW).forEach(x=>{ const o={id:'O'+on,no:'З-'+(on++),projectId:x.projectId,qty:0,due:iso(addD(new Date(sched(x,LIVE).end),2+Math.floor(rnd()*5))),note:''}; orders.push(o); x.orderId=o.id; });
   { const S2={id:'s2',lineShifts:{L3:[1,2]}}; const cand=plan.filter(x=>x.lineId==='L3'&&sched(x,LIVE).start>NOW).find(x=>iso(new Date(sched(x,LIVE).end))>iso(addD(new Date(sched(x,S2).end),1)));
     if(cand){ const o=orders.find(o=>o.id===cand.orderId); o.due=iso(new Date(sched(cand,S2).end)); o.note='Клиент просит раньше'; } }
@@ -2035,26 +2205,36 @@ function genDemo(){
   const reasons=DEFAULT_SETTINGS.defectReasons, rw=[26,20,18,12,10,8,6];
   const reason=()=>{ let x=rnd()*100; for(let i=0;i<rw.length;i++){ if((x-=rw[i])<0) return reasons[i]; } return reasons[0]; };
   const output=[], cur={}, lastEnd={};
+  const mkShift=(s,sh,l,a,b,segs)=>{
+    segs=segs.filter(x=>x.b-x.a>=60e3).sort((x,y)=>x.a-y.a);
+    const wi=segs.findIndex(x=>x.act==='work'&&x.b-x.a>100*60e3);
+    if(wi>=0&&rnd()<.25){ const w=segs[wi], m=r5(w.a+(w.b-w.a)*(.3+rnd()*.4)), e=Math.min(m+(15+Math.round(rnd()*9)*5)*60e3,w.b); segs.splice(wi,1,{...w,b:m},{a:m,b:e,act:pick(['brk','brk','wait','mat']),pid:w.pid},{...w,a:e}); }
+    const full=[]; let t=a; segs.forEach(x=>{ if(x.a>t+60e3) full.push({a:t,b:x.a,act:'other'}); full.push(x); t=Math.max(t,x.b); }); if(t<b-60e3) full.push({a:t,b,act:'other'}); t=Math.max(t,b);
+    const per={}; full.forEach(x=>{ if(!x.pid||!['work','setup'].includes(x.act)) return; const v=per[x.pid]=per[x.pid]||{work:0,setup:0,a:x.a,b:x.b,pi:x.pi,o:x.o}; v[x.act]+=(x.b-x.a)/60e3; v.a=Math.min(v.a,x.a); v.b=Math.max(v.b,x.b); });
+    const pids=Object.keys(per).sort((x,y)=>per[y].work-per[x].work); if(!pids.length) return; const main=pids[0], rid='RP'+output.length;
+    const downBy={}; let down=0; full.forEach(x=>{ const ac=DEFAULT_SETTINGS.activities.find(q=>q.id===x.act); if(ac&&ac.cat==='down'){ const m=(x.b-x.a)/60e3; down+=m; downBy[ac.name]=(downBy[ac.name]||0)+Math.round(m); } });
+    const timeline=full.map(x=>({from:hhmm(x.a),to:hhmm(x.b),act:x.act,projectId:x.pid&&x.pid!==main?x.pid:'',note:x.act==='brk'?pick(['замена форсунки ст.5','засор пистолета','сбой конвейера','перегрев печи']):x.act==='staff'?'нет операторов':''}));
+    pids.forEach(pid=>{ const p=projects.find(q=>q.id===pid), v=per[pid], good=Math.round(p.speed*v.work*(.86+rnd()*.12)), defect=Math.round(good*(.006+rnd()*rnd()*.04)), isM=pid===main;
+      output.push({id:'R'+output.length,reportId:rid,date:s,shift:sh,shiftScheme:l.scheme,shiftMin:Math.round((b-a)/60e3),lineId:l.id,planItemId:v.pi||'',projectId:pid,orderId:v.o||'',startAt:toDT(isM?a:v.a),endAt:toDT(isM?t:v.b),good,defect,reason:defect?reason():'',
+        workMin:Math.round(v.work),setup:Math.round(v.setup),downtime:isM?Math.round(down):0,breakMin:0,downBy:isM?downBy:{},timeline:isM?timeline:[],operator:pick(ops),ts:a+1}); });
+  };
   for(let d=addD(now,-180); iso(d)<=T; d=addD(d,1)){
     const s=iso(d), age=(now-d)/864e5, inMonth=s>=iso(m0);
     lines.forEach(l=>{ if(!l.workDays.includes(d.getDay())) return;
       l.workShifts.forEach(sh=>{
-        const [a,b0]=shiftWindow(s,sh); if(a>=NOW) return; const b=Math.min(b0,NOW);
-        if(downs.some(x=>x.lineId===l.id&&tms(x.start)<b&&tms(x.end)>a)){ lastEnd[l.id]=null; return; }
-        if(inMonth){
-          plan.filter(x=>x.lineId===l.id).forEach(x=>{ let run=0,setup=0,fa=null,fb=null;
-            sched(x,LIVE).segs.forEach(([sa,sb,k])=>{ const ov=Math.max(0,Math.min(sb,b)-Math.max(sa,a)); if(ov<=0) return; if(k==='r') run+=ov/60e3; else setup+=ov/60e3; const u=Math.max(sa,a), v=Math.min(sb,b); fa=fa==null?u:Math.min(fa,u); fb=fb==null?v:Math.max(fb,v); });
-            if(run+setup<5) return; const p=projects.find(q=>q.id===x.projectId), down=Math.round(rnd()*rnd()*Math.min(40,run*.3));
-            const good=Math.round(p.speed*Math.max(0,run-down)*(.86+rnd()*.12)), defect=Math.round(good*(.006+rnd()*rnd()*.04));
-            output.push({id:'R'+output.length,date:s,shift:sh,lineId:l.id,planItemId:x.id,projectId:p.id,orderId:x.orderId,startAt:toDT(fa),endAt:toDT(fb),good,defect,reason:defect?reason():'',setup:Math.round(setup),downtime:down,operator:pick(ops),ts:a+1}); });
-        } else {
+        const [a,b0]=shiftWindow(s,sh,l.id); if(a>=NOW) return; const b=Math.min(b0,NOW);
+        const dn=downs.find(x=>x.lineId===l.id&&tms(x.start)<b&&tms(x.end)>a);
+        if(dn&&tms(dn.start)<=a&&tms(dn.end)>=b){ lastEnd[l.id]=null; return; }
+        let segs=[];
+        if(inMonth){ plan.filter(x=>x.lineId===l.id).forEach(x=>sched(x,LIVE).segs.forEach(([sa,sb,k])=>{ const u=Math.max(sa,a), v=Math.min(sb,b); if(v>u) segs.push({a:u,b:v,act:k==='s'?'setup':'work',pid:x.projectId,pi:x.id,o:x.orderId}); }));
+          if(dn) segs.push({a:Math.max(tms(dn.start),a),b:Math.min(tms(dn.end),b),act:'staff'}); }
+        else {
           const ps=projects.filter(q=>q.lineId===l.id&&q.status==='Активный'), p=(!cur[l.id]||rnd()<.22)?pick(ps):projects.find(q=>q.id===cur[l.id]); let setup=0;
           if(cur[l.id]!==p.id){ setup=Math.round(p.setupMin*(.85+rnd()*(.4+age/180*.9))); cur[l.id]=p.id; } else if(lastEnd[l.id]!==a){ setup=Math.round((+p.restartMin||l.restartMin)*(.9+rnd()*.5)); }
-          setup=Math.min(setup,Math.round((b-a)/60e3*.8)); lastEnd[l.id]=b0;
-          const down=rnd()<.03?90+Math.round(rnd()*120):Math.round(rnd()*rnd()*40), runMin=Math.max(0,(b-a)/60e3-setup-down);
-          const good=Math.round(p.speed*runMin*(.82+rnd()*.14)), defect=Math.round(good*(.006+rnd()*rnd()*.045));
-          output.push({id:'R'+output.length,date:s,shift:sh,lineId:l.id,planItemId:'',projectId:p.id,orderId:'',startAt:toDT(a),endAt:toDT(b),good,defect,reason:defect?reason():'',setup,downtime:down,operator:pick(ops),ts:a+1});
+          setup=Math.min(setup,Math.round((b-a)/60e3*.8)); lastEnd[l.id]=b0; const se=r5(a+setup*60e3);
+          if(setup>0) segs.push({a,b:se,act:'setup',pid:p.id}); segs.push({a:se,b,act:'work',pid:p.id});
         }
+        mkShift(s,sh,l,a,b,segs);
       });
     });
   }
