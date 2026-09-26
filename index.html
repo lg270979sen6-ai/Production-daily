@@ -188,7 +188,8 @@ tfoot td{font-weight:800;background:var(--card2)}
 .g-in{position:relative}
 .g-head,.g-row{display:flex}
 .g-lab{position:sticky;left:0;z-index:4;width:160px;flex-shrink:0;background:var(--card);border-right:1px solid var(--line);padding:9px 12px;font-weight:700;font-size:12.5px;line-height:1.25}
-.g-lab small{display:block;color:var(--text3);font-weight:600;font-size:11px}
+.g-lab small{display:block;color:var(--text3);font-weight:600;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-lab{overflow:hidden}
 .g-days{position:relative;flex-shrink:0}
 .g-day{position:absolute;top:0;bottom:0;border-left:1px solid var(--line);font-size:11px;color:var(--text3);font-weight:800;text-align:center;padding-top:5px;line-height:1.2}
 .g-day.we{background:var(--card2)}
@@ -226,6 +227,31 @@ tfoot td{font-weight:800;background:var(--card2)}
   .shifts{grid-template-columns:1fr} .top .hide-m{display:none} .frow3{grid-template-columns:1fr 1fr}
   .g-lab{width:110px}
 }
+.frow4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.cat-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.g-item{position:absolute;border-radius:7px;cursor:pointer;overflow:hidden;z-index:1}
+.g-item.conf{outline:2px solid var(--red);outline-offset:1px}
+.g-item.late{box-shadow:inset 0 -3px 0 var(--red)}
+.g-item.done{opacity:.6}
+.g-seg{position:absolute;top:0;bottom:0}
+.g-seg.s{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.55) 0 3px,transparent 3px 7px)}
+.g-lbl{position:absolute;left:6px;top:3px;right:4px;color:#fff;font-size:11.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-shadow:0 0 3px rgba(0,0,0,.65),0 0 1px rgba(0,0,0,.8);line-height:1.3;pointer-events:none}
+.g-lbl small{display:block;font-weight:600;font-size:10.5px}
+.g-off{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,rgba(120,130,150,.16) 0 5px,transparent 5px 10px)}
+.g-down{position:absolute;top:3px;bottom:3px;background:repeating-linear-gradient(135deg,rgba(229,72,77,.30) 0 5px,rgba(229,72,77,.12) 5px 10px);border:1px solid rgba(229,72,77,.55);border-radius:5px;z-index:2;font-size:10px;color:var(--red);font-weight:800;padding:2px 4px;overflow:hidden;white-space:nowrap}
+.g-row.r-row{height:auto;min-height:60px}
+.g-row.r-lrow{height:34px;background:var(--card2)}
+.r-lrow .g-lab{background:var(--card2);font-size:12.5px;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
+.r-grid{display:grid !important;grid-template-columns:1.85fr .75fr 1.05fr 1.1fr;gap:10px;align-items:center;font-size:12px;font-weight:600}
+.r-grid>div{min-width:0}
+.r-grid>div>b,.r-grid small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-grid>div:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-grid b{font-weight:800}
+.r-grid small{display:block;color:var(--text3);font-weight:600;font-size:11px;line-height:1.3}
+.r-head{font-size:10.5px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;height:100%}
+.r-row.click:hover .g-lab{background:var(--card2)}
+.r-fact{position:absolute;top:34px;height:9px;border-radius:3px;background:var(--green);z-index:1}
+@media (max-width:860px){.frow4{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -286,7 +312,7 @@ const FB_CONFIG = {
   appId: "1:1015461302295:web:835d7a14a852c224534c52"
 };
 const ROOT = 'prod';
-const COLS = ['lines','projects','raw','semis','orders','output','runs','plan','planLog','supplies','moves'];
+const COLS = ['lines','projects','raw','semis','orders','output','runs','plan','planLog','supplies','moves','downs','scenarios'];
 
 // ═════════════════════════════════════════════
 //  ROLES
@@ -303,6 +329,7 @@ const can = a => { const l = ROLES[state.me.role]?.lvl ?? 0; return a==='admin' 
 const ICONS = {
   dash:'M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 9h8V3h-8z',
   plan:'M3 5h18v16H3zM3 10h18M8 3v4M16 3v4M7 14h4M13 17h4',
+  model:'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM17 14v6M14 17h6',
   output:'M2 20h20M4 20V9l5 3V9l5 3V9l5 3V4h2v16',
   quality:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4',
   projects:'M12 2l9 5-9 5-9-5zM3 12l9 5 9-5M3 17l9 5 9-5',
@@ -322,6 +349,7 @@ const SECTIONS = [
   {g:'Производство'},
   {id:'dashboard', t:'Дашборд',               i:'dash',     r:()=>renderDashboard()},
   {id:'plan',      t:'План наработки',        i:'plan',     r:()=>renderPlan()},
+  {id:'model',     t:'Моделирование',         i:'model',    r:()=>renderModel()},
   {id:'output',    t:'Журнал выпуска',        i:'output',   r:()=>renderOutput()},
   {id:'quality',   t:'Брак и качество',       i:'quality',  r:()=>renderQuality()},
   {g:'Технология'},
@@ -349,7 +377,7 @@ const SECTIONS = [
 let DB = emptyDB();
 function emptyDB(){ const d={members:[],settings:{},approved:{}}; COLS.forEach(c=>d[c]=[]); return d; }
 const state = {sec:'dashboard', me:{id:'',name:'',role:'viewer'}, mode:'demo', preset:'month', from:'', to:'', lineF:'', groupBy:'project',
-  planMonth:'', planTab:'live', stockTab:'raw', q:'', draft:null, back:null};
+  planMonth:'', planTab:'live', planView:'rows', stockTab:'raw', rawCat:'', scnId:'', q:'', draft:null, back:null};
 let auth=null, fdb=null, orgRef=null;
 
 const $ = s => document.querySelector(s);
@@ -369,7 +397,6 @@ const clone = o => JSON.parse(JSON.stringify(o));
 const A = x => Array.isArray(x) ? x.filter(v=>v!=null) : x ? Object.values(x) : [];
 const H = 3600e3;
 const tms = s => new Date(s).getTime();
-const endMs = it => tms(it.start)+(+it.hours||0)*H;
 const toDT = ms => { const d=new Date(ms); return iso(d)+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
 const MON = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -465,7 +492,9 @@ function planDay(ds,lineId){
   const ap=DB.approved?.[ds.slice(0,7)], lf=lineId||state.lineF;
   if(ap&&A(ap.items).length){
     const d0=pd(ds).getTime(), d1=d0+864e5; let s=0;
-    A(ap.items).forEach(it=>{ if(lf&&it.lineId!==lf) return; const a=tms(it.start), b=a+(+it.hours||0)*H, ov=Math.max(0,Math.min(b,d1)-Math.max(a,d0)); if(ov&&+it.hours) s+=(+it.qty||0)*ov/((+it.hours)*H); });
+    A(ap.items).forEach(it=>{ if(lf&&it.lineId!==lf) return; const segs=A(it.segs).filter(x=>x.k==='r'), tot=segs.reduce((a,x)=>a+(x.b-x.a),0);
+      if(tot) segs.forEach(x=>{ s+=(+it.qty||0)*Math.max(0,Math.min(x.b,d1)-Math.max(x.a,d0))/tot; });
+      else { const a=tms(it.start), b=a+(+it.hours||0)*H, ov=Math.max(0,Math.min(b,d1)-Math.max(a,d0)); if(ov&&+it.hours) s+=(+it.qty||0)*ov/((+it.hours)*H); } });
     return s;
   }
   const wd=pd(ds).getDay(); if(!(DB.settings.workDays||[1,2,3,4,5]).includes(wd)) return 0;
@@ -493,18 +522,118 @@ function orderStats(){ const s={shipped:0,done:0,overdue:0,work:0,new:0}; DB.ord
 const OST = {shipped:['Отгружен','t-green'],done:['Произведён','t-green'],overdue:['Просрочен','t-red'],work:['В работе','t-blue'],new:['Новый','t-gray']};
 
 // ═════════════════════════════════════════════
-//  MATERIALS — прогноз остатков и проверка позиций плана
+//  SCHEDULER — календарь линий: смены, дни, простои, наладка при перезапуске
 // ═════════════════════════════════════════════
-function activePlanReq(){ // позиции плана, которые ещё будут потреблять сырьё
-  const now=Date.now();
-  return DB.plan.map(it=>{ const p=byId(DB.projects,it.projectId); if(!p) return null; const a=tms(it.start), b=endMs(it); if(b<=now) return null;
-    const frac=a>=now?1:(b-now)/Math.max(1,b-a); return {it,p,d:a>=now?it.start.slice(0,10):iso(new Date()),req:projectReq(p,(+it.qty||0)*frac)}; })
-    .filter(Boolean).sort((x,y)=>x.it.start.localeCompare(y.it.start));
+const hm = s => { const [h,m]=String(s||'0:0').split(':').map(Number); return (h||0)*60+(m||0); };
+const LIVE = {id:'live'};
+const ctxItems = ctx => ctx&&ctx.items ? ctx.items : DB.plan;
+const ctxDowns = ctx => ctx&&ctx.downs ? ctx.downs : DB.downs;
+function shiftDefs(){ return A(DB.settings.shifts).length ? A(DB.settings.shifts) : DEFAULT_SETTINGS.shifts; }
+function lineCfg(lineId,ctx){
+  const l=byId(DB.lines,lineId)||{}, ov=ctx&&ctx.lineShifts?A(ctx.lineShifts[lineId]):[];
+  const sh=ov.length?ov:A(l.workShifts);
+  return {shifts:sh.length?sh.map(Number):[1,2,3], days:A(l.workDays).length?A(l.workDays).map(Number):[0,1,2,3,4,5,6], restart:+l.restartMin||0};
 }
-function demandForecast(){
+const shiftLabel = (lineId,ctx) => { const c=lineCfg(lineId,ctx); return c.shifts.length===3?'3 смены':c.shifts.length===1?`только ${c.shifts[0]}-я смена`:`смены ${c.shifts.join('+')}`; };
+function lineWindows(lineId,from,to,ctx){
+  const cfg=lineCfg(lineId,ctx), w=[], d=new Date(from); d.setHours(0,0,0,0); d.setDate(d.getDate()-1);
+  for(; d.getTime()<to; d.setDate(d.getDate()+1)){
+    if(!cfg.days.includes(d.getDay())) continue;
+    const base=d.getTime();
+    shiftDefs().forEach(s=>{ if(!cfg.shifts.includes(+s.n)) return; const a=base+hm(s.from)*60e3; let b=base+hm(s.to)*60e3; if(b<=a) b+=864e5; w.push([a,b]); });
+  }
+  w.sort((x,y)=>x[0]-y[0]); const m=[];
+  w.forEach(x=>{ const l=m[m.length-1]; if(l&&x[0]<=l[1]) l[1]=Math.max(l[1],x[1]); else m.push([x[0],x[1]]); });
+  let res=m;
+  ctxDowns(ctx).filter(dn=>dn.lineId===lineId).forEach(dn=>{ const da=tms(dn.start), db=tms(dn.end), nx=[];
+    res.forEach(([a,b])=>{ if(db<=a||da>=b){ nx.push([a,b]); return; } if(da>a) nx.push([a,da]); if(db<b) nx.push([db,b]); }); res=nx; });
+  return res.filter(([a,b])=>b>from&&a<to);
+}
+const _sch = new Map();
+// Раскладывает позицию плана по рабочему времени линии:
+// наладка в начале → работа → (перерыв: нерабочая смена или простой) → наладка при перезапуске → работа …
+function sched(it,ctx){
+  const key=(ctx?.id||'live')+'|'+it.id+'|'+it.start+'|'+it.qty+'|'+it.lineId+'|'+it.projectId+'|'+(it.noSetup?1:0);
+  if(_sch.has(key)) return _sch.get(key);
+  const p=byId(DB.projects,it.projectId), start=tms(it.start), res={start,end:start,segs:[],setup:0,restarts:0,run:0,hours:0,ok:true};
+  if(p&&+it.qty>0&&isFinite(start)){
+    const restart=(p.restartMin!==''&&p.restartMin!=null&&isFinite(+p.restartMin))?+p.restartMin:lineCfg(it.lineId,ctx).restart;
+    let setupNeed=it.noSetup?0:(+p.setupMin||0), runLeft=(+it.qty)/Math.max(1,+p.speed||1), last=null, t=start, from=start;
+    for(let chunk=0; chunk<16&&runLeft>1e-6; chunk++, from+=14*864e5){
+      for(const [wa,wb] of lineWindows(it.lineId,from,from+14*864e5,ctx)){
+        if(wb<=t) continue; let a=Math.max(wa,t);
+        if(last!=null&&a>last+60e3&&setupNeed<=1e-6&&restart>0){ setupNeed=restart; res.restarts++; }
+        if(setupNeed>1e-6){ const s=Math.min(setupNeed,(wb-a)/60e3); res.segs.push([a,a+s*60e3,'s']); res.setup+=s; setupNeed-=s; a+=s*60e3; last=t=a; if(setupNeed>1e-6) continue; }
+        const r=Math.min(runLeft,(wb-a)/60e3); if(r>0){ res.segs.push([a,a+r*60e3,'r']); res.run+=r; runLeft-=r; a+=r*60e3; last=t=a; }
+        if(runLeft<=1e-6) break;
+      }
+    }
+    res.ok=runLeft<=1e-6;
+    if(res.segs.length){ res.start=res.segs[0][0]; res.end=res.segs[res.segs.length-1][1]; }
+    res.hours=(res.end-res.start)/H;
+  }
+  _sch.set(key,res); return res;
+}
+const itemSegs = (it,ctx) => it.fixed ? A(it.segs).map(s=>[+s.a,+s.b,s.k]) : sched(it,ctx).segs;
+const itemStart = (it,ctx) => it.fixed ? (+it.startMs||tms(it.start)) : sched(it,ctx).start;
+const endMs = (it,ctx) => it.fixed ? (+it.end||tms(it.start)+(+it.hours||0)*H) : sched(it,ctx).end;
+const itemHours = (it,ctx) => (endMs(it,ctx)-itemStart(it,ctx))/H;
+function snapItem(it,ctx){ const s=sched(it,ctx); const o=clone(it); delete o.fixed; return {...o,fixed:true,startMs:s.start,end:s.end,hours:Math.round(s.hours*100)/100,setupMin:Math.round(s.setup),restarts:s.restarts,segs:s.segs.map(([a,b,k])=>({a,b,k}))}; }
+function monthGeo(){ const [y,m]=state.planMonth.split('-').map(Number), days=new Date(y,m,0).getDate(), t0=new Date(y,m-1,1).getTime(), t1=new Date(y,m,1).getTime(), HW=2, DW=48; return {y,m,days,t0,t1,HW,DW,W:days*DW}; }
+function monthItems(items,mk,ctx){ const [y,m]=mk.split('-').map(Number), t0=new Date(y,m-1,1).getTime(), t1=new Date(y,m,1).getTime(); return items.filter(it=>itemStart(it,ctx)<t1&&endMs(it,ctx)>t0); }
+// сдвигает позиции линии вперёд, если они налезают друг на друга
+function pushOverlaps(items,lineId,ctx){
+  const changed=[]; let prevEnd=0;
+  items.filter(i=>i.lineId===lineId).sort((a,b)=>itemStart(a,ctx)-itemStart(b,ctx)).forEach(it=>{
+    if(prevEnd&&itemStart(it,ctx)<prevEnd-60e3){ it.start=toDT(prevEnd); changed.push(it); }
+    prevEnd=Math.max(prevEnd,endMs(it,ctx));
+  });
+  return changed;
+}
+function compactLine(items,lineId,ctx){
+  const changed=[]; let prevEnd=0;
+  items.filter(i=>i.lineId===lineId).sort((a,b)=>itemStart(a,ctx)-itemStart(b,ctx)).forEach((it,k)=>{
+    if(k&&Math.abs(tms(it.start)-prevEnd)>60e3&&endMs(it,ctx)>Date.now()){ it.start=toDT(prevEnd); changed.push(it); }
+    prevEnd=endMs(it,ctx);
+  });
+  return changed;
+}
+function overlapsCount(items,ctx){ let n=0; DB.lines.forEach(l=>{ let pe=0; items.filter(i=>i.lineId===l.id).sort((a,b)=>itemStart(a,ctx)-itemStart(b,ctx)).forEach(it=>{ if(pe&&itemStart(it,ctx)<pe-60e3) n++; pe=Math.max(pe,endMs(it,ctx)); }); }); return n; }
+function lineEnd(lineId,exceptId,ctx){ const its=ctxItems(ctx).filter(i=>i.lineId===lineId&&i.id!==exceptId); return its.length?Math.max(...its.map(i=>endMs(i,ctx))):null; }
+function orderFinish(o,ctx){ const its=ctxItems(ctx).filter(i=>i.orderId===o.id); return its.length?Math.max(...its.map(i=>endMs(i,ctx))):null; }
+function itemFact(it){
+  const rs=DB.output.filter(r=>r.planItemId===it.id), st=rs.map(r=>tms(r.startAt)).filter(isFinite), en=rs.map(r=>tms(r.endAt)).filter(isFinite);
+  return {good:rs.reduce((a,r)=>a+(+r.good||0),0),defect:rs.reduce((a,r)=>a+(+r.defect||0),0),start:st.length?Math.min(...st):null,end:en.length?Math.max(...en):null,recs:rs};
+}
+const runFor = it => DB.runs.find(r=>r.planItemId===it.id);
+function itemStatus(it,ctx,chk){
+  const f=itemFact(it), q=+it.qty||0, now=Date.now(), a=itemStart(it,ctx), b=endMs(it,ctx), o=byId(DB.orders,it.orderId), late=!!(o&&b>pd(o.due).getTime()+864e5);
+  const segs=itemSegs(it,ctx).filter(x=>x[2]==='r'), tot=segs.reduce((s,x)=>s+(x[1]-x[0]),0), el=segs.reduce((s,x)=>s+Math.max(0,Math.min(now,x[1])-x[0]),0), exp=tot?q*el/tot:0;
+  let st;
+  const run=runFor(it);
+  if(run) st=[run.writtenOff?'Завершено':'Отчёт без факта',run.writtenOff?'t-green':'t-amber'];
+  else if(q&&f.good>=q*0.98) st=['Выполнено','t-green'];
+  else if(now>=b&&f.good>=q*0.85) st=['Нет тех. отчёта','t-amber'];
+  else if(now<a) st=chk&&chk.lacks&&chk.lacks.length?['Ждёт сырьё','t-amber']:['Ожидает','t-gray'];
+  else if(now>=b) st=[`Не добрали −${short(q-f.good)}`,'t-red'];
+  else if(f.good<exp*0.9) st=[`Отстаём −${short(exp-f.good)}`,'t-red'];
+  else st=[`В работе ${P(q?f.good/q*100:0,0)}`,'t-blue'];
+  return {st,late,f,exp,o};
+}
+
+// ═════════════════════════════════════════════
+//  MATERIALS — пока нет тех. отчёта со списанием, позиция плана «держит» сырьё по нормам проекта
+// ═════════════════════════════════════════════
+function activePlanReq(ctx){
+  const today=iso(new Date());
+  return ctxItems(ctx).map(it=>{ const p=byId(DB.projects,it.projectId); if(!p) return null; const run=runFor(it); if(run&&run.writtenOff) return null;
+    const s=iso(new Date(itemStart(it,ctx))); return {it,p,d:s<today?today:s,overdue:endMs(it,ctx)<Date.now(),req:projectReq(p,+it.qty||0)}; })
+    .filter(Boolean).sort((x,y)=>x.d.localeCompare(y.d)||String(x.it.start).localeCompare(String(y.it.start)));
+}
+function demandForecast(ctx){
   const rows={};
   DB.raw.forEach(r=>rows[r.id]={r,stock:+r.qty||0,need:0,incoming:0,events:[]});
-  activePlanReq().forEach(({it,d,req})=>Object.entries(req).forEach(([rid,q])=>{ if(rows[rid]){ rows[rid].need+=q; rows[rid].events.push({d,q:-q,it}); } }));
+  activePlanReq(ctx).forEach(({it,d,req})=>Object.entries(req).forEach(([rid,q])=>{ if(rows[rid]){ rows[rid].need+=q; rows[rid].events.push({d,q:-q,it}); } }));
   DB.supplies.filter(s=>s.status!=='received').forEach(s=>{ if(rows[s.rawId]){ rows[s.rawId].incoming+=+s.qty||0; rows[s.rawId].events.push({d:s.date,q:+s.qty||0}); } });
   Object.values(rows).forEach(x=>{
     x.events.sort((a,b)=>a.d.localeCompare(b.d)||b.q-a.q);
@@ -514,10 +643,10 @@ function demandForecast(){
   });
   return rows;
 }
-function planMaterialCheck(){
+function planMaterialCheck(ctx){
   const sup=DB.supplies.filter(s=>s.status!=='received'), used={}, res={};
   const supBy=(rid,d)=>sup.filter(s=>s.rawId===rid&&s.date<=d).reduce((a,s)=>a+(+s.qty||0),0);
-  activePlanReq().forEach(({it,d,req})=>{
+  activePlanReq(ctx).forEach(({it,d,req})=>{
     const lacks=[];
     Object.entries(req).forEach(([rid,need])=>{
       const base=(+byId(DB.raw,rid)?.qty||0)-(used[rid]||0);
@@ -532,9 +661,9 @@ function planMaterialCheck(){
   return res;
 }
 function matTag(chk){
-  if(!chk) return '<span class="tag t-gray">выполнено</span>';
+  if(!chk) return '<span class="tag t-gray">списано</span>';
   if(!chk.lacks.length) return '<span class="tag t-green">сырьё есть</span>';
-  const tip=chk.lacks.map(l=>`${esc(rawName(l.rid))}: не хватает ${Q(l.lack)} ${esc(byId(DB.raw,l.rid)?.unit||'')}${l.when?' (поставка '+fdate(l.when)+')':''}`).join('<br>');
+  const tip=chk.lacks.map(l=>`${esc(rawName(l.rid))}: не хватает ${QU(l.lack,byId(DB.raw,l.rid)?.unit)} ${esc(byId(DB.raw,l.rid)?.unit||'')}${l.when?' (поставка '+fdate(l.when)+')':''}`).join('<br>');
   return chk.ready?`<span class="tag t-amber" data-tip="${tip}">дефицит · будет ${fdate(chk.ready)}</span>`:`<span class="tag t-red" data-tip="${tip}">дефицит · нет поставки</span>`;
 }
 
@@ -594,8 +723,8 @@ function renderDashboard(){
   }).join('')||'<div class="empty">Нет линий</div>';
   // сегодня по действующему плану
   const d0=new Date(); d0.setHours(0,0,0,0); const t0=d0.getTime(), t1=t0+864e5, now=Date.now();
-  const today=DB.plan.filter(it=>tms(it.start)<t1&&endMs(it)>t0).sort((a,b)=>a.start.localeCompare(b.start));
-  const todayRows=today.map(it=>{ const p=byId(DB.projects,it.projectId), a=tms(it.start), b=endMs(it), pr=Math.max(0,Math.min(1,(now-a)/(b-a)));
+  const today=DB.plan.filter(it=>itemStart(it)<t1&&endMs(it)>t0).sort((a,b)=>itemStart(a)-itemStart(b));
+  const todayRows=today.map(it=>{ const p=byId(DB.projects,it.projectId), a=itemStart(it), b=endMs(it), pr=Math.max(0,Math.min(1,(now-a)/(b-a)));
     return `<div class="hb"><div class="hb-top"><b><span class="sw" style="background:${pColor(p)}"></span>${esc(p?.name||'—')}${p?.quality?` <span class="tag t-amber" data-tip="${esc(p.quality).replace(/\n/g,'<br>')}">⚠ качество</span>`:''}</b><span>${esc(lineName(it.lineId))} · ${fdt(a)} → ${fdt(b)}</span></div><div class="track"><div class="fill" style="width:${pr*100}%;background:${pColor(p)}"></div></div></div>`; }).join('');
   const wd=Array(7).fill(0).map(()=>({s:0,days:new Set()}));
   recs.forEach(r=>{ const i=(pd(r.date).getDay()+6)%7; wd[i].s+=+r.good||0; wd[i].days.add(r.date); });
@@ -637,6 +766,9 @@ function renderDashboard(){
 // ═════════════════════════════════════════════
 //  OUTPUT JOURNAL
 // ═════════════════════════════════════════════
+function shiftWindow(date,shift){ const s=shiftDefs().find(x=>+x.n===+shift)||shiftDefs()[0], base=pd(date).getTime(), a=base+hm(s.from)*60e3; let b=base+hm(s.to)*60e3; if(b<=a) b+=864e5; return [a,b]; }
+const hhmm = ms => { if(!isFinite(ms)||ms==null) return '—'; const d=new Date(ms); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+function curShiftDate(){ const now=Date.now(); for(const back of [0,-1]) for(const s of shiftDefs()){ const d=iso(addD(new Date(),back)), [a,b]=shiftWindow(d,s.n); if(now>=a&&now<b) return {date:d,shift:+s.n}; } return {date:iso(new Date()),shift:1}; }
 function renderOutput(){
   const recs=filtered(inRange(state.from,state.to)).sort((a,b)=>b.date.localeCompare(a.date)||b.shift-a.shift||(b.ts||0)-(a.ts||0));
   const m=metrics(recs,state.from,state.to), shown=recs.slice(0,300);
@@ -644,33 +776,51 @@ function renderOutput(){
   <div class="toolbar">${lineFilter()}<span class="muted" style="font-weight:600">${recs.length} записей · ${N(m.good)} годных · брак ${P(m.defPct)}</span><div class="sp"></div>
     ${can('output')?`<button class="btn btn-p" onclick="openOutputModal()">+ Внести выпуск</button>`:''}</div>
   <div class="card">${shown.length?`<div class="tw flush"><table>
-    <tr><th>Дата</th><th>Смена</th><th>Линия</th><th>Проект</th><th>Заказ</th><th class="num">Годные</th><th class="num">Брак</th><th>Причина</th><th class="num">Наладка</th><th class="num">Простой</th><th>Оператор</th><th></th></tr>
-    ${shown.map(r=>`<tr><td>${fdate(r.date)}</td><td>${r.shift}</td><td>${esc(lineName(r.lineId))}</td><td>${esc(projName(r.projectId))}</td><td>${esc(byId(DB.orders,r.orderId)?.no||'—')}</td>
+    <tr><th>Дата</th><th>Смена</th><th>Линия</th><th>Проект</th><th>Факт: начали — закончили</th><th class="num">Годные</th><th class="num">Брак</th><th>Причина</th><th class="num">Наладка</th><th class="num">Простой</th><th>Оператор</th><th></th></tr>
+    ${shown.map(r=>`<tr><td>${fdate(r.date)}</td><td>${r.shift}</td><td>${esc(lineName(r.lineId))}</td><td>${esc(projName(r.projectId))}${r.planItemId?'':' <span class="tag t-gray" data-tip="Запись не привязана к позиции плана">вне плана</span>'}</td>
+      <td>${r.startAt?`${hhmm(tms(r.startAt))} — ${hhmm(tms(r.endAt))}`:'<span class="muted">—</span>'}</td>
       <td class="num"><b>${N(r.good)}</b></td><td class="num">${N(r.defect)}</td><td class="muted">${r.defect?esc(r.reason||'—'):''}</td><td class="num">${r.setup?r.setup+' мин':'—'}</td><td class="num">${r.downtime?r.downtime+' мин':'—'}</td><td>${esc(r.operator||'')}</td>
       <td>${can('edit')?`<button class="btn btn-s btn-sm" onclick="openOutputModal('${r.id}')">✎</button> <button class="btn btn-d btn-sm" onclick="delItem('output','${r.id}')">✕</button>`:''}</td></tr>`).join('')}
   </table></div>${recs.length>300?`<div class="muted" style="padding:14px 0 0;font-size:12px">Показаны последние 300 записей.</div>`:''}`:'<div class="empty">Нет записей за выбранный период</div>'}</div>`;
 }
 function opts(arr,sel,label=x=>x.name,empty=''){ return (empty?`<option value="">${empty}</option>`:'')+arr.map(x=>`<option value="${x.id}" ${x.id===sel?'selected':''}>${esc(label(x))}</option>`).join(''); }
+function outItemOpts(lineId,date,sel){
+  const d0=pd(date).getTime(), its=DB.plan.filter(i=>i.lineId===lineId&&itemStart(i)<d0+2*864e5&&endMs(i)>d0-864e5).sort((a,b)=>itemStart(a)-itemStart(b));
+  return `<option value="">— вне плана —</option>`+its.map(i=>`<option value="${i.id}" ${i.id===sel?'selected':''}>${esc(projName(i.projectId))} · ${fdt(itemStart(i))} → ${fdt(endMs(i))}</option>`).join('');
+}
+function outRefresh(which){
+  const F=$('#mForm').elements;
+  if(which==='shift'){ const [a,b]=shiftWindow(F.date.value,F.shift.value); F.startAt.value=toDT(a); F.endAt.value=toDT(b); }
+  if(which!=='item') F.planItemId.innerHTML=outItemOpts(F.lineId.value,F.date.value,F.planItemId.value);
+  const it=byId(DB.plan,F.planItemId.value); if(it&&(which==='item'||which==='line')){ F.projectId.value=it.projectId; if(it.orderId) F.orderId.value=it.orderId; }
+}
 function openOutputModal(id){
   if(!can('output')) return toast('Нет прав на внесение выпуска');
-  const r=id?byId(DB.output,id):{date:iso(new Date()),shift:1,lineId:DB.lines[0]?.id,operator:state.me.name,good:'',defect:0,setup:0,downtime:0};
-  if(!id){ const it=DB.plan.find(i=>tms(i.start)<=Date.now()&&endMs(i)>Date.now()&&i.lineId===r.lineId); if(it){ r.projectId=it.projectId; r.orderId=it.orderId; } }
+  let r;
+  if(id) r=byId(DB.output,id);
+  else { const cs=curShiftDate(), [a,b]=shiftWindow(cs.date,cs.shift); r={date:cs.date,shift:cs.shift,lineId:DB.lines[0]?.id,operator:state.me.name,good:'',defect:0,setup:0,downtime:0,startAt:toDT(a),endAt:toDT(Math.min(b,Math.max(a,Date.now())))};
+    const it=DB.plan.find(i=>i.lineId===r.lineId&&itemStart(i)<=Date.now()&&endMs(i)>Date.now()); if(it){ r.planItemId=it.id; r.projectId=it.projectId; r.orderId=it.orderId; } }
+  if(!r.startAt){ const [a,b]=shiftWindow(r.date,r.shift); r.startAt=toDT(a); r.endAt=toDT(b); }
   const openOrders=DB.orders.filter(o=>!['shipped','done'].includes(orderStatus(o))||o.id===r.orderId);
   modal(id?'Редактировать запись':'Выпуск за смену',`
-    <div class="frow"><div class="fg"><label class="fl">Дата</label><input class="fi" type="date" name="date" value="${r.date}"></div>
-    <div class="fg"><label class="fl">Смена</label><select class="fi" name="shift">${[1,2,3].map(s=>`<option ${+r.shift===s?'selected':''}>${s}</option>`).join('')}</select></div></div>
-    <div class="fg"><label class="fl">Линия</label><select class="fi" name="lineId">${opts(DB.lines,r.lineId)}</select></div>
-    <div class="fg"><label class="fl">Проект</label><select class="fi" name="projectId">${opts(DB.projects.filter(p=>p.status!=='Архив'||p.id===r.projectId),r.projectId,p=>p.name+(p.client?' · '+p.client:''))}</select></div>
-    <div class="fg"><label class="fl">Заказ (необязательно)</label><select class="fi" name="orderId">${opts(openOrders,r.orderId,o=>o.no+' · '+projName(o.projectId),'— без заказа —')}</select></div>
+    <div class="frow3"><div class="fg"><label class="fl">Дата смены</label><input class="fi" type="date" name="date" value="${r.date}" onchange="outRefresh('shift')"></div>
+    <div class="fg"><label class="fl">Смена</label><select class="fi" name="shift" onchange="outRefresh('shift')">${shiftDefs().map(s=>`<option value="${s.n}" ${+r.shift===+s.n?'selected':''}>${s.n} (${s.from}–${s.to})</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Линия</label><select class="fi" name="lineId" onchange="outRefresh('line')">${opts(DB.lines,r.lineId)}</select></div></div>
+    <div class="fg"><label class="fl">Позиция действующего плана</label><select class="fi" name="planItemId" onchange="outRefresh('item')">${outItemOpts(r.lineId,r.date,r.planItemId)}</select></div>
+    <div class="frow"><div class="fg"><label class="fl">Проект</label><select class="fi" name="projectId">${opts(DB.projects.filter(p=>p.status!=='Архив'||p.id===r.projectId),r.projectId,p=>p.name)}</select></div>
+    <div class="fg"><label class="fl">Заказ</label><select class="fi" name="orderId">${opts(openOrders,r.orderId,o=>o.no+' · '+projName(o.projectId),'— без заказа —')}</select></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Факт: приступили</label><input class="fi" type="datetime-local" name="startAt" value="${r.startAt}"></div>
+    <div class="fg"><label class="fl">Факт: закончили</label><input class="fi" type="datetime-local" name="endAt" value="${r.endAt}"></div></div>
     <div class="frow"><div class="fg"><label class="fl">Годные, шт</label><input class="fi" type="number" min="0" name="good" value="${r.good}" inputmode="numeric"></div>
     <div class="fg"><label class="fl">Брак, шт</label><input class="fi" type="number" min="0" name="defect" value="${r.defect||0}" inputmode="numeric"></div></div>
     <div class="fg"><label class="fl">Основная причина брака</label><select class="fi" name="reason"><option value="">—</option>${(DB.settings.defectReasons||[]).map(x=>`<option ${x===r.reason?'selected':''}>${esc(x)}</option>`).join('')}</select></div>
-    <div class="frow"><div class="fg"><label class="fl">Переналадка, мин</label><input class="fi" type="number" min="0" name="setup" value="${r.setup||0}"></div>
+    <div class="frow"><div class="fg"><label class="fl">Наладка, мин</label><input class="fi" type="number" min="0" name="setup" value="${r.setup||0}"></div>
     <div class="fg"><label class="fl">Прочий простой, мин</label><input class="fi" type="number" min="0" name="downtime" value="${r.downtime||0}"></div></div>
     <div class="fg"><label class="fl">Оператор</label><input class="fi" name="operator" value="${esc(r.operator||'')}"></div>`,
   async f=>{
     if(f.good===''){ toast('Укажите количество годных'); return false; }
-    const rec={...(id?r:{}),id:id||uid(),date:f.date,shift:+f.shift,lineId:f.lineId,projectId:f.projectId,orderId:f.orderId||'',good:+f.good,defect:+f.defect||0,reason:f.reason,setup:+f.setup||0,downtime:+f.downtime||0,operator:f.operator,ts:Date.now(),by:state.me.id};
+    if(f.startAt&&f.endAt&&tms(f.endAt)<=tms(f.startAt)){ toast('Время окончания должно быть позже начала'); return false; }
+    const rec={...(id?r:{}),id:id||uid(),date:f.date,shift:+f.shift,lineId:f.lineId,planItemId:f.planItemId||'',projectId:f.projectId,orderId:f.orderId||'',startAt:f.startAt,endAt:f.endAt,good:+f.good,defect:+f.defect||0,reason:f.reason,setup:+f.setup||0,downtime:+f.downtime||0,operator:f.operator,ts:Date.now(),by:state.me.id};
     await Store.put('output',rec); toast('Выпуск сохранён');
   });
 }
@@ -699,26 +849,28 @@ function renderQuality(){
 }
 
 // ═════════════════════════════════════════════
-//  RAW — сырьё
+//  RAW — сырьё и справочник категорий
 // ═════════════════════════════════════════════
 const UNITS=['кг','л','г','шт','м','м²','рул.'];
+function rawCats(){ const s=A(DB.settings.rawCats).length?A(DB.settings.rawCats):DEFAULT_SETTINGS.rawCats; return [...s,...new Set(DB.raw.map(r=>r.cat).filter(c=>c&&!s.includes(c)))]; }
 function renderRaw(){
-  const q=state.q.toLowerCase();
-  const list=DB.raw.filter(r=>!q||(r.name+' '+(r.cat||'')+' '+(r.supplier||'')).toLowerCase().includes(q)).sort((a,b)=>(a.cat||'').localeCompare(b.cat||'')||a.name.localeCompare(b.name));
+  const q=state.q.toLowerCase(), cats=rawCats();
+  const list=DB.raw.filter(r=>(!state.rawCat||r.cat===state.rawCat)&&(!q||(r.name+' '+(r.cat||'')+' '+(r.supplier||'')).toLowerCase().includes(q))).sort((a,b)=>cats.indexOf(a.cat)-cats.indexOf(b.cat)||a.name.localeCompare(b.name));
   const used=id=>DB.semis.filter(s=>A(s.items).some(it=>it.kind==='raw'&&it.id===id)).length+DB.projects.filter(p=>p.tareId===id).length;
-  $('#content').innerHTML=`<div class="toolbar">${searchBox('Поиск сырья, категории, поставщика')}<span class="muted" style="font-weight:600">${DB.raw.length} позиций · на складе на ${money(DB.raw.reduce((a,r)=>a+(+r.qty||0)*(+r.cost||0),0))}</span><div class="sp"></div>${can('edit')?`<button class="btn btn-p" onclick="openRawModal()">+ Сырьё</button>`:''}</div>
+  $('#content').innerHTML=`<div class="toolbar">${searchBox('Поиск сырья, поставщика')}<select class="sel" onchange="state.rawCat=this.value;render()"><option value="">Все категории</option>${cats.map(c=>`<option ${c===state.rawCat?'selected':''}>${esc(c)}</option>`).join('')}</select>
+    <span class="muted" style="font-weight:600">${list.length} поз. · на складе на ${money(list.reduce((a,r)=>a+(+r.qty||0)*(+r.cost||0),0))}</span><div class="sp"></div>
+    ${can('edit')?`<button class="btn btn-s" onclick="openCatsModal()">Категории</button><button class="btn btn-p" onclick="openRawModal()">+ Сырьё</button>`:''}</div>
   <div class="card">${list.length?`<div class="tw flush"><table><tr><th>Наименование</th><th>Категория</th><th>Ед.</th><th class="num">Цена за ед.</th><th class="num">Остаток</th><th class="num">Мин.</th><th>Поставщик</th><th class="num">Срок поставки</th><th class="num">Используется</th></tr>
-  ${list.map(r=>`<tr class="click" onclick="${can('edit')?`openRawModal('${r.id}')`:''}"><td><b>${esc(r.name)}</b></td><td class="muted">${esc(r.cat||'')}</td><td>${esc(r.unit)}</td><td class="num">${money(r.cost)}</td>
-    <td class="num">${(+r.qty||0)<(+r.min||0)?`<span class="tag t-red">${Q(r.qty)}</span>`:Q(r.qty)}</td><td class="num muted">${Q(r.min)}</td><td class="muted">${esc(r.supplier||'')}</td><td class="num muted">${r.leadDays?r.leadDays+' дн.':'—'}</td><td class="num">${used(r.id)||'—'}</td></tr>`).join('')}
-  </table></div>`:'<div class="empty">Сырья пока нет — добавьте первую позицию</div>'}</div>`;
+  ${list.map(r=>`<tr class="click" onclick="${can('edit')?`openRawModal('${r.id}')`:''}"><td><b>${esc(r.name)}</b></td><td><span class="tag t-gray">${esc(r.cat||'—')}</span></td><td>${esc(r.unit)}</td><td class="num">${money(r.cost)}</td>
+    <td class="num">${(+r.qty||0)<(+r.min||0)?`<span class="tag t-red">${QU(r.qty,r.unit)}</span>`:QU(r.qty,r.unit)}</td><td class="num muted">${QU(r.min,r.unit)}</td><td class="muted">${esc(r.supplier||'')}</td><td class="num muted">${r.leadDays?r.leadDays+' дн.':'—'}</td><td class="num">${used(r.id)||'—'}</td></tr>`).join('')}
+  </table></div>`:'<div class="empty">Сырья нет — добавьте первую позицию</div>'}</div>`;
 }
 function searchBox(ph){ return `<input class="sel" id="qBox" style="min-width:240px" placeholder="${ph}" value="${esc(state.q)}" oninput="state.q=this.value;const p=this.selectionStart;render();const e=$('#qBox');e.focus();e.setSelectionRange(p,p)">`; }
 function openRawModal(id,onCreated){
-  const r=id?byId(DB.raw,id):{name:'',cat:'',unit:'кг',cost:'',qty:0,min:0,supplier:'',leadDays:''};
-  const cats=[...new Set(DB.raw.map(x=>x.cat).filter(Boolean))];
+  const r=id?byId(DB.raw,id):{name:'',cat:state.rawCat||rawCats()[0],unit:'кг',cost:'',qty:0,min:0,supplier:'',leadDays:''};
   modal(id?'Сырьё':'Новое сырьё',`
     <div class="fg"><label class="fl">Наименование</label><input class="fi" name="name" value="${esc(r.name)}" autofocus></div>
-    <div class="frow"><div class="fg"><label class="fl">Категория</label><input class="fi" name="cat" value="${esc(r.cat||'')}" list="rawCats" placeholder="Пигменты, лаки, тара…"><datalist id="rawCats">${cats.map(c=>`<option>${esc(c)}</option>`).join('')}</datalist></div>
+    <div class="frow"><div class="fg"><label class="fl">Категория <button type="button" class="link" onclick="closeModal();openCatsModal()">(изменить список)</button></label><select class="fi" name="cat">${rawCats().map(c=>`<option ${c===r.cat?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
     <div class="fg"><label class="fl">Единица измерения</label><select class="fi" name="unit">${UNITS.map(u=>`<option ${u===r.unit?'selected':''}>${u}</option>`).join('')}</select></div></div>
     <div class="frow3"><div class="fg"><label class="fl">Цена за ед., ${esc(DB.settings.currency||'€')}</label><input class="fi" type="number" step="any" min="0" name="cost" value="${r.cost}"></div>
     <div class="fg"><label class="fl">${id?'Остаток (через склад)':'Начальный остаток'}</label><input class="fi" type="number" step="any" name="qty" value="${r.qty||0}" ${id?'disabled':''}></div>
@@ -727,7 +879,7 @@ function openRawModal(id,onCreated){
     <div class="fg"><label class="fl">Срок поставки, дней</label><input class="fi" type="number" min="0" name="leadDays" value="${r.leadDays||''}"></div></div>`,
   async f=>{
     if(!f.name.trim()){ toast('Введите наименование'); return false; }
-    const rec={...(id?r:{}),id:id||uid(),name:f.name.trim(),cat:f.cat.trim(),unit:f.unit,cost:+f.cost||0,min:+f.min||0,supplier:f.supplier.trim(),leadDays:+f.leadDays||0,qty:id?(+r.qty||0):(+f.qty||0)};
+    const rec={...(id?r:{}),id:id||uid(),name:f.name.trim(),cat:f.cat,unit:f.unit,cost:+f.cost||0,min:+f.min||0,supplier:f.supplier.trim(),leadDays:+f.leadDays||0,qty:id?(+r.qty||0):(+f.qty||0)};
     await Store.put('raw',rec); toast('Сырьё сохранено'); if(onCreated) onCreated(rec);
   }, 'Сохранить', id&&can('admin')?`<button class="btn btn-d" type="button" onclick="delRaw('${id}')">Удалить</button>`:'');
 }
@@ -735,6 +887,21 @@ async function delRaw(id){
   if(DB.semis.some(s=>A(s.items).some(it=>it.id===id))) return toast('Сырьё используется в рецептурах — сначала уберите его оттуда');
   if(!confirm('Удалить сырьё?')) return; closeModal(); await Store.del('raw',id); toast('Удалено');
 }
+const catRow=(c,i)=>{ const n=DB.raw.filter(r=>r.cat===c).length; return `<div class="cat-row" data-old="${esc(c)}"><span class="muted" style="cursor:grab">≡</span><input class="fi" value="${esc(c)}"><span class="muted" style="font-size:12px;min-width:56px;text-align:right">${c?n+' поз.':'новая'}</span><button type="button" class="btn btn-s btn-sm" onclick="catMove(this,-1)">↑</button><button type="button" class="btn btn-s btn-sm" onclick="catMove(this,1)">↓</button><button type="button" class="btn btn-s btn-sm" onclick="catDel(this)">✕</button></div>`; };
+function openCatsModal(){
+  modal('Категории сырья',`<div class="hint" style="margin-bottom:12px">Фиксированный список: при создании сырья категория выбирается из него. Переименование обновит все позиции этой категории. Порядок здесь — порядок на складе и в списках.</div>
+    <div id="catRows">${rawCats().map(catRow).join('')}</div><button type="button" class="btn btn-s btn-sm" style="margin-top:6px" onclick="document.getElementById('catRows').insertAdjacentHTML('beforeend',catRow('',0));document.querySelector('#catRows .cat-row:last-child input').focus()">+ Категория</button>`,
+  async()=>{
+    const rows=[...document.querySelectorAll('#catRows .cat-row')], list=[], ren={};
+    rows.forEach(r=>{ const v=r.querySelector('input').value.trim(), old=r.dataset.old; if(!v) return; if(list.includes(v)) return; list.push(v); if(old&&old!==v) ren[old]=v; });
+    if(!list.length){ toast('Нужна хотя бы одна категория'); return false; }
+    const batch=DB.raw.filter(r=>ren[r.cat]).map(r=>({col:'raw',obj:{...r,cat:ren[r.cat]}}));
+    await Store.settings({...DB.settings,rawCats:list}); if(batch.length) await Store.batch(batch);
+    toast('Категории сохранены'+(batch.length?` · обновлено позиций: ${batch.length}`:''));
+  });
+}
+function catDel(btn){ const row=btn.closest('.cat-row'), old=row.dataset.old; if(old&&DB.raw.some(r=>r.cat===old)) return toast('В категории есть сырьё — сначала перенесите его в другую'); row.remove(); }
+function catMove(btn,dir){ const row=btn.closest('.cat-row'), sib=dir<0?row.previousElementSibling:row.nextElementSibling; if(!sib) return; dir<0?row.parentNode.insertBefore(row,sib):row.parentNode.insertBefore(sib,row); }
 
 // ═════════════════════════════════════════════
 //  SEMIS — полуфабрикаты (рецептуры)
@@ -870,7 +1037,7 @@ function renderProjectEdit(){
     <td class="num muted">${st.semiId&&+st.norm?money(stationKg(st.norm,1000)*unitCost('semi',st.semiId)):'—'}</td>
     <td style="white-space:nowrap">${ro?'':`<button class="btn btn-s btn-sm" onclick="stMove(${i},-1)" title="Выше">↑</button> <button class="btn btn-s btn-sm" onclick="stMove(${i},1)" title="Ниже">↓</button> <button class="btn btn-s btn-sm" onclick="stDel(${i})">✕</button>`}</td></tr>`).join('');
   const runs=d.id?DB.runs.filter(r=>r.projectId===d.id).sort((a,b)=>(b.dateTo||'').localeCompare(a.dateTo||'')):[];
-  const runRows=runs.map(r=>{ const t=runTotals(r); return `<tr class="click" onclick="openRun('${r.projectId}','${r.id}')"><td><b>${fdate(r.dateFrom)}${r.dateTo&&r.dateTo!==r.dateFrom?' — '+fdate(r.dateTo):''}</b></td><td>${esc(lineName(r.lineId))}</td><td class="num">${N(r.qtyGood)}</td>
+  const runRows=runs.map(r=>{ const t=runTotals(r); return `<tr class="click" onclick="openRun('${r.projectId}','${r.id}')"><td><b>${r.startAt?fdt(tms(r.startAt)):fdate(r.dateFrom)}</b><div class="muted" style="font-size:12px">→ ${r.endAt?fdt(tms(r.endAt)):fdate(r.dateTo||r.dateFrom)}</div></td><td>${esc(lineName(r.lineId))}</td><td class="num">${N(r.qtyGood)}</td>
     <td class="num">${r.setupFact?N(r.setupFact)+' / '+N(d.setupMin):'—'}</td><td class="num">${r.speedFact?N(r.speedFact)+' / '+N(d.speed):'—'}</td>
     <td class="num">${t.fact?`${Q(t.fact,1)} / ${Q(t.plan,1)} кг <span class="tag ${Math.abs(t.fact/t.plan-1)<=.05?'t-green':'t-amber'}">${t.fact>=t.plan?'+':''}${P((t.fact/t.plan-1)*100,0)}</span>`:'<span class="muted">факт не внесён</span>'}</td>
     <td>${r.writtenOff?'<span class="tag t-green">списано</span>':'<span class="tag t-gray">не списано</span>'}</td></tr>`; }).join('');
@@ -883,16 +1050,18 @@ function renderProjectEdit(){
     <div class="card"><div class="card-h"><div class="card-t">Основное и планирование</div></div>
       <div class="frow"><div class="fg"><label class="fl">Название проекта</label><input class="fi" value="${esc(d.name)}" ${ro?'disabled':''} oninput="D('name',this.value)"></div>
       <div class="fg"><label class="fl">Клиент</label><input class="fi" value="${esc(d.client||'')}" ${ro?'disabled':''} oninput="D('client',this.value)"></div></div>
-      <div class="frow3"><div class="fg"><label class="fl">Линия</label><select class="fi" ${ro?'disabled':''} onchange="D('lineId',this.value);renderProjectEdit()">${opts(DB.lines,d.lineId)}</select></div>
+      <div class="frow4"><div class="fg"><label class="fl">Линия</label><select class="fi" ${ro?'disabled':''} onchange="D('lineId',this.value);renderProjectEdit()">${opts(DB.lines,d.lineId)}</select></div>
       <div class="fg"><label class="fl">Тара (изделие)</label><select class="fi" ${ro?'disabled':''} onchange="D('tareId',this.value)">${opts(tares,d.tareId,r=>r.name,'— не указана —')}</select></div>
-      <div class="fg"><label class="fl">Статус</label><select class="fi" ${ro?'disabled':''} onchange="D('status',this.value)">${PSTATUS.map(s=>`<option ${s===d.status?'selected':''}>${s}</option>`).join('')}</select></div></div>
+      <div class="fg"><label class="fl">Статус</label><select class="fi" ${ro?'disabled':''} onchange="D('status',this.value)">${PSTATUS.map(s=>`<option ${s===d.status?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">Цвет в плане</label><input class="fi" type="color" style="height:42px;padding:4px" value="${d.color||pColor(d)}" ${ro?'disabled':''} onchange="D('color',this.value)"></div></div>
       <div class="frow3"><div class="fg"><label class="fl">План: скорость, шт/мин</label><input class="fi" type="number" min="1" value="${d.speed}" ${ro?'disabled':''} onchange="D('speed',+this.value);renderProjectEdit()"></div>
       <div class="fg"><label class="fl">План: наладка, мин</label><input class="fi" type="number" min="0" value="${d.setupMin}" ${ro?'disabled':''} onchange="D('setupMin',+this.value);renderProjectEdit()"></div>
-      <div class="fg"><label class="fl">Цвет в плане</label><input class="fi" type="color" style="height:42px;padding:4px" value="${d.color||pColor(d)}" ${ro?'disabled':''} onchange="D('color',this.value)"></div></div>
+      <div class="fg"><label class="fl">Наладка при перезапуске, мин</label><input class="fi" type="number" min="0" value="${d.restartMin??''}" placeholder="как у линии: ${N(line?.restartMin)}" ${ro?'disabled':''} onchange="D('restartMin',this.value===''?'':+this.value)"></div></div>
     </div>
     <div class="card"><div class="card-h"><div class="card-t">Расчёт</div></div>
       <div class="stat"><span>Выработка в час / смену</span><b>${N(d.speed*60)} / ${N(d.speed*60*sh)} шт</b></div>
-      <div class="stat"><span>100 000 шт займут</span><b>${Q(planHours(d,100000),1)} ч (с наладкой)</b></div>
+      <div class="stat"><span>100 000 шт: чистое время + наладка</span><b>${Q(planHours(d,100000),1)} ч</b></div>
+      <div class="stat"><span>Перезапуск после остановки линии</span><b>${N(d.restartMin!==''&&d.restartMin!=null?d.restartMin:line?.restartMin)} мин</b></div>
       <div class="stat"><span>Материалы на 1000 шт</span><b>${Q(kg,3)} кг</b></div>
       <div class="stat"><span>Себестоимость покрытия / 1000 шт</span><b>${money(cost)}</b></div>
       <div class="stat"><span>Станций задействовано</span><b>${d.stations.filter(s=>s.semiId).length}${line?.stations?' из '+line.stations:''}</b></div>
@@ -911,109 +1080,131 @@ function renderProjectEdit(){
 }
 async function saveProject(){
   const d=state.draft; if(!d.name.trim()) return toast('Введите название проекта');
-  const rec={...d,id:d.id||uid(),name:d.name.trim(),speed:+d.speed||1,setupMin:+d.setupMin||0,
+  const rec={...d,id:d.id||uid(),name:d.name.trim(),speed:+d.speed||1,setupMin:+d.setupMin||0,restartMin:d.restartMin===''||d.restartMin==null?'':+d.restartMin,
     stations:d.stations.map(st=>({semiId:st.semiId||'',norm:+st.norm||0,visc:st.visc||'',press:st.press||'',nozzle:st.nozzle||'',note:st.note||''})),updated:iso(new Date())};
   await Store.put('projects',rec); state.draft=clone(rec); render(); toast('Проект сохранён');
 }
 
 // ═════════════════════════════════════════════
-//  RUNS — тех. отчёт наработки
+//  RUNS — тех. отчёт наработки: факт по компонентам и автосписание со склада
 // ═════════════════════════════════════════════
-function runTotals(r){
-  const q=(+r.qtyGood||0)+(+r.qtyDefect||0); let plan=0, fact=0;
-  A(r.stations).forEach(st=>{ const pk=stationKg(st.norm,q); plan+=pk; if(st.factKg!==''&&st.factKg!=null) fact+=+st.factKg; });
-  return {plan,fact};
+function runPlanRaw(r){ // плановый расход сырья по нормам: станции + тара
+  const q=(+r.qtyGood||0)+(+r.qtyDefect||0), acc={};
+  A(r.stations).forEach(st=>{ const kg=stationKg(st.norm,q); Object.entries(st.rawPerKg||{}).forEach(([rid,per])=>acc[rid]=(acc[rid]||0)+per*kg); });
+  if(r.tareId) acc[r.tareId]=(acc[r.tareId]||0)+q;
+  return acc;
 }
-function openRun(pid,rid){
+function runTotals(r){
+  const q=(+r.qtyGood||0)+(+r.qtyDefect||0), plan=runPlanRaw(r), fact=r.rawFact||{}; let cp=0, cf=0, kgP=0, kgF=0, filled=0;
+  Object.keys({...plan,...fact}).forEach(rid=>{ const raw=byId(DB.raw,rid), c=+raw?.cost||0, p=plan[rid]||0, f=fact[rid]; cp+=p*c; if(raw?.unit==='кг'||raw?.unit==='л'){ kgP+=p; }
+    if(f!==''&&f!=null){ cf+=(+f)*c; filled++; if(raw?.unit==='кг'||raw?.unit==='л') kgF+=+f; } });
+  return {q,plan:kgP,fact:filled?kgF:0,costPlan:cp,costFact:cf,filled};
+}
+function openRun(pid,rid,planItemId){
   const p=byId(DB.projects,pid); if(!p) return toast('Проект не найден');
-  if(rid){ state.draft=clone(byId(DB.runs,rid)); state.draft.stations=A(state.draft.stations); state.draft.settings=A(state.draft.settings); }
+  if(rid){ state.draft=clone(byId(DB.runs,rid)); }
   else {
-    const last=lastRun(pid), t=iso(new Date());
-    state.draft={id:null,projectId:pid,lineId:p.lineId,dateFrom:t,dateTo:t,qtyGood:'',qtyDefect:'',setupFact:'',speedFact:'',note:'',writtenOff:false,
+    const last=lastRun(pid);
+    let it=planItemId?byId(DB.plan,planItemId):DB.plan.filter(i=>i.projectId===pid&&!runFor(i)&&itemStart(i)<Date.now()).sort((a,b)=>endMs(b)-endMs(a))[0];
+    const f=it?itemFact(it):null, a=it?(f.start||itemStart(it)):Date.now()-8*H, b=it?(f.end||Math.min(endMs(it),Date.now())):Date.now();
+    state.draft={id:null,projectId:pid,planItemId:it?.id||'',lineId:it?.lineId||p.lineId,tareId:p.tareId||'',startAt:toDT(a),endAt:toDT(b),dateFrom:iso(new Date(a)),dateTo:iso(new Date(b)),
+      qtyGood:f?.good||'',qtyDefect:f?.defect||'',setupFact:f?f.recs.reduce((s,r)=>s+(+r.setup||0),0)||'':'',speedFact:'',note:'',rawFact:{},writtenMap:{},writtenOff:false,
       settings:A(last?.settings).length?A(last.settings).map(x=>({k:x.k,v:x.v})):(DB.settings.machineParams||[]).map(k=>({k,v:''})),
-      stations:A(p.stations).filter(st=>st.semiId).map((st,i)=>{ const s=byId(DB.semis,st.semiId), ls=A(last?.stations).find(x=>x.n===i+1&&x.semiId===st.semiId);
+      stations:A(p.stations).map((st,i)=>({st,i})).filter(x=>x.st.semiId).map(({st,i})=>{ const s=byId(DB.semis,st.semiId), ls=A(last?.stations).find(x=>x.n===i+1&&x.semiId===st.semiId);
         return {n:i+1,semiId:st.semiId,name:s?.name||'—',color:s?.color||'#ddd',ver:s?.ver||1,rawPerKg:s?expand('semi',s.id,1):{},norm:+st.norm||0,
           visc:ls?.visc??st.visc??'',press:ls?.press??st.press??'',nozzle:ls?.nozzle??st.nozzle??'',factKg:''}; })};
   }
+  const d=state.draft; d.stations=A(d.stations); d.settings=A(d.settings); d.rawFact=d.rawFact||{}; d.writtenMap=d.writtenMap||{};
+  if(!d.startAt&&d.dateFrom){ d.startAt=d.dateFrom+'T06:00'; d.endAt=(d.dateTo||d.dateFrom)+'T22:00'; }
   state.sec='runEdit'; render(); scrollTo(0,0);
 }
 function DR(k,v){ state.draft[k]=v; }
 function DRS(i,k,v){ state.draft.stations[i][k]=v; }
+function DRF(rid,v){ state.draft.rawFact[rid]=v===''?'':+v; renderRunEdit(); }
+function runFactFromPlan(){ const pl=runPlanRaw(state.draft); Object.entries(pl).forEach(([rid,v])=>state.draft.rawFact[rid]=Math.round(v*1000)/1000); renderRunEdit(); toast('Факт заполнен по плану — поправьте по результатам инвентаризации'); }
+function runFactFromStations(){
+  const d=state.draft, acc={}; let n=0;
+  d.stations.forEach(st=>{ if(st.factKg===''||st.factKg==null) return; n++; Object.entries(st.rawPerKg||{}).forEach(([rid,per])=>acc[rid]=(acc[rid]||0)+per*(+st.factKg)); });
+  if(!n) return toast('Сначала внесите факт кг хотя бы по одной станции');
+  Object.entries(acc).forEach(([rid,v])=>d.rawFact[rid]=Math.round(v*1000)/1000); renderRunEdit(); toast('Факт по сырью пересчитан из станций через рецептуры');
+}
 function renderRunEdit(){
   const d=state.draft; if(!d) return go('projects');
-  const p=byId(DB.projects,d.projectId), ro=!can('edit'), q=(+d.qtyGood||0)+(+d.qtyDefect||0);
-  const rawPlan={}, rawFact={};
-  d.stations.forEach(st=>{ const pk=stationKg(st.norm,q), hasF=st.factKg!==''&&st.factKg!=null;
-    Object.entries(st.rawPerKg||{}).forEach(([rid,per])=>{ rawPlan[rid]=(rawPlan[rid]||0)+per*pk; if(hasF) rawFact[rid]=(rawFact[rid]||0)+per*(+st.factKg); }); });
-  const tot=runTotals(d);
+  const p=byId(DB.projects,d.projectId), ro=!can('edit'), q=(+d.qtyGood||0)+(+d.qtyDefect||0), plan=runPlanRaw(d), tot=runTotals(d);
+  const items=DB.plan.filter(i=>i.projectId===d.projectId).sort((a,b)=>itemStart(b)-itemStart(a));
   const stRows=d.stations.map((st,i)=>{ const pk=stationKg(st.norm,q), hasF=st.factKg!==''&&st.factKg!=null, dv=hasF&&pk?(+st.factKg/pk-1)*100:null;
     return `<tr><td><span class="stn">${st.n}</span></td><td><span class="sw" style="background:${st.color}"></span><b>${esc(st.name)}</b> <span class="tag t-gray">v${st.ver}</span></td><td class="num">${Q(st.norm)}</td>
       <td><input class="fi" style="width:74px" value="${esc(st.visc||'')}" ${ro?'disabled':''} oninput="DRS(${i},'visc',this.value)"></td>
       <td><input class="fi" style="width:74px" value="${esc(st.press||'')}" ${ro?'disabled':''} oninput="DRS(${i},'press',this.value)"></td>
       <td><input class="fi" style="width:74px" value="${esc(st.nozzle||'')}" ${ro?'disabled':''} oninput="DRS(${i},'nozzle',this.value)"></td>
-      <td class="num">${Q(pk,3)}</td><td><input class="fi" type="number" step="any" min="0" style="width:96px" value="${st.factKg??''}" ${ro||d.writtenOff?'disabled':''} onchange="DRS(${i},'factKg',this.value===''?'':+this.value);renderRunEdit()"></td>
+      <td class="num">${Q(pk,3)}</td><td><input class="fi" type="number" step="any" min="0" style="width:96px" value="${st.factKg??''}" ${ro?'disabled':''} onchange="DRS(${i},'factKg',this.value===''?'':+this.value);renderRunEdit()"></td>
       <td class="num">${dv==null?'—':`<span class="tag ${Math.abs(dv)<=5?'t-green':Math.abs(dv)<=15?'t-amber':'t-red'}">${dv>0?'+':''}${P(dv,0)}</span>`}</td></tr>`; }).join('');
-  const rids=[...new Set([...Object.keys(rawPlan),...Object.keys(rawFact)])];
-  let cp=0, cf=0;
-  const rawRows=rids.map(rid=>{ const r=byId(DB.raw,rid), pl=rawPlan[rid]||0, fa=rawFact[rid], c=+r?.cost||0; cp+=pl*c; if(fa!=null) cf+=fa*c;
-    return `<tr><td>${esc(r?.name||'—')}</td><td class="num">${Q(pl,3)} ${esc(r?.unit||'')}</td><td class="num">${fa==null?'—':Q(fa,3)}</td><td class="num">${fa==null?'—':(fa-pl>0?'+':'')+Q(fa-pl,3)}</td><td class="num">${fa==null?'—':money((fa-pl)*c)}</td></tr>`; }).join('');
-  $('#content').innerHTML=`<div class="toolbar"><button class="btn btn-s" onclick="openProject('${d.projectId}')">← ${esc(p?.name||'Проект')}</button><div class="card-t">Тех. отчёт наработки</div>${d.writtenOff?'<span class="tag t-green">материалы списаны</span>':''}<div class="sp"></div>
+  const rids=[...new Set([...Object.keys(plan),...Object.keys(d.rawFact)])].sort((a,b)=>(plan[b]?1:0)-(plan[a]?1:0));
+  const rawRows=rids.map(rid=>{ const r=byId(DB.raw,rid), pl=plan[rid]||0, fa=d.rawFact[rid], has=fa!==''&&fa!=null, c=+r?.cost||0, wr=d.writtenMap[rid];
+    return `<tr><td>${esc(r?.name||'—')}${pl?'':' <span class="tag t-gray">вне норм</span>'}</td><td class="num">${QU(pl,r?.unit)} ${esc(r?.unit||'')}</td>
+      <td><input class="fi" type="number" step="any" min="0" style="width:110px" value="${has?fa:''}" ${ro?'disabled':''} onchange="DRF('${rid}',this.value)"></td>
+      <td class="num">${has?(fa-pl>0?'+':'')+QU(fa-pl,r?.unit):'—'}</td><td class="num">${has?money((fa-pl)*c):'—'}</td><td class="num muted">${wr!=null?QU(wr,r?.unit):'—'}</td></tr>`; }).join('');
+  const addable=DB.raw.filter(r=>!rids.includes(r.id));
+  const changed=Object.keys({...d.rawFact,...d.writtenMap}).some(rid=>{ const f=d.rawFact[rid], w=d.writtenMap[rid]; return ((f===''||f==null)?0:+f)!==(+w||0); });
+  $('#content').innerHTML=`<div class="toolbar"><button class="btn btn-s" onclick="openProject('${d.projectId}')">← ${esc(p?.name||'Проект')}</button><div class="card-t">Тех. отчёт наработки</div>${d.writtenOff?'<span class="tag t-green">сырьё списано</span>':'<span class="tag t-amber">сырьё не списано</span>'}<div class="sp"></div>
     ${d.id?`<button class="btn btn-s" onclick="printRun('${d.id}')">🖨 Печать</button>`:''}
-    ${!ro&&d.id&&!d.writtenOff?`<button class="btn btn-g" onclick="writeOffRun()">Списать материалы со склада</button>`:''}
-    ${ro?'':`<button class="btn btn-p" onclick="saveRun()">Сохранить</button>`}</div>
+    ${ro?'':`<button class="btn btn-p" onclick="saveRun()">${changed?'Сохранить и списать со склада':'Сохранить'}</button>`}</div>
   <div class="grid g2 row-gap">
-    <div class="card"><div class="card-h"><div class="card-t">Наработка</div><div class="sp"></div>${ro?'':`<button class="btn btn-s btn-sm" onclick="pullJournal()" data-tip="Сложить выпуск, наладку и простои из журнала выпуска за эти даты по этому проекту">↻ Подтянуть из журнала выпуска</button>`}</div>
-      <div class="frow3"><div class="fg"><label class="fl">Линия</label><select class="fi" ${ro?'disabled':''} onchange="DR('lineId',this.value)">${opts(DB.lines,d.lineId)}</select></div>
-      <div class="fg"><label class="fl">Дата начала</label><input class="fi" type="date" value="${d.dateFrom}" ${ro?'disabled':''} onchange="DR('dateFrom',this.value)"></div>
-      <div class="fg"><label class="fl">Дата окончания</label><input class="fi" type="date" value="${d.dateTo}" ${ro?'disabled':''} onchange="DR('dateTo',this.value)"></div></div>
-      <div class="frow"><div class="fg"><label class="fl">Годные, шт</label><input class="fi" type="number" min="0" value="${d.qtyGood}" ${ro||d.writtenOff?'disabled':''} onchange="DR('qtyGood',+this.value);renderRunEdit()"></div>
-      <div class="fg"><label class="fl">Брак, шт</label><input class="fi" type="number" min="0" value="${d.qtyDefect}" ${ro||d.writtenOff?'disabled':''} onchange="DR('qtyDefect',+this.value);renderRunEdit()"></div></div>
+    <div class="card"><div class="card-h"><div class="card-t">Наработка</div><div class="sp"></div>${ro?'':`<button class="btn btn-s btn-sm" onclick="pullJournal()" data-tip="Сложить выпуск, наладку, простои и фактическое время из журнала выпуска">↻ Подтянуть из журнала выпуска</button>`}</div>
+      <div class="frow"><div class="fg"><label class="fl">Позиция плана</label><select class="fi" ${ro?'disabled':''} onchange="DR('planItemId',this.value)">${opts(items,d.planItemId,i=>`${fdt(itemStart(i))} · ${lineName(i.lineId)} · ${N(i.qty)} шт`,'— не связан —')}</select></div>
+      <div class="fg"><label class="fl">Линия</label><select class="fi" ${ro?'disabled':''} onchange="DR('lineId',this.value)">${opts(DB.lines,d.lineId)}</select></div></div>
+      <div class="frow"><div class="fg"><label class="fl">Факт: приступили</label><input class="fi" type="datetime-local" value="${d.startAt||''}" ${ro?'disabled':''} onchange="DR('startAt',this.value);DR('dateFrom',this.value.slice(0,10))"></div>
+      <div class="fg"><label class="fl">Факт: закончили</label><input class="fi" type="datetime-local" value="${d.endAt||''}" ${ro?'disabled':''} onchange="DR('endAt',this.value);DR('dateTo',this.value.slice(0,10))"></div></div>
+      <div class="frow"><div class="fg"><label class="fl">Годные, шт</label><input class="fi" type="number" min="0" value="${d.qtyGood}" ${ro?'disabled':''} onchange="DR('qtyGood',+this.value);renderRunEdit()"></div>
+      <div class="fg"><label class="fl">Брак, шт</label><input class="fi" type="number" min="0" value="${d.qtyDefect}" ${ro?'disabled':''} onchange="DR('qtyDefect',+this.value);renderRunEdit()"></div></div>
       <div class="frow"><div class="fg"><label class="fl">Наладка факт, мин <span class="muted">(план ${N(p?.setupMin)})</span></label><input class="fi" type="number" min="0" value="${d.setupFact}" ${ro?'disabled':''} onchange="DR('setupFact',+this.value)"></div>
       <div class="fg"><label class="fl">Скорость факт, шт/мин <span class="muted">(план ${N(p?.speed)})</span></label><input class="fi" type="number" min="0" value="${d.speedFact}" ${ro?'disabled':''} onchange="DR('speedFact',+this.value)"></div></div>
     </div>
     <div class="card"><div class="card-h"><div class="card-t">Итог по материалам</div></div>
-      <div class="stat"><span>План по нормам</span><b>${Q(tot.plan,2)} кг · ${money(cp)}</b></div>
-      <div class="stat"><span>Факт (после инвентаризации)</span><b>${tot.fact?Q(tot.fact,2)+' кг · '+money(cf):'—'}</b></div>
-      <div class="stat"><span>Отклонение</span><b>${tot.fact&&tot.plan?`<span class="tag ${Math.abs(tot.fact/tot.plan-1)<=.05?'t-green':'t-amber'}">${tot.fact>=tot.plan?'+':''}${P((tot.fact/tot.plan-1)*100,1)}</span> ${money(cf-cp)}`:'—'}</b></div>
+      <div class="stat"><span>План по нормам</span><b>${Q(tot.plan,2)} кг · ${money(tot.costPlan)}</b></div>
+      <div class="stat"><span>Факт (после инвентаризации)</span><b>${tot.filled?Q(tot.fact,2)+' кг · '+money(tot.costFact):'—'}</b></div>
+      <div class="stat"><span>Отклонение</span><b>${tot.filled&&tot.costPlan?`<span class="tag ${Math.abs(tot.costFact/tot.costPlan-1)<=.05?'t-green':'t-amber'}">${tot.costFact>=tot.costPlan?'+':''}${P((tot.costFact/tot.costPlan-1)*100,1)}</span> ${money(tot.costFact-tot.costPlan)}`:'—'}</b></div>
       <div class="stat"><span>Изделий обработано</span><b>${N(q)} шт</b></div>
-      <div class="hint" style="margin-top:8px">Рецептуры зафиксированы на момент создания отчёта: если состав позже поменяют, отчёт сохранит ту версию, по которой работали.</div>
+      <div class="note" style="margin-top:10px">При сохранении фактический расход по каждому компоненту <b>списывается со склада</b>. Повторное сохранение проводит только разницу. Пока отчёта нет, позиция плана резервирует сырьё по нормам проекта.</div>
     </div>
   </div>
-  <div class="card row-gap"><div class="card-h"><div class="card-t">Станции: настройки и расход</div><div class="card-s">план = норма × количество изделий</div></div>
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Сырьё: план / факт по компонентам</div><div class="card-s">факт — по инвентаризации после наработки</div><div class="sp"></div>
+    ${ro?'':`<button class="btn btn-s btn-sm" onclick="runFactFromStations()">Пересчитать из факта по станциям</button><button class="btn btn-s btn-sm" onclick="runFactFromPlan()">Факт = план</button>`}</div>
+    ${rawRows?`<div class="tw ed"><table><tr><th>Сырьё</th><th class="num">План</th><th>Факт</th><th class="num">Откл.</th><th class="num">Деньги</th><th class="num">Уже списано</th></tr>${rawRows}</table></div>`:'<div class="empty">Внесите количество изделий</div>'}
+    ${ro||!addable.length?'':`<div style="margin-top:12px"><select class="sel" onchange="if(this.value){state.draft.rawFact[this.value]='';renderRunEdit()}"><option value="">+ Добавить сырьё вне норм (промывка, потери…)</option>${addable.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select></div>`}</div>
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Станции: настройки и расход полуфабрикатов</div><div class="card-s">план = норма × количество изделий · рецептуры зафиксированы версией на момент наработки</div></div>
     <div class="tw ed"><table><tr><th>№</th><th>Рецептура</th><th class="num">Норма г/1000</th><th>Вязкость</th><th>Давление</th><th>Сопло</th><th class="num">План, кг</th><th>Факт, кг</th><th class="num">Откл.</th></tr>${stRows||'<tr><td colspan="9" class="empty">В проекте не заданы станции</td></tr>'}</table></div></div>
-  <div class="grid g11 row-gap">
+  <div class="grid g11">
     <div class="card"><div class="card-h"><div class="card-t">Настройки машины</div><div class="card-s">на эту наработку</div><div class="sp"></div>${ro?'':`<button class="btn btn-s btn-sm" onclick="state.draft.settings.push({k:'',v:''});renderRunEdit()">+ Параметр</button>`}</div>
       <div class="tw ed"><table><tr><th>Параметр</th><th>Значение</th><th></th></tr>${d.settings.map((x,i)=>`<tr><td><input class="fi" style="min-width:200px" value="${esc(x.k)}" ${ro?'disabled':''} oninput="state.draft.settings[${i}].k=this.value"></td><td><input class="fi" style="min-width:120px" value="${esc(x.v)}" ${ro?'disabled':''} oninput="state.draft.settings[${i}].v=this.value"></td><td>${ro?'':`<button class="btn btn-s btn-sm" onclick="state.draft.settings.splice(${i},1);renderRunEdit()">✕</button>`}</td></tr>`).join('')}</table></div></div>
-    <div class="card"><div class="card-h"><div class="card-t">Сырьё: план / факт</div><div class="card-s">в пересчёте через рецептуры</div></div>
-      ${rawRows?`<div class="tw"><table><tr><th>Сырьё</th><th class="num">План</th><th class="num">Факт</th><th class="num">Откл.</th><th class="num">Деньги</th></tr>${rawRows}</table></div>`:'<div class="empty">Внесите количество изделий</div>'}</div>
-  </div>
-  <div class="card"><div class="card-h"><div class="card-t">Замечания по наработке</div></div><textarea class="fi" rows="3" ${ro?'disabled':''} oninput="DR('note',this.value)" placeholder="Что пошло не так, что поменяли в настройках, рекомендации на следующий раз…">${esc(d.note||'')}</textarea></div>`;
+    <div class="card"><div class="card-h"><div class="card-t">Замечания по наработке</div></div><textarea class="fi" rows="8" ${ro?'disabled':''} oninput="DR('note',this.value)" placeholder="Что пошло не так, что поменяли в настройках, рекомендации на следующий раз…">${esc(d.note||'')}</textarea></div>
+  </div>`;
 }
 function pullJournal(){
-  const d=state.draft, recs=DB.output.filter(r=>r.projectId===d.projectId&&r.date>=d.dateFrom&&r.date<=d.dateTo&&(!d.lineId||r.lineId===d.lineId));
-  if(!recs.length) return toast('В журнале нет записей по этому проекту за эти даты');
+  const d=state.draft, recs=d.planItemId?DB.output.filter(r=>r.planItemId===d.planItemId):DB.output.filter(r=>r.projectId===d.projectId&&r.date>=(d.startAt||'').slice(0,10)&&r.date<=(d.endAt||'').slice(0,10)&&(!d.lineId||r.lineId===d.lineId));
+  if(!recs.length) return toast('В журнале нет записей по этой позиции / датам');
   const g=recs.reduce((a,r)=>a+(+r.good||0),0), df=recs.reduce((a,r)=>a+(+r.defect||0),0), su=recs.reduce((a,r)=>a+(+r.setup||0),0), dn=recs.reduce((a,r)=>a+(+r.downtime||0),0);
-  const runMin=recs.length*(DB.settings.shiftHours||8)*60-su-dn;
-  Object.assign(d,{qtyGood:g,qtyDefect:df,setupFact:su,speedFact:runMin>0?Math.round((g+df)/runMin):''});
+  const st=recs.map(r=>tms(r.startAt)).filter(isFinite), en=recs.map(r=>tms(r.endAt)).filter(isFinite);
+  const workMin=recs.reduce((a,r)=>{ const x=tms(r.startAt), y=tms(r.endAt); return a+(isFinite(x)&&isFinite(y)?(y-x)/60e3:(DB.settings.shiftHours||8)*60); },0)-su-dn;
+  Object.assign(d,{qtyGood:g,qtyDefect:df,setupFact:su,speedFact:workMin>0?Math.round((g+df)/workMin):''});
+  if(st.length){ d.startAt=toDT(Math.min(...st)); d.endAt=toDT(Math.max(...en)); d.dateFrom=d.startAt.slice(0,10); d.dateTo=d.endAt.slice(0,10); }
   renderRunEdit(); toast(`Подтянуто ${recs.length} смен из журнала`);
 }
 async function saveRun(){
   const d=state.draft; if(!(+d.qtyGood)&&!(+d.qtyDefect)) return toast('Укажите количество изделий');
-  const rec={...d,id:d.id||uid(),qtyGood:+d.qtyGood||0,qtyDefect:+d.qtyDefect||0,setupFact:+d.setupFact||0,speedFact:+d.speedFact||0,settings:d.settings.filter(x=>x.k||x.v),by:state.me.name,ts:Date.now()};
-  await Store.put('runs',rec); state.draft=clone(rec); state.draft.stations=A(rec.stations); state.draft.settings=A(rec.settings); render(); toast('Тех. отчёт сохранён');
-}
-async function writeOffRun(){
-  const d=state.draft, q=(+d.qtyGood||0)+(+d.qtyDefect||0), use={};
-  if(!q) return toast('Нет количества изделий');
-  d.stations.forEach(st=>{ const kg=st.factKg!==''&&st.factKg!=null?+st.factKg:stationKg(st.norm,q); Object.entries(st.rawPerKg||{}).forEach(([rid,per])=>use[rid]=(use[rid]||0)+per*kg); });
-  const noFact=d.stations.some(st=>st.factKg===''||st.factKg==null);
-  if(!confirm(`Списать со склада сырьё по ${noFact?'факту (где не внесён — по норме)':'факту'}? ${Object.keys(use).length} позиций. Это действие создаст движения по складу.`)) return;
-  const list=[];
-  Object.entries(use).forEach(([rid,qty])=>{ const r=byId(DB.raw,rid); if(!r) return;
-    list.push({col:'raw',obj:{...r,qty:Math.round(((+r.qty||0)-qty)*1000)/1000}});
-    list.push({col:'moves',obj:{id:uid(),date:d.dateTo,type:'out',rawId:rid,qty:Math.round(qty*1000)/1000,projectId:d.projectId,runId:d.id,note:'Списание по тех. отчёту',by:state.me.name,ts:Date.now()}}); });
-  const rec={...d,writtenOff:true}; list.push({col:'runs',obj:rec});
-  await Store.batch(list); state.draft=clone(rec); state.draft.stations=A(rec.stations); state.draft.settings=A(rec.settings); render(); toast('Материалы списаны со склада');
+  const id=d.id||uid(), prev=d.writtenMap||{}, next={};
+  Object.entries(d.rawFact||{}).forEach(([rid,v])=>{ if(v!==''&&v!=null&&isFinite(+v)) next[rid]=+v; });
+  const list=[], date=(d.endAt||iso(new Date())).slice(0,10); let n=0;
+  [...new Set([...Object.keys(prev),...Object.keys(next)])].forEach(rid=>{
+    const delta=Math.round(((next[rid]||0)-(prev[rid]||0))*1000)/1000, r=byId(DB.raw,rid); if(!delta||!r) return; n++;
+    list.push({col:'raw',obj:{...r,qty:Math.round(((+r.qty||0)-delta)*1000)/1000}});
+    list.push({col:'moves',obj:{id:uid(),date,type:delta>0?'out':'in',rawId:rid,qty:Math.abs(delta),projectId:d.projectId,runId:id,note:delta>0?'Списание по тех. отчёту':'Корректировка тех. отчёта (возврат)',by:state.me.name,ts:Date.now()}});
+  });
+  const rec={...d,id,qtyGood:+d.qtyGood||0,qtyDefect:+d.qtyDefect||0,setupFact:+d.setupFact||0,speedFact:+d.speedFact||0,dateFrom:(d.startAt||'').slice(0,10)||d.dateFrom,dateTo:(d.endAt||'').slice(0,10)||d.dateTo,
+    settings:d.settings.filter(x=>x.k||x.v),rawFact:next,writtenMap:next,writtenOff:Object.keys(next).length>0,by:state.me.name,ts:Date.now()};
+  list.push({col:'runs',obj:rec});
+  await Store.batch(list); state.draft=clone(rec); state.draft.stations=A(rec.stations); state.draft.settings=A(rec.settings); render();
+  toast(n?`Тех. отчёт сохранён · проведено по складу: ${n} поз.`:'Тех. отчёт сохранён');
 }
 
 // ═════════════════════════════════════════════
@@ -1061,165 +1252,268 @@ function printProject(id){
 }
 function printRun(id){
   const r=byId(DB.runs,id); if(!r) return; const p=byId(DB.projects,r.projectId), q=(+r.qtyGood||0)+(+r.qtyDefect||0), t=runTotals(r);
-  printDoc('Тех. отчёт · '+(p?.name||''),`<div class="head"><div><div class="sub">${esc(DB.settings.orgName||'')} · Технический отчёт наработки</div><h1>${esc(p?.name||'—')}</h1><div>${esc(p?.client||'')}</div></div><div style="text-align:right;font-size:11px">${fdate(r.dateFrom)}${r.dateTo!==r.dateFrom?' — '+fdate(r.dateTo):''}<br>${esc(lineName(r.lineId))}</div></div>
+  printDoc('Тех. отчёт · '+(p?.name||''),`<div class="head"><div><div class="sub">${esc(DB.settings.orgName||'')} · Технический отчёт наработки</div><h1>${esc(p?.name||'—')}</h1><div>${esc(p?.client||'')}</div></div><div style="text-align:right;font-size:11px">${r.startAt?fdt(tms(r.startAt))+' — '+fdt(tms(r.endAt)):fdate(r.dateFrom)}<br>${esc(lineName(r.lineId))}</div></div>
   <div class="grid"><div><b>Годные</b>${N(r.qtyGood)} шт</div><div><b>Брак</b>${N(r.qtyDefect)} шт (${P(q?r.qtyDefect/q*100:0)})</div><div><b>Наладка факт / план</b>${N(r.setupFact)} / ${N(p?.setupMin)} мин</div><div><b>Скорость факт / план</b>${N(r.speedFact)} / ${N(p?.speed)} шт/мин</div></div>
   <h2>Станции</h2><table><tr><th>№</th><th>Рецептура</th><th>Норма</th><th>Вязкость</th><th>Давление</th><th>Сопло</th><th>План, кг</th><th>Факт, кг</th></tr>
   ${A(r.stations).map(st=>`<tr><td class="n">${st.n}</td><td><span class="sw" style="background:${st.color}"></span>${esc(st.name)} v${st.ver}</td><td class="n">${Q(st.norm)}</td><td>${esc(st.visc||'')}</td><td>${esc(st.press||'')}</td><td>${esc(st.nozzle||'')}</td><td class="n">${Q(stationKg(st.norm,q),3)}</td><td class="n">${st.factKg===''||st.factKg==null?'':Q(st.factKg,3)}</td></tr>`).join('')}
   <tr><td colspan="6"><b>Итого</b></td><td class="n"><b>${Q(t.plan,3)}</b></td><td class="n"><b>${t.fact?Q(t.fact,3):''}</b></td></tr></table>
+  <h2>Сырьё: план / факт (списано со склада)</h2><table><tr><th>Сырьё</th><th>План</th><th>Факт</th><th>Откл.</th></tr>${(()=>{ const pl=runPlanRaw(r), fa=r.rawFact||{}; return [...new Set([...Object.keys(pl),...Object.keys(fa)])].map(rid=>{ const rw=byId(DB.raw,rid); return `<tr><td>${esc(rw?.name||'—')}</td><td class="n">${QU(pl[rid]||0,rw?.unit)} ${esc(rw?.unit||'')}</td><td class="n">${fa[rid]!=null?QU(fa[rid],rw?.unit):''}</td><td class="n">${fa[rid]!=null?QU(fa[rid]-(pl[rid]||0),rw?.unit):''}</td></tr>`; }).join(''); })()}</table>
   <h2>Настройки машины</h2><table>${A(r.settings).map(x=>`<tr><td style="width:55%">${esc(x.k)}</td><td><b>${esc(x.v)}</b></td></tr>`).join('')}</table>
   ${r.note?`<h2>Замечания</h2><div class="box">${esc(r.note)}</div>`:''}
   <div class="sign"><div>Мастер смены</div><div>Технолог</div><div>Кладовщик (инвентаризация)</div></div>`);
 }
 
 // ═════════════════════════════════════════════
-//  LINES
+//  LINES — линии и их календарь
 // ═════════════════════════════════════════════
+const DAYN=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
 function renderLines(){
-  $('#content').innerHTML=`<div class="toolbar"><span class="muted" style="font-weight:600">Мощность нужна для плана, когда месячный план ещё не утверждён</span><div class="sp"></div>${can('edit')?`<button class="btn btn-p" onclick="openLineModal()">+ Линия</button>`:''}</div>
-  <div class="grid g3">${DB.lines.map(l=>{ const ps=DB.projects.filter(p=>p.lineId===l.id&&p.status!=='Архив'); return `<div class="card"><div class="card-h"><div><div class="card-t">${esc(l.name)}</div><div class="card-s">${esc(l.type||'')}</div></div><div class="sp"></div>${can('edit')?`<button class="btn btn-s btn-sm" onclick="openLineModal('${l.id}')">✎</button>`:''}</div>
-    <div class="shifts"><div class="sh"><div class="n">Станций</div><div class="v">${l.stations||'—'}</div><div class="d">пистолетов/голов</div></div><div class="sh"><div class="n">Мощность</div><div class="v">${short(l.cap)}</div><div class="d">шт/смену</div></div><div class="sh"><div class="n">Смен</div><div class="v">${l.shifts}</div><div class="d">в сутки</div></div></div>
-    <div class="hint" style="margin-top:12px">Проекты: ${ps.length?ps.map(p=>esc(p.name)).join(', '):'—'}</div></div>`; }).join('')||'<div class="card"><div class="empty">Линий пока нет</div></div>'}</div>`;
+  $('#content').innerHTML=`<div class="toolbar"><span class="muted" style="font-weight:600">Сменность, рабочие дни и наладка при перезапуске используются планом для расчёта окончания позиций</span><div class="sp"></div>${can('edit')?`<button class="btn btn-p" onclick="openLineModal()">+ Линия</button>`:''}</div>
+  <div class="grid g3">${DB.lines.map(l=>{ const ps=DB.projects.filter(p=>p.lineId===l.id&&p.status!=='Архив'), c=lineCfg(l.id); return `<div class="card"><div class="card-h"><div><div class="card-t">${esc(l.name)}</div><div class="card-s">${esc(l.type||'')}</div></div><div class="sp"></div>${can('edit')?`<button class="btn btn-s btn-sm" onclick="openLineModal('${l.id}')">✎</button>`:''}</div>
+    <div class="shifts"><div class="sh"><div class="n">Станций</div><div class="v">${l.stations||'—'}</div><div class="d">пистолетов/голов</div></div><div class="sh"><div class="n">Работает</div><div class="v" style="font-size:15px">${esc(shiftLabel(l.id))}</div><div class="d">${[1,2,3,4,5,6,0].filter(x=>c.days.includes(x)).map(x=>DAYN[x]).join(' ')}</div></div><div class="sh"><div class="n">Перезапуск</div><div class="v">${N(c.restart)}</div><div class="d">мин наладки после остановки</div></div></div>
+    <div class="hint" style="margin-top:12px">Мощность для плана по умолчанию: ${short(l.cap)} шт/смену · Проекты: ${ps.length?ps.map(p=>esc(p.name)).join(', '):'—'}</div></div>`; }).join('')||'<div class="card"><div class="empty">Линий пока нет</div></div>'}</div>`;
 }
 function openLineModal(id){
-  const l=id?byId(DB.lines,id):{name:'',type:'',stations:7,cap:30000,shifts:3};
+  const l=id?byId(DB.lines,id):{name:'',type:'',stations:7,cap:30000,workShifts:[1,2,3],workDays:[1,2,3,4,5,6,0],restartMin:30};
+  const ws=A(l.workShifts).length?A(l.workShifts).map(Number):[1,2,3], wd=A(l.workDays).length?A(l.workDays).map(Number):[0,1,2,3,4,5,6];
   modal(id?'Линия':'Новая линия',`<div class="fg"><label class="fl">Название</label><input class="fi" name="name" value="${esc(l.name)}" autofocus></div>
-    <div class="fg"><label class="fl">Технология</label><input class="fi" name="type" value="${esc(l.type||'')}" placeholder="Пистолетная покраска, печь, УФ…"></div>
-    <div class="frow3"><div class="fg"><label class="fl">Станций (пистолетов)</label><input class="fi" type="number" min="1" name="stations" value="${l.stations||7}"></div>
-    <div class="fg"><label class="fl">Мощность, шт/смену</label><input class="fi" type="number" name="cap" value="${l.cap}"></div>
-    <div class="fg"><label class="fl">Смен в сутки</label><select class="fi" name="shifts">${[1,2,3].map(s=>`<option ${+l.shifts===s?'selected':''}>${s}</option>`).join('')}</select></div></div>`,
-  async f=>{ if(!f.name.trim()) return false; await Store.put('lines',{...(id?l:{}),id:id||uid(),name:f.name.trim(),type:f.type,stations:+f.stations||1,cap:+f.cap||0,shifts:+f.shifts}); });
+    <div class="frow"><div class="fg"><label class="fl">Технология</label><input class="fi" name="type" value="${esc(l.type||'')}" placeholder="Пистолетная покраска, печь, УФ…"></div>
+    <div class="fg"><label class="fl">Станций (пистолетов)</label><input class="fi" type="number" min="1" name="stations" value="${l.stations||7}"></div></div>
+    <div class="fg"><label class="fl">Работающие смены</label><div style="display:flex;gap:6px;flex-wrap:wrap">${shiftDefs().map(s=>`<label class="chip ${ws.includes(+s.n)?'on':''}" style="cursor:pointer"><input type="checkbox" name="sh_${s.n}" style="display:none" ${ws.includes(+s.n)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${s.n}-я · ${s.from}–${s.to}</label>`).join('')}</div></div>
+    <div class="fg"><label class="fl">Рабочие дни</label><div style="display:flex;gap:6px;flex-wrap:wrap">${[1,2,3,4,5,6,0].map(x=>`<label class="chip ${wd.includes(x)?'on':''}" style="cursor:pointer"><input type="checkbox" name="d_${x}" style="display:none" ${wd.includes(x)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${DAYN[x]}</label>`).join('')}</div></div>
+    <div class="frow"><div class="fg"><label class="fl">Наладка при перезапуске, мин</label><input class="fi" type="number" min="0" name="restartMin" value="${l.restartMin??30}"><div class="hint" style="margin-top:4px">Добавляется каждый раз, когда линия возобновляет работу после нерабочей смены или простоя. В проекте можно задать своё значение.</div></div>
+    <div class="fg"><label class="fl">Мощность, шт/смену</label><input class="fi" type="number" name="cap" value="${l.cap}"><div class="hint" style="margin-top:4px">Для плана по умолчанию, пока месяц не утверждён.</div></div></div>`,
+  async f=>{ if(!f.name.trim()) return false;
+    const workShifts=shiftDefs().map(s=>+s.n).filter(n=>f['sh_'+n]), workDays=[0,1,2,3,4,5,6].filter(x=>f['d_'+x]);
+    if(!workShifts.length||!workDays.length){ toast('Выберите хотя бы одну смену и один день'); return false; }
+    await Store.put('lines',{...(id?l:{}),id:id||uid(),name:f.name.trim(),type:f.type,stations:+f.stations||1,cap:+f.cap||0,shifts:workShifts.length,workShifts,workDays,restartMin:+f.restartMin||0}); });
 }
 
 // ═════════════════════════════════════════════
 //  PLAN — план наработки
 // ═════════════════════════════════════════════
-function monthItems(items,mk){ const [y,m]=mk.split('-').map(Number), t0=new Date(y,m-1,1).getTime(), t1=new Date(y,m,1).getTime(); return items.filter(it=>tms(it.start)<t1&&endMs(it)>t0); }
 function shiftMonth(n){ const [y,m]=state.planMonth.split('-').map(Number); state.planMonth=monthKey(new Date(y,m-1+n,1)); render(); }
+function monthNav(){ return `<button class="btn btn-s btn-sm" onclick="shiftMonth(-1)">‹</button><div class="card-t" style="min-width:140px;text-align:center">${monthLabel(state.planMonth)}</div><button class="btn btn-s btn-sm" onclick="shiftMonth(1)">›</button>`; }
+function viewSeg(){ return `<div class="seg">${[['rows','По проектам (строки)'],['lines','По линиям']].map(([k,l])=>`<button class="${state.planView===k?'on':''}" onclick="state.planView='${k}';render()">${l}</button>`).join('')}</div>`; }
 function renderPlan(){
   if(!state.planMonth) state.planMonth=monthKey(new Date());
-  const mk=state.planMonth, tab=state.planTab, ap=DB.approved?.[mk], cur=monthItems(DB.plan,mk).sort((a,b)=>a.start.localeCompare(b.start));
-  const lastLog=DB.planLog.slice().sort((a,b)=>b.ts-a.ts)[0];
-  const head=`<div class="toolbar"><button class="btn btn-s btn-sm" onclick="shiftMonth(-1)">‹</button><div class="card-t" style="min-width:140px;text-align:center">${monthLabel(mk)}</div><button class="btn btn-s btn-sm" onclick="shiftMonth(1)">›</button>
-    <div class="seg" style="margin-left:8px">${[['live','Действующий'],['approved','Утверждённый'],['compare','План / факт']].map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="state.planTab='${k}';render()">${l}</button>`).join('')}</div><div class="sp"></div>
-    ${tab==='live'&&can('edit')?`<button class="btn btn-s" onclick="openMeeting()">📝 Итоги оперативки</button><button class="btn btn-p" onclick="openPlanItem()">+ Позиция плана</button>`:''}
-    ${tab!=='compare'&&can('admin')?`<button class="btn btn-s" onclick="approveMonth()">✔ Утвердить ${ap?'заново':'план месяца'}</button>`:''}</div>
-  <div class="toolbar" style="margin-top:-4px">${ap?`<span class="pill">✔ Утверждён ${fts(ap.at)} · ${esc(ap.by||'')}</span>`:'<span class="pill" style="color:var(--amber)">План месяца ещё не утверждён</span>'}
-    ${lastLog?`<span class="pill">🕘 Последнее изменение: ${fts(lastLog.ts)} · ${esc(lastLog.by||'')}</span>`:''}</div>`;
+  const mk=state.planMonth, tab=state.planTab, ap=DB.approved?.[mk], cur=monthItems(DB.plan,mk,LIVE).sort((a,b)=>itemStart(a)-itemStart(b));
+  const lastLog=DB.planLog.slice().sort((a,b)=>b.ts-a.ts)[0], ov=overlapsCount(DB.plan,LIVE), ce=can('edit');
+  const head=`<div class="toolbar">${monthNav()}
+    <div class="seg" style="margin-left:8px">${[['live','Действующий'],['approved','Утверждённый'],['compare','План / факт']].map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="state.planTab='${k}';render()">${l}</button>`).join('')}</div>
+    ${tab!=='compare'?viewSeg():''}<div class="sp"></div>
+    ${tab==='live'&&ce?`<button class="btn btn-s" onclick="openDown()">⛔ Простой</button><button class="btn btn-s" onclick="openMeeting()">📝 Оперативка</button><button class="btn btn-p" onclick="openPlanItem()">+ Позиция</button>`:''}
+    ${tab!=='compare'&&can('admin')?`<button class="btn btn-s" onclick="approveMonth()">✔ Утвердить ${ap?'заново':'месяц'}</button>`:''}</div>
+  <div class="toolbar" style="margin-top:-4px">${ap?`<span class="pill">✔ Утверждён ${fts(ap.at)} · ${esc(ap.by||'')}</span>`:'<span class="pill" style="color:var(--amber)">План месяца не утверждён</span>'}
+    ${lastLog?`<span class="pill">🕘 Изменён ${fts(lastLog.ts)} · ${esc(lastLog.by||'')}</span>`:''}
+    ${tab==='live'&&ov?`<span class="pill" style="color:var(--red)">⚠ Наложений: ${ov}${ce?` <button class="btn btn-s btn-sm" onclick="fixOverlaps()">Сдвинуть</button>`:''}</span>`:''}</div>`;
   let body='';
   if(tab==='live'){
-    const chk=planMaterialCheck();
-    body=`<div class="card row-gap"><div class="card-h"><div class="card-t">Действующий план</div><div class="card-s">корректируется после оперативки, виден всем</div><div class="sp"></div><div class="legend"><span><i style="background:none;border:1.5px dashed var(--text3);height:6px"></i>утверждённый</span><span><i style="background:var(--red);width:2px"></i>сейчас</span><span><i style="background:none;outline:2px solid var(--red)"></i>наложение</span></div></div>
-      ${gantt(cur,{ghost:A(ap?.items),editable:can('edit'),chk})}</div>
-    <div class="card row-gap"><div class="card-h"><div class="card-t">Позиции плана</div><div class="card-s">${cur.length} шт${can('edit')?' · нажмите строку или блок на диаграмме, чтобы изменить':''}</div></div>${planTable(cur,chk,can('edit'))}</div>
+    const chk=planMaterialCheck(LIVE), opt={ctx:LIVE,ghost:A(ap?.items),editable:ce,chk};
+    body=`<div class="card row-gap"><div class="card-h"><div class="card-t">Действующий план</div><div class="card-s">корректируется после оперативки · виден всем</div><div class="sp"></div>${planLegend()}</div>
+      ${state.planView==='rows'?scheduleRows(cur,opt):gantt(cur,opt)}</div>
+    <div class="card row-gap"><div class="card-h"><div class="card-t">Позиции плана</div><div class="card-s">${cur.length} шт${ce?' · нажмите строку, чтобы изменить':''}</div></div>${planTable(cur,chk,ce,LIVE)}</div>
     <div class="card"><div class="card-h"><div class="card-t">Журнал изменений и оперативок</div></div><div class="log">${planLogHtml()}</div></div>`;
   } else if(tab==='approved'){
     const items=A(ap?.items);
-    body=ap?`<div class="card row-gap"><div class="card-h"><div class="card-t">Утверждённый план — статичный</div><div class="card-s">это плановая цифра месяца для дашборда и отчётов</div></div>${gantt(items,{})}</div>
+    body=ap?`<div class="card row-gap"><div class="card-h"><div class="card-t">Утверждённый план — статичный</div><div class="card-s">плановая цифра месяца для дашборда и отчётов</div></div>${state.planView==='rows'?scheduleRows(items,{}):gantt(items,{})}</div>
       <div class="card"><div class="card-h"><div class="card-t">Позиции утверждённого плана</div><div class="card-s">${items.length} шт · ${N(items.reduce((a,i)=>a+(+i.qty||0),0))} изделий</div></div>${planTable(items,null,false)}</div>`
-      :`<div class="card"><div class="empty">План на ${monthLabel(mk)} ещё не утверждён.<br>${can('admin')?'Сформируйте действующий план и нажмите «Утвердить план месяца» — он станет статичной плановой цифрой.':'Его утверждает администратор.'}</div></div>`;
+      :`<div class="card"><div class="empty">План на ${monthLabel(mk)} ещё не утверждён.<br>${can('admin')?'Сформируйте действующий план и нажмите «Утвердить месяц» — он станет статичной плановой цифрой.':'Его утверждает администратор.'}</div></div>`;
   } else body=planCompare(mk,ap,cur);
   $('#content').innerHTML=head+body;
 }
-function gantt(items,opt={}){
-  const [y,m]=state.planMonth.split('-').map(Number), days=new Date(y,m,0).getDate(), t0=new Date(y,m-1,1).getTime(), t1=new Date(y,m,1).getTime();
-  const HW=2, DW=24*HW, W=days*DW, now=Date.now(), td=iso(new Date());
-  const head=`<div class="g-head"><div class="g-lab" style="height:36px"></div><div class="g-days" style="width:${W}px;height:36px">${Array.from({length:days},(_,i)=>{ const dt=new Date(y,m-1,i+1), we=[0,6].includes(dt.getDay());
-    return `<div class="g-day ${we?'we':''} ${iso(dt)===td?'td':''}" style="left:${i*DW}px;width:${DW}px">${i+1}<br><span style="font-weight:600">${WD[(dt.getDay()+6)%7]}</span></div>`; }).join('')}</div></div>`;
-  const pos=it=>{ const a=tms(it.start), b=a+(+it.hours||0)*H; if(b<=t0||a>=t1) return null; const L=Math.max(a,t0), R=Math.min(b,t1); return {a,b,left:(L-t0)/H*HW,w:Math.max(3,(R-L)/H*HW)}; };
-  const rows=DB.lines.map(l=>{
-    const li=items.filter(i=>i.lineId===l.id).sort((a,b)=>a.start.localeCompare(b.start)); let prevEnd=0; const conf=new Set();
-    li.forEach((it,k)=>{ const a=tms(it.start); if(a<prevEnd-60e3){ conf.add(it.id); if(li[k-1]) conf.add(li[k-1].id); } prevEnd=Math.max(prevEnd,endMs(it)); });
-    const hrs=li.reduce((s,it)=>{ const q=pos(it); return s+(q?(Math.min(q.b,t1)-Math.max(q.a,t0))/H:0); },0);
-    const bars=li.map(it=>{ const q=pos(it); if(!q) return ''; const p=byId(DB.projects,it.projectId), o=byId(DB.orders,it.orderId), late=o&&q.b>pd(o.due).getTime()+864e5, ck=opt.chk?.[it.id];
-      const tip=`<b>${esc(p?.name||'—')}</b><br>${esc(lineName(it.lineId))}<br>${fdt(q.a)} → ${fdt(q.b)} · ${Q(it.hours,1)} ч<br>${N(it.qty)} шт${o?`<br>Заказ ${esc(o.no)} · срок ${fdate(o.due)}${late?' — НЕ УСПЕВАЕМ':''}`:''}${ck&&ck.lacks.length?'<br>⚠ дефицит сырья':''}${it.note?'<br>'+esc(it.note):''}`;
-      return `<div class="g-bar ${conf.has(it.id)?'conf':''} ${late?'late':''} ${q.b<now?'done':''}" style="left:${q.left}px;width:${q.w}px;background:${pColor(p)}" data-tip="${tip.replace(/"/g,'&quot;')}" ${opt.editable?`onclick="openPlanItem('${it.id}')"`:''}>${ck&&ck.lacks.length?'⚠ ':''}${esc(p?.name||'—')}<small>${N(it.qty)} шт · ${Q(it.hours,0)} ч</small></div>`; }).join('');
-    const ghosts=A(opt.ghost).filter(i=>i.lineId===l.id).map(it=>{ const q=pos(it); return q?`<div class="g-ghost" style="left:${q.left}px;width:${q.w}px" data-tip="Утверждено: ${esc(projName(it.projectId))}<br>${fdt(q.a)} → ${fdt(q.b)}"></div>`:''; }).join('');
-    return `<div class="g-row"><div class="g-lab">${esc(l.name)}<small>${Q(hrs,0)} ч · загрузка ${P(hrs/(days*24)*100,0)}</small></div><div class="g-days" style="width:${W}px;background-image:linear-gradient(to right,var(--line) 1px,transparent 1px);background-size:${DW}px 100%">${ghosts}${bars}</div></div>`;
-  }).join('');
-  const nowX=now>t0&&now<t1?`<div class="g-now" style="left:${160+(now-t0)/H*HW}px"></div>`:'';
-  return `<div class="gantt"><div class="g-in" style="width:${W+160}px">${head}${rows}${nowX}</div></div>`;
+function planLegend(){ return `<div class="legend"><span><i style="background:var(--text3)"></i>работа</span><span><i style="background:repeating-linear-gradient(45deg,var(--text3) 0 3px,var(--card2) 3px 6px)"></i>наладка</span><span><i style="background:repeating-linear-gradient(135deg,rgba(120,130,150,.35) 0 3px,transparent 3px 6px)"></i>линия не работает</span><span><i style="background:rgba(229,72,77,.35)"></i>простой</span><span><i style="background:var(--green)"></i>факт</span><span><i style="background:none;border:1.5px dashed var(--text3)"></i>утверждённый</span></div>`; }
+function timeHead(g,lw,labHtml=''){
+  const td=iso(new Date());
+  return `<div class="g-head"><div class="g-lab" style="height:38px;width:${lw}px">${labHtml}</div><div class="g-days" style="width:${g.W}px;height:38px">${Array.from({length:g.days},(_,i)=>{ const dt=new Date(g.y,g.m-1,i+1), we=[0,6].includes(dt.getDay());
+    return `<div class="g-day ${we?'we':''} ${iso(dt)===td?'td':''}" style="left:${i*g.DW}px;width:${g.DW}px">${i+1}<br><span style="font-weight:600">${WD[(dt.getDay()+6)%7]}</span></div>`; }).join('')}</div></div>`;
 }
-function planTable(items,chk,editable){
+function lineBackdrop(l,g,ctx,opt){
+  // нерабочее время линии + простои
+  const wins=lineWindows(l.id,g.t0,g.t1,ctx===undefined?LIVE:ctx); let prev=g.t0, off='';
+  // окна без учёта простоев — чтобы простои рисовать отдельно
+  const pure=lineWindows(l.id,g.t0,g.t1,{...(ctx||{}),id:'pure',downs:[]});
+  pure.forEach(([a,b])=>{ if(a>prev) off+=offDiv(prev,Math.min(a,g.t1),g); prev=Math.max(prev,b); }); if(prev<g.t1) off+=offDiv(prev,g.t1,g);
+  const downs=ctxDowns(ctx).filter(d=>d.lineId===l.id&&tms(d.end)>g.t0&&tms(d.start)<g.t1).map(d=>{ const a=Math.max(tms(d.start),g.t0), b=Math.min(tms(d.end),g.t1), mine=!opt?.downIds||opt.downIds.includes(d.id);
+    return `<div class="g-down" style="left:${(a-g.t0)/H*g.HW}px;width:${Math.max(3,(b-a)/H*g.HW)}px" data-tip="<b>Простой: ${esc(d.reason)}</b><br>${fdt(tms(d.start))} → ${fdt(tms(d.end))}${d.note?'<br>'+esc(d.note):''}${mine?'':'<br>(из действующего плана)'}" ${opt?.editable&&mine?`onclick="openDown('${d.id}'${opt.scn?`,'${opt.scn}'`:''})"`:''}>${(b-a)/H>=6?esc(d.reason):''}</div>`; }).join('');
+  return off+downs;
+}
+const offDiv=(a,b,g)=>b>a?`<div class="g-off" style="left:${(a-g.t0)/H*g.HW}px;width:${(b-a)/H*g.HW}px"></div>`:'';
+function itemBar(it,g,opt,top=8,hgt=38){
+  const ctx=opt.ctx, a=itemStart(it,ctx), b=endMs(it,ctx); if(b<=g.t0||a>=g.t1) return '';
+  const L=Math.max(a,g.t0), R=Math.min(b,g.t1), p=byId(DB.projects,it.projectId), col=pColor(p), s=it.fixed?null:sched(it,ctx);
+  const o=byId(DB.orders,it.orderId), late=o&&b>pd(o.due).getTime()+864e5, ck=opt.chk?.[it.id];
+  const segs=itemSegs(it,ctx).filter(x=>x[1]>g.t0&&x[0]<g.t1).map(([sa,sb,k])=>{ const x=Math.max(sa,g.t0), y=Math.min(sb,g.t1); return `<div class="g-seg ${k==='s'?'s':''}" style="left:${(x-L)/H*g.HW}px;width:${Math.max(1,(y-x)/H*g.HW)}px;background-color:${col}"></div>`; }).join('');
+  const setupMin=s?s.setup:+it.setupMin||0, restarts=s?s.restarts:+it.restarts||0;
+  const tip=`<b>${esc(p?.name||'—')}</b><br>${esc(lineName(it.lineId))} · ${N(it.qty)} шт<br>${fdt(a)} → ${fdt(b)} (${Q((b-a)/H,1)} ч)<br>наладка ${N(setupMin)} мин${restarts?` · перезапусков ${restarts}`:''}${o?`<br>Заказ ${esc(o.no)} · срок ${fdate(o.due)}${late?' — НЕ УСПЕВАЕМ':''}`:''}${ck&&ck.lacks.length?'<br>⚠ дефицит сырья':''}${it.note?'<br>'+esc(it.note):''}`;
+  return `<div class="g-item ${opt.conf?.has(it.id)?'conf':''} ${late?'late':''} ${b<Date.now()?'done':''}" style="left:${(L-g.t0)/H*g.HW}px;width:${Math.max(3,(R-L)/H*g.HW)}px;top:${top}px;height:${hgt}px;background:${col}26" data-tip="${tip.replace(/"/g,'&quot;')}" ${opt.editable?`onclick="openPlanItem('${it.id}'${opt.scn?`,'${opt.scn}'`:''})"`:''}>${segs}${hgt>=30?`<div class="g-lbl">${ck&&ck.lacks.length?'⚠ ':''}${esc(p?.name||'—')}<small>${N(it.qty)} шт${restarts?` · ↻${restarts}`:''}</small></div>`:''}</div>`;
+}
+function conflictsOf(items,ctx){ const c=new Set(); DB.lines.forEach(l=>{ let pe=0, prev=null; items.filter(i=>i.lineId===l.id).sort((a,b)=>itemStart(a,ctx)-itemStart(b,ctx)).forEach(it=>{ if(pe&&itemStart(it,ctx)<pe-60e3){ c.add(it.id); if(prev) c.add(prev.id); } if(endMs(it,ctx)>pe){ pe=endMs(it,ctx); prev=it; } }); }); return c; }
+function gantt(items,opt={}){
+  const g=monthGeo(), now=Date.now(), conf=conflictsOf(items,opt.ctx), o2={...opt,conf}, LW=160;
+  const rows=DB.lines.map(l=>{
+    const li=items.filter(i=>i.lineId===l.id);
+    const hrs=li.reduce((s,it)=>s+Math.max(0,Math.min(endMs(it,opt.ctx),g.t1)-Math.max(itemStart(it,opt.ctx),g.t0))/H,0);
+    const ghosts=A(opt.ghost).filter(i=>i.lineId===l.id).map(it=>{ const a=itemStart(it), b=endMs(it); if(b<=g.t0||a>=g.t1) return ''; const L=Math.max(a,g.t0), R=Math.min(b,g.t1);
+      return `<div class="g-ghost" style="left:${(L-g.t0)/H*g.HW}px;width:${Math.max(3,(R-L)/H*g.HW)}px" data-tip="Утверждено: ${esc(projName(it.projectId))}<br>${fdt(a)} → ${fdt(b)}"></div>`; }).join('');
+    return `<div class="g-row"><div class="g-lab">${esc(l.name)}<small>${esc(shiftLabel(l.id,opt.ctx))} · ${Q(hrs,0)} ч</small></div><div class="g-days" style="width:${g.W}px;background-image:linear-gradient(to right,var(--line) 1px,transparent 1px);background-size:${g.DW}px 100%">${lineBackdrop(l,g,opt.ctx,opt)}${ghosts}${li.map(it=>itemBar(it,g,o2)).join('')}</div></div>`;
+  }).join('');
+  const nowX=now>g.t0&&now<g.t1?`<div class="g-now" style="left:${LW+(now-g.t0)/H*g.HW}px"></div>`:'';
+  return `<div class="gantt"><div class="g-in" style="width:${g.W+LW}px">${timeHead(g,LW)}${rows}${nowX}</div></div>`;
+}
+// Production schedule — строки: слева текст, справа план и факт
+function scheduleRows(items,opt={}){
+  const g=monthGeo(), now=Date.now(), LW=540, ctx=opt.ctx, conf=conflictsOf(items,ctx), o2={...opt,conf};
+  const labHead=`<div class="r-grid r-head"><span>Проект</span><span>План / факт</span><span>Сроки</span><span>Статус</span></div>`;
+  const body=DB.lines.map(l=>{
+    const li=items.filter(i=>i.lineId===l.id).sort((a,b)=>itemStart(a,ctx)-itemStart(b,ctx)); if(!li.length&&!opt.showEmpty) return '';
+    const hrs=li.reduce((s,it)=>s+Math.max(0,Math.min(endMs(it,ctx),g.t1)-Math.max(itemStart(it,ctx),g.t0))/H,0);
+    const lineRow=`<div class="g-row r-lrow"><div class="g-lab" style="width:${LW}px"><b>${esc(l.name)}</b> <span class="muted">· ${esc(shiftLabel(l.id,ctx))} · перезапуск ${N(lineCfg(l.id,ctx).restart)} мин · загрузка ${Q(hrs,0)} ч</span></div><div class="g-days" style="width:${g.W}px">${lineBackdrop(l,g,ctx,opt)}</div></div>`;
+    const rows=li.map(it=>{
+      const p=byId(DB.projects,it.projectId), s=it.fixed?null:sched(it,ctx), a=itemStart(it,ctx), b=endMs(it,ctx), x=it.fixed?null:itemStatus(it,ctx,opt.chk?.[it.id]);
+      const f=x?x.f:{good:0,start:null,end:null,recs:[]}, q=+it.qty||0;
+      const facts=(x?f.recs:[]).map(r=>{ const fa=tms(r.startAt), fb=tms(r.endAt); if(!isFinite(fa)||!isFinite(fb)||fb<=g.t0||fa>=g.t1) return ''; const L=Math.max(fa,g.t0), R=Math.min(fb,g.t1);
+        return `<div class="r-fact" style="left:${(L-g.t0)/H*g.HW}px;width:${Math.max(2,(R-L)/H*g.HW)}px" data-tip="Факт: ${fdt(fa)} → ${fdt(fb)}<br>${N(r.good)} шт годных"></div>`; }).join('');
+      const o=byId(DB.orders,it.orderId), late=o&&b>pd(o.due).getTime()+864e5;
+      return `<div class="g-row r-row ${opt.editable?'click':''}" ${opt.editable?`onclick="if(!event.target.closest('.g-item'))openPlanItem('${it.id}'${opt.scn?`,'${opt.scn}'`:''})"`:''}>
+        <div class="g-lab r-grid" style="width:${LW}px">
+          <div><span class="sw" style="background:${pColor(p)}"></span><b>${esc(p?.name||'—')}</b><small>${esc(p?.client||'')}${o?` · ${esc(o.no)} до ${fdate(o.due)}`:''}</small></div>
+          <div><b>${N(q)}</b><small>${x?`факт ${N(f.good)} · ${P(q?f.good/q*100:0,0)}`:'утверждено'}</small></div>
+          <div>${fdt(a)} → ${fdt(b)}<small>${s?`наладка ${N(s.setup)} мин${s.restarts?` · перезапусков ${s.restarts}`:''}`:`${Q((b-a)/H,0)} ч`}</small></div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px">${x?`<span class="tag ${x.st[1]}">${x.st[0]}</span>`:''}${late?`<span class="tag t-red">не успеваем к сроку</span>`:''}${opt.chk&&opt.chk[it.id]&&opt.chk[it.id].lacks.length?matTag(opt.chk[it.id]):''}</div>
+        </div>
+        <div class="g-days" style="width:${g.W}px;background-image:linear-gradient(to right,var(--line) 1px,transparent 1px);background-size:${g.DW}px 100%">${itemBar(it,g,o2,7,22)}${facts}</div></div>`;
+    }).join('');
+    return lineRow+rows;
+  }).join('')||`<div class="empty">В этом месяце позиций нет</div>`;
+  const nowX=now>g.t0&&now<g.t1?`<div class="g-now" style="left:${LW+(now-g.t0)/H*g.HW}px"></div>`:'';
+  return `<div class="gantt"><div class="g-in" style="width:${g.W+LW}px">${timeHead(g,LW,labHead)}${body}${nowX}</div></div>`;
+}
+function planTable(items,chk,editable,ctx,scn){
   if(!items.length) return '<div class="empty">Позиций нет</div>';
-  return `<div class="tw"><table><tr><th>Старт</th><th>Окончание</th><th>Линия</th><th>Проект</th><th class="num">Кол-во</th><th class="num">Часов</th><th>Заказ</th>${chk?'<th>Сырьё</th>':''}</tr>
-  ${items.map(it=>{ const o=byId(DB.orders,it.orderId), e=endMs(it), late=o&&e>pd(o.due).getTime()+864e5, p=byId(DB.projects,it.projectId);
-    return `<tr class="${editable?'click':''}" ${editable?`onclick="openPlanItem('${it.id}')"`:''}><td>${fdt(tms(it.start))}</td><td>${fdt(e)}</td><td>${esc(lineName(it.lineId))}</td><td><span class="sw" style="background:${pColor(p)}"></span>${esc(p?.name||'—')}</td><td class="num">${N(it.qty)}</td><td class="num">${Q(it.hours,1)}</td>
-    <td>${o?`${esc(o.no)} <span class="tag ${late?'t-red':'t-gray'}">${late?'не успеваем к ':'срок '}${fdate(o.due)}</span>`:'<span class="muted">—</span>'}</td>${chk?`<td>${matTag(chk[it.id])}</td>`:''}</tr>`; }).join('')}</table></div>`;
+  return `<div class="tw"><table><tr><th>Старт</th><th>Окончание</th><th>Линия</th><th>Проект</th><th class="num">План</th><th class="num">Факт</th><th class="num">Наладка</th><th>Заказ</th><th>Статус</th>${chk?'<th>Сырьё</th>':''}</tr>
+  ${items.map(it=>{ const o=byId(DB.orders,it.orderId), a=itemStart(it,ctx), e=endMs(it,ctx), late=o&&e>pd(o.due).getTime()+864e5, p=byId(DB.projects,it.projectId), s=it.fixed?null:sched(it,ctx), x=it.fixed?null:itemStatus(it,ctx,chk?.[it.id]);
+    return `<tr class="${editable?'click':''}" ${editable?`onclick="openPlanItem('${it.id}'${scn?`,'${scn}'`:''})"`:''}><td>${fdt(a)}</td><td>${fdt(e)}</td><td>${esc(lineName(it.lineId))}</td><td><span class="sw" style="background:${pColor(p)}"></span>${esc(p?.name||'—')}</td><td class="num">${N(it.qty)}</td><td class="num">${x?N(x.f.good):'—'}</td>
+    <td class="num">${N(s?s.setup:it.setupMin)} мин${(s?s.restarts:it.restarts)?` <span class="muted">↻${s?s.restarts:it.restarts}</span>`:''}</td>
+    <td>${o?`${esc(o.no)} <span class="tag ${late?'t-red':'t-gray'}">${late?'не успеваем к ':'срок '}${fdate(o.due)}</span>`:'<span class="muted">—</span>'}</td><td>${x?`<span class="tag ${x.st[1]}">${x.st[0]}</span>`:''}</td>${chk?`<td>${matTag(chk[it.id])}</td>`:''}</tr>`; }).join('')}</table></div>`;
 }
 function planLogHtml(){
-  const l=DB.planLog.slice().sort((a,b)=>b.ts-a.ts).slice(0,40);
+  const l=DB.planLog.slice().sort((a,b)=>b.ts-a.ts).slice(0,50);
   return l.length?l.map(x=>`<div class="${x.kind==='meeting'?'meet':''}"><small>${fts(x.ts)} · ${esc(x.by||'')}${x.kind==='meeting'?' · оперативка':''}</small>${esc(x.text).replace(/\n/g,'<br>')}</div>`).join(''):'<div class="empty">Изменений пока не было</div>';
 }
-function lineEnd(lineId,exceptId){ const it=DB.plan.filter(i=>i.lineId===lineId&&i.id!==exceptId).sort((a,b)=>endMs(b)-endMs(a))[0]; return it?endMs(it):null; }
-function openPlanItem(id){
+const logEntry = (text,kind) => ({col:'planLog',obj:{id:uid(),ts:Date.now(),by:state.me.name,text,...(kind?{kind}:{})}});
+function scnCtx(scn){ return {id:'scn:'+scn.id, items:A(scn.items), downs:[...DB.downs,...A(scn.downs)], lineShifts:scn.lineShifts||{}}; }
+function openPlanItem(id,scnId){
   if(!can('edit')) return;
-  const it=id?byId(DB.plan,id):null, p0=DB.projects.find(p=>p.status==='Активный')||DB.projects[0];
+  const scn=scnId?byId(DB.scenarios,scnId):null, ctx=scn?scnCtx(scn):LIVE, items=ctxItems(ctx);
+  const it=id?items.find(x=>x.id===id):null, p0=DB.projects.find(p=>p.status==='Активный')||DB.projects[0];
   const r=it||{projectId:p0?.id,lineId:p0?.lineId,qty:100000,orderId:'',note:''};
-  if(!it){ const e=lineEnd(r.lineId); r.start=toDT(e&&e>Date.now()?e:Math.ceil(Date.now()/H)*H); r.hours=Math.round(planHours(p0,r.qty)*10)/10; }
-  modal(id?'Позиция плана':'Новая позиция плана',`
+  if(!it){ const e=lineEnd(r.lineId,null,ctx); r.start=toDT(e&&e>Date.now()?e:Math.ceil(Date.now()/H)*H); }
+  modal((id?'Позиция плана':'Новая позиция плана')+(scn?' · сценарий':''),`
     <div class="fg"><label class="fl">Проект</label><select class="fi" name="projectId" onchange="planCalc(true)">${opts(DB.projects.filter(p=>p.status!=='Архив'||p.id===r.projectId),r.projectId,p=>p.name+(p.client?' · '+p.client:''))}</select></div>
-    <div class="frow"><div class="fg"><label class="fl">Линия</label><select class="fi" name="lineId">${opts(DB.lines,r.lineId)}</select></div>
-    <div class="fg"><label class="fl">Заказ (для контроля срока)</label><select class="fi" name="orderId">${opts(DB.orders.filter(o=>o.projectId===r.projectId||o.id===r.orderId),r.orderId,o=>o.no+' · срок '+fdate(o.due),'— без заказа —')}</select></div></div>
-    <div class="frow3"><div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="number" min="1" name="qty" value="${r.qty}" onchange="planCalc()"></div>
-    <div class="fg"><label class="fl">Старт</label><input class="fi" type="datetime-local" name="start" value="${r.start}"></div>
-    <div class="fg"><label class="fl">Длительность, ч</label><input class="fi" type="number" step="0.1" min="0.1" name="hours" value="${r.hours}"></div></div>
-    <div class="hint" id="planHint" style="margin:-4px 0 12px"></div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><button type="button" class="btn btn-s btn-sm" onclick="planCalc()">↻ Пересчитать длительность</button><button type="button" class="btn btn-s btn-sm" onclick="planAfterPrev('${id||''}')">⇥ Сразу после предыдущей на линии</button></div>
+    <div class="frow"><div class="fg"><label class="fl">Линия</label><select class="fi" name="lineId" onchange="planCalc()">${opts(DB.lines,r.lineId)}</select></div>
+    <div class="fg"><label class="fl">Заказ (контроль срока)</label><select class="fi" name="orderId">${opts(DB.orders.filter(o=>o.projectId===r.projectId||o.id===r.orderId),r.orderId,o=>o.no+' · срок '+fdate(o.due),'— без заказа —')}</select></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="number" min="1" name="qty" value="${r.qty}" oninput="planCalc()"></div>
+    <div class="fg"><label class="fl">Старт</label><input class="fi" type="datetime-local" name="start" value="${r.start}" onchange="planCalc()"></div></div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin:-2px 0 10px"><input type="checkbox" name="noSetup" ${r.noSetup?'checked':''} onchange="planCalc()"> Без начальной наладки (продолжение того же проекта)</label>
+    <div class="note" id="planHint" style="margin-bottom:12px;background:var(--blueBg)"></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><button type="button" class="btn btn-s btn-sm" onclick="planAfterPrev('${id||''}','${scnId||''}')">⇥ Сразу после предыдущей на линии</button></div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:12px"><input type="checkbox" name="push" checked> Сдвинуть следующие позиции линии, если появится наложение</label>
     <div class="fg"><label class="fl">Комментарий</label><input class="fi" name="note" value="${esc(r.note||'')}" placeholder="Причина переноса, особенности…"></div>`,
   async f=>{
-    const p=byId(DB.projects,f.projectId); if(!p||!f.start||!(+f.qty)) { toast('Заполните проект, количество и старт'); return false; }
-    const rec={...(it||{}),id:id||uid(),projectId:f.projectId,lineId:f.lineId,orderId:f.orderId||'',qty:+f.qty,start:f.start,hours:+f.hours||planHours(p,+f.qty),note:f.note};
-    await Store.batch([{col:'plan',obj:rec},{col:'planLog',obj:{id:uid(),ts:Date.now(),by:state.me.name,text:planDiff(it,rec)}}]);
-    toast('План обновлён');
-  },'Сохранить',id?`<button class="btn btn-d" type="button" onclick="delPlanItem('${id}')">Удалить</button>`:'');
-  setTimeout(()=>planCalc(false,true),0);
+    const p=byId(DB.projects,f.projectId); if(!p||!f.start||!(+f.qty)){ toast('Заполните проект, количество и старт'); return false; }
+    const rec={...(it?clone(it):{}),id:id||uid(),projectId:f.projectId,lineId:f.lineId,orderId:f.orderId||'',qty:+f.qty,start:f.start,note:f.note,noSetup:!!f.noSetup};
+    delete rec.hours;
+    const work=items.filter(x=>x.id!==rec.id).map(clone).concat([rec]), wctx={...ctx,id:'tmp'+uid(),items:work};
+    const pushed=f.push?pushOverlaps(work,rec.lineId,wctx).filter(x=>x.id!==rec.id):[];
+    if(scn){ await Store.put('scenarios',{...scn,items:work,updated:Date.now()}); toast('Сценарий обновлён'); return; }
+    await Store.batch([{col:'plan',obj:rec},...pushed.map(x=>({col:'plan',obj:x})),logEntry(planDiff(it,rec)+(pushed.length?`; сдвинуто следующих: ${pushed.length}`:''))]);
+    toast('План обновлён'+(pushed.length?` · сдвинуто ${pushed.length}`:''));
+  },'Сохранить',id?`<button class="btn btn-d" type="button" onclick="delPlanItem('${id}','${scnId||''}')">Удалить</button>`:'');
+  state._planCtx=ctx; setTimeout(()=>planCalc(false),0);
 }
-function planCalc(projChanged,hintOnly){
-  const F0=$('#mForm'); if(!F0) return; const F=F0.elements, p=byId(DB.projects,F.projectId.value);
+function planCalc(projChanged){
+  const F0=$('#mForm'); if(!F0||!F0.elements.projectId) return; const F=F0.elements, p=byId(DB.projects,F.projectId.value);
   if(projChanged&&p){ F.lineId.value=p.lineId; F.orderId.innerHTML=opts(DB.orders.filter(o=>o.projectId===p.id),'',o=>o.no+' · срок '+fdate(o.due),'— без заказа —'); }
-  const h=planHours(p,+F.qty.value); if(!hintOnly) F.hours.value=Math.round(h*10)/10;
-  $('#planHint').textContent=p?`Расчёт: наладка ${N(p.setupMin)} мин + ${N(F.qty.value)} шт ÷ ${N(p.speed)} шт/мин = ${Q(h,1)} ч`:'';
+  const ctx=state._planCtx||LIVE, s=sched({id:'__calc'+Math.random(),projectId:F.projectId.value,lineId:F.lineId.value,qty:+F.qty.value,start:F.start.value,noSetup:F.noSetup.checked},ctx);
+  $('#planHint').innerHTML=p&&s.segs.length?`<b>Окончание: ${fdt(s.end)}</b> · всего ${Q(s.hours,1)} ч<br>Чистая работа ${Q(s.run/60,1)} ч (${N(p.speed)} шт/мин) · наладка ${N(s.setup)} мин${s.restarts?` · перезапусков ${s.restarts} (линия: ${esc(shiftLabel(F.lineId.value,ctx))})`:''}${s.ok?'':'<br>⚠ не помещается в 8 недель рабочего времени'}`:'Выберите проект и количество';
 }
-function planAfterPrev(id){ const F=$('#mForm').elements, e=lineEnd(F.lineId.value,id); if(!e) return toast('На этой линии ещё нет позиций'); F.start.value=toDT(e); }
+function planAfterPrev(id,scnId){ const scn=scnId?byId(DB.scenarios,scnId):null, F=$('#mForm').elements, e=lineEnd(F.lineId.value,id,scn?scnCtx(scn):LIVE); if(!e) return toast('На этой линии ещё нет позиций'); F.start.value=toDT(e); planCalc(); }
 function planDiff(o,n){
   const p=projName(n.projectId);
-  if(!o) return `Добавил «${p}» на ${lineName(n.lineId)}: ${fdt(tms(n.start))}, ${N(n.qty)} шт (${Q(n.hours,1)} ч)`;
+  if(!o) return `Добавил «${p}» на ${lineName(n.lineId)}: ${fdt(tms(n.start))}, ${N(n.qty)} шт`;
   const ch=[];
   if(o.projectId!==n.projectId) ch.push(`проект «${projName(o.projectId)}» → «${p}»`);
   if(o.lineId!==n.lineId) ch.push(`линия ${lineName(o.lineId)} → ${lineName(n.lineId)}`);
   if(o.start!==n.start) ch.push(`старт ${fdt(tms(o.start))} → ${fdt(tms(n.start))}`);
   if(+o.qty!==+n.qty) ch.push(`кол-во ${N(o.qty)} → ${N(n.qty)}`);
-  if(+o.hours!==+n.hours) ch.push(`длительность ${Q(o.hours,1)} → ${Q(n.hours,1)} ч`);
   return `«${p}»: ${ch.join('; ')||'комментарий'}${n.note&&n.note!==o.note?' — '+n.note:''}`;
 }
-async function delPlanItem(id){
-  const it=byId(DB.plan,id); if(!confirm('Удалить позицию из плана?')) return; closeModal();
-  await Store.batch([{col:'plan',id,del:true},{col:'planLog',obj:{id:uid(),ts:Date.now(),by:state.me.name,text:`Удалил «${projName(it.projectId)}» (${lineName(it.lineId)}, ${fdt(tms(it.start))}, ${N(it.qty)} шт)`}}]);
+async function delPlanItem(id,scnId){
+  if(!confirm('Удалить позицию из плана?')) return; closeModal();
+  if(scnId){ const scn=byId(DB.scenarios,scnId); await Store.put('scenarios',{...scn,items:A(scn.items).filter(x=>x.id!==id)}); return; }
+  const it=byId(DB.plan,id);
+  await Store.batch([{col:'plan',id,del:true},logEntry(`Удалил «${projName(it.projectId)}» (${lineName(it.lineId)}, ${fdt(itemStart(it))}, ${N(it.qty)} шт)`)]);
   toast('Позиция удалена');
+}
+async function fixOverlaps(){
+  const work=DB.plan.map(clone), ctx={id:'tmp'+uid(),items:work}; let ch=[];
+  DB.lines.forEach(l=>ch=ch.concat(pushOverlaps(work,l.id,ctx)));
+  if(!ch.length) return toast('Наложений нет');
+  await Store.batch([...ch.map(x=>({col:'plan',obj:x})),logEntry(`Устранены наложения: сдвинуто позиций ${ch.length}`)]); toast(`Сдвинуто позиций: ${ch.length}`);
+}
+function openDown(id,scnId){
+  if(!can('edit')) return;
+  const scn=scnId?byId(DB.scenarios,scnId):null, list=scn?A(scn.downs):DB.downs, dn=id?list.find(x=>x.id===id):null;
+  const tm=addD(new Date(),1), [a,b]=shiftWindow(iso(tm),1);
+  const r=dn||{lineId:DB.lines[0]?.id,start:toDT(a),end:toDT(b),reason:(DB.settings.downReasons||DEFAULT_SETTINGS.downReasons)[0],note:''};
+  modal((id?'Простой':'Новый простой')+(scn?' · сценарий':''),`<div class="hint" style="margin-bottom:12px">Линия в это время не работает. Позиции плана автоматически растянутся, а после простоя добавится наладка при перезапуске.</div>
+    <div class="frow"><div class="fg"><label class="fl">Линия</label><select class="fi" name="lineId">${opts(DB.lines,r.lineId)}</select></div>
+    <div class="fg"><label class="fl">Причина</label><select class="fi" name="reason">${(DB.settings.downReasons||DEFAULT_SETTINGS.downReasons).map(x=>`<option ${x===r.reason?'selected':''}>${esc(x)}</option>`).join('')}</select></div></div>
+    <div class="frow"><div class="fg"><label class="fl">С</label><input class="fi" type="datetime-local" name="start" value="${r.start}"></div><div class="fg"><label class="fl">По</label><input class="fi" type="datetime-local" name="end" value="${r.end}"></div></div>
+    <div class="fg"><label class="fl">Комментарий</label><input class="fi" name="note" value="${esc(r.note||'')}" placeholder="Например: 2 оператора на больничном"></div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" name="push" checked> Сдвинуть следующие позиции линии, если появится наложение</label>`,
+  async f=>{
+    if(!f.start||!f.end||tms(f.end)<=tms(f.start)){ toast('Окончание должно быть позже начала'); return false; }
+    const rec={...(dn||{}),id:id||uid(),lineId:f.lineId,start:f.start,end:f.end,reason:f.reason,note:f.note,by:state.me.name};
+    const ctx=scn?scnCtx(scn):LIVE, work=ctxItems(ctx).map(clone);
+    const downs=(scn?A(scn.downs):DB.downs).filter(x=>x.id!==rec.id).concat([rec]);
+    const wctx={...ctx,id:'tmp'+uid(),items:work,downs:scn?[...DB.downs,...downs]:downs};
+    const pushed=f.push?pushOverlaps(work,rec.lineId,wctx):[];
+    if(scn){ await Store.put('scenarios',{...scn,downs,items:work}); toast('Сценарий обновлён'); return; }
+    await Store.batch([{col:'downs',obj:rec},...pushed.map(x=>({col:'plan',obj:x})),logEntry(`${id?'Изменил':'Добавил'} простой ${lineName(rec.lineId)}: ${fdt(tms(rec.start))} → ${fdt(tms(rec.end))}, ${rec.reason}${rec.note?' ('+rec.note+')':''}${pushed.length?`; сдвинуто позиций: ${pushed.length}`:''}`)]);
+    toast('Простой сохранён'+(pushed.length?` · сдвинуто ${pushed.length}`:''));
+  },'Сохранить',id?`<button class="btn btn-d" type="button" onclick="delDown('${id}','${scnId||''}')">Удалить</button>`:'');
+}
+async function delDown(id,scnId){
+  if(!confirm('Удалить простой?')) return; closeModal();
+  if(scnId){ const scn=byId(DB.scenarios,scnId); await Store.put('scenarios',{...scn,downs:A(scn.downs).filter(x=>x.id!==id)}); return; }
+  const d=byId(DB.downs,id); await Store.batch([{col:'downs',id,del:true},logEntry(`Удалил простой ${lineName(d.lineId)} ${fdt(tms(d.start))}`)]);
 }
 function openMeeting(){
   modal('Итоги оперативки',`<div class="hint" style="margin-bottom:12px">Коротко: что решили, что перенесли и почему. Запись увидят все в журнале плана.</div>
-    <div class="fg"><textarea class="fi" name="text" rows="6" autofocus placeholder="Линия 1: сдвиг на 6 ч из-за замены форсунки на ст. 5. Заказ З-104 — ждём золото, ставим после Джина…"></textarea></div>`,
+    <div class="fg"><textarea class="fi" name="text" rows="6" autofocus placeholder="Линия 1: сдвиг на 6 ч из-за замены форсунки на ст. 5. Линия 3 завтра без 2-й смены — нет людей…"></textarea></div>`,
   async f=>{ if(!f.text.trim()) return false; await Store.put('planLog',{id:uid(),ts:Date.now(),by:state.me.name,kind:'meeting',text:'Оперативка: '+f.text.trim()}); toast('Записано'); },'Записать');
 }
 async function approveMonth(){
-  const mk=state.planMonth, items=monthItems(DB.plan,mk);
+  const mk=state.planMonth, items=monthItems(DB.plan,mk,LIVE);
   if(!items.length) return toast('В действующем плане на этот месяц нет позиций');
   if(!confirm(`${DB.approved?.[mk]?'Перезаписать утверждённый план':'Утвердить план'} на ${monthLabel(mk)}? ${items.length} позиций станут статичной плановой цифрой месяца.`)) return;
-  await Store.batch([{path:['approved',mk],val:{at:Date.now(),by:state.me.name,items:clone(items)}},{col:'planLog',obj:{id:uid(),ts:Date.now(),by:state.me.name,text:`Утвердил план на ${monthLabel(mk)}: ${items.length} позиций, ${N(items.reduce((a,i)=>a+(+i.qty||0),0))} шт`}}]);
+  await Store.batch([{path:['approved',mk],val:{at:Date.now(),by:state.me.name,items:items.map(it=>snapItem(it,LIVE))}},logEntry(`Утвердил план на ${monthLabel(mk)}: ${items.length} позиций, ${N(items.reduce((a,i)=>a+(+i.qty||0),0))} шт`)]);
   toast('План месяца утверждён');
 }
+function qtyInMonth(it,ctx,t0,t1){ const segs=itemSegs(it,ctx).filter(x=>x[2]==='r'), tot=segs.reduce((s,x)=>s+(x[1]-x[0]),0); if(!tot) return 0; return (+it.qty||0)*segs.reduce((s,x)=>s+Math.max(0,Math.min(x[1],t1)-Math.max(x[0],t0)),0)/tot; }
 function planCompare(mk,ap,cur){
   const [y,m]=mk.split('-').map(Number), f=iso(new Date(y,m-1,1)), t=iso(new Date(y,m,0)), t0=new Date(y,m-1,1).getTime(), t1=new Date(y,m,1).getTime();
-  const inM=it=>{ const a=tms(it.start), b=endMs(it), ov=Math.max(0,Math.min(b,t1)-Math.max(a,t0)); return (+it.qty||0)*(b>a?ov/(b-a):0); };
   const rows={}; const add=(pid,k,v)=>{ rows[pid]=rows[pid]||{a:0,c:0,f:0}; rows[pid][k]+=v; };
-  A(ap?.items).forEach(it=>add(it.projectId,'a',inM(it))); cur.forEach(it=>add(it.projectId,'c',inM(it)));
+  A(ap?.items).forEach(it=>add(it.projectId,'a',qtyInMonth(it,null,t0,t1))); cur.forEach(it=>add(it.projectId,'c',qtyInMonth(it,LIVE,t0,t1)));
   DB.output.filter(r=>r.date>=f&&r.date<=t).forEach(r=>add(r.projectId,'f',+r.good||0));
   const list=Object.entries(rows).sort((a,b)=>b[1].a-a[1].a), T=list.reduce((s,[,r])=>({a:s.a+r.a,c:s.c+r.c,f:s.f+r.f}),{a:0,c:0,f:0});
+  const inMonth=x=>new Date(x.ts).getMonth()===m-1&&new Date(x.ts).getFullYear()===y;
   return `<div class="grid kpis k4"><div class="card kpi accent"><div class="kl">Утверждённый план</div><div class="kv">${N(T.a)} <small>шт</small></div><div class="kd">${ap?'утверждён '+fts(ap.at):'не утверждён'}</div></div>
     <div class="card kpi"><div class="kl">Действующий план</div><div class="kv">${N(T.c)} <small>шт</small></div><div class="kd ${T.c>=T.a?'up':'down'}">${T.a?(T.c>=T.a?'+':'')+P((T.c/T.a-1)*100,1)+' к утверждённому':''}</div></div>
     <div class="card kpi"><div class="kl">Факт (журнал выпуска)</div><div class="kv">${N(T.f)} <small>шт</small></div><div class="kd flat">${T.a?P(T.f/T.a*100,0)+' от утверждённого':''}</div></div>
-    <div class="card kpi"><div class="kl">Изменений плана</div><div class="kv">${DB.planLog.filter(x=>new Date(x.ts).getMonth()===m-1&&new Date(x.ts).getFullYear()===y&&x.kind!=='meeting').length}</div><div class="kd flat">оперативок: ${DB.planLog.filter(x=>x.kind==='meeting'&&new Date(x.ts).getMonth()===m-1).length}</div></div></div>
+    <div class="card kpi"><div class="kl">Изменений плана</div><div class="kv">${DB.planLog.filter(x=>inMonth(x)&&x.kind!=='meeting').length}</div><div class="kd flat">оперативок: ${DB.planLog.filter(x=>inMonth(x)&&x.kind==='meeting').length} · простоев: ${DB.downs.filter(d=>d.start.slice(0,7)===mk).length}</div></div></div>
   <div class="card"><div class="card-h"><div class="card-t">По проектам</div><div class="card-s">количество в пределах месяца</div></div>${list.length?`<div class="tw"><table><tr><th>Проект</th><th class="num">Утверждено</th><th class="num">Действующий</th><th class="num">Откл. плана</th><th class="num">Факт</th><th>Выполнение утверждённого</th></tr>
   ${list.map(([pid,r])=>{ const pct=r.a?r.f/r.a*100:0; return `<tr><td><span class="sw" style="background:${pColor(byId(DB.projects,pid))}"></span>${esc(projName(pid))}</td><td class="num">${N(r.a)}</td><td class="num">${N(r.c)}</td><td class="num">${r.a?(r.c>=r.a?'+':'')+N(r.c-r.a):'—'}</td><td class="num"><b>${N(r.f)}</b></td>
     <td><div class="prog"><div class="track"><div class="fill" style="width:${Math.min(pct,100)}%;background:${pct>=100?'var(--green)':'var(--brand)'}"></div></div><span style="font-size:12px;font-weight:700">${r.a?P(pct,0):'вне плана'}</span></div></td></tr>`; }).join('')}
@@ -1227,33 +1521,106 @@ function planCompare(mk,ap,cur){
 }
 
 // ═════════════════════════════════════════════
+//  MODEL — моделирование вариантов плана
+// ═════════════════════════════════════════════
+function planStats(items,ctx,mk){
+  const [y,m]=mk.split('-').map(Number), t0=new Date(y,m-1,1).getTime(), t1=new Date(y,m,1).getTime(), mi=monthItems(items,mk,ctx);
+  let setup=0, restarts=0; mi.forEach(it=>{ const s=sched(it,ctx); setup+=s.setup; restarts+=s.restarts; });
+  const late=DB.orders.filter(o=>{ const e=orderFinish(o,ctx); return e&&e>pd(o.due).getTime()+864e5; });
+  const chk=planMaterialCheck(ctx);
+  return {out:mi.reduce((a,it)=>a+qtyInMonth(it,ctx,t0,t1),0),setup,restarts,late,deficit:Object.values(chk).filter(c=>c.lacks.length).length,overlaps:overlapsCount(items,ctx)};
+}
+function renderModel(){
+  if(!state.planMonth) state.planMonth=monthKey(new Date());
+  const list=DB.scenarios.slice().sort((a,b)=>(b.created||0)-(a.created||0)), ce=can('edit');
+  const scn=byId(DB.scenarios,state.scnId)||list[0]; if(scn) state.scnId=scn.id;
+  const top=`<div class="toolbar">${monthNav()}${list.length?`<select class="sel" style="margin-left:8px;min-width:220px" onchange="state.scnId=this.value;render()">${list.map(s=>`<option value="${s.id}" ${s.id===scn?.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select>`:''}<div class="sp"></div>
+    ${ce?`<button class="btn btn-s" onclick="newScenario()">+ Сценарий из действующего плана</button>`:''}
+    ${scn&&ce?`<button class="btn btn-s" onclick="newScenario('${scn.id}')">Копия</button><button class="btn btn-s" onclick="renameScenario('${scn.id}')">Переименовать</button><button class="btn btn-d" onclick="delScenario('${scn.id}')">Удалить</button>`:''}
+    ${scn&&can('edit')?`<button class="btn btn-p" onclick="applyScenario('${scn.id}')">Применить к действующему плану</button>`:''}</div>`;
+  if(!scn){ $('#content').innerHTML=top+`<div class="card"><div class="empty">Здесь можно проверить «а что если»: переставить проекты, добавить смену или простой, изменить количество — и сразу увидеть, как это скажется на отгрузках и сырье. Действующий план при этом не меняется.<br><br>${ce?'<button class="btn btn-p" onclick="newScenario()">Создать первый сценарий из действующего плана</button>':''}</div></div>`; return; }
+  const ctx=scnCtx(scn), mk=state.planMonth, cur=monthItems(ctx.items,mk,ctx).sort((a,b)=>itemStart(a,ctx)-itemStart(b,ctx));
+  const A1=planStats(DB.plan,LIVE,mk), B=planStats(ctx.items,ctx,mk), chk=planMaterialCheck(ctx);
+  const cmp=(l,a,b,fmt,lowerBetter)=>{ const d=b-a, good=lowerBetter?d<0:d>0; return `<div class="card kpi"><div class="kl">${l}</div><div class="kv">${fmt(b)}</div><div class="kd ${Math.abs(d)<1e-6?'flat':good?'up':'down'}">сейчас ${fmt(a)}${Math.abs(d)<1e-6?'':` · ${d>0?'+':''}${fmt(d)}`}</div></div>`; };
+  const shiftsCard=DB.lines.map(l=>{ const c=lineCfg(l.id,ctx), base=lineCfg(l.id,LIVE); return `<div class="stat"><span><b>${esc(l.name)}</b><div class="muted" style="font-size:12px">сейчас: ${esc(shiftLabel(l.id,LIVE))}</div></span><span style="display:flex;gap:6px">${[1,2,3].map(n=>`<label class="chip ${c.shifts.includes(n)?'on':''}" style="cursor:pointer;padding:5px 10px"><input type="checkbox" style="display:none" ${c.shifts.includes(n)?'checked':''} ${ce?'':'disabled'} onchange="setScnShift('${scn.id}','${l.id}',${n},this.checked)">${n} см.</label>`).join('')}</span></div>`; }).join('');
+  const ords=DB.orders.map(o=>({o,a:orderFinish(o,LIVE),b:orderFinish(o,ctx)})).filter(x=>x.a||x.b).filter(x=>x.a!==x.b||x.b>pd(x.o.due).getTime()+864e5||x.a>pd(x.o.due).getTime()+864e5).sort((x,y)=>x.o.due.localeCompare(y.o.due));
+  const fa=demandForecast(LIVE), fb=demandForecast(ctx), raws=DB.raw.filter(r=>fa[r.id]?.deficitDate||fb[r.id]?.deficitDate);
+  const onTime=(e,o)=>!e?'<span class="muted">не в плане</span>':e>pd(o.due).getTime()+864e5?`<span class="tag t-red">${fdt(e)}</span>`:`<span class="tag t-green">${fdt(e)}</span>`;
+  $('#content').innerHTML=top+`
+  <div class="toolbar" style="margin-top:-4px"><span class="pill">🧪 ${esc(scn.name)} · создан ${fts(scn.created)} · ${esc(scn.by||'')}</span><span class="pill">Изменения здесь не влияют на действующий план</span></div>
+  <div class="grid kpis">${cmp('Выпуск в месяце, шт',A1.out,B.out,N)}${cmp('Наладка, ч',A1.setup/60,B.setup/60,v=>Q(v,1),true)}${cmp('Перезапусков линий',A1.restarts,B.restarts,N,true)}${cmp('Заказов с опозданием',A1.late.length,B.late.length,N,true)}${cmp('Позиций с дефицитом сырья',A1.deficit,B.deficit,N,true)}${cmp('Наложений',A1.overlaps,B.overlaps,N,true)}</div>
+  <div class="grid g2 row-gap">
+    <div class="card"><div class="card-h"><div class="card-t">План сценария</div><div class="sp"></div>${viewSeg()}</div>
+      <div class="toolbar">${ce?`<button class="btn btn-p btn-sm" onclick="openPlanItem(null,'${scn.id}')">+ Позиция</button><button class="btn btn-s btn-sm" onclick="openDown(null,'${scn.id}')">⛔ Простой</button><button class="btn btn-s btn-sm" onclick="scnReflow('${scn.id}','push')">Устранить наложения</button><button class="btn btn-s btn-sm" onclick="scnReflow('${scn.id}','compact')" data-tip="Убрать паузы между будущими позициями на каждой линии">Выстроить вплотную</button>`:''}</div>
+      ${state.planView==='rows'?scheduleRows(cur,{ctx,editable:ce,scn:scn.id,chk,downIds:A(scn.downs).map(d=>d.id)}):gantt(cur,{ctx,editable:ce,scn:scn.id,chk,ghost:monthItems(DB.plan,mk,LIVE).map(it=>snapItem(it,LIVE)),downIds:A(scn.downs).map(d=>d.id)})}</div>
+    <div class="card"><div class="card-h"><div class="card-t">Сменность линий в сценарии</div></div>${shiftsCard}<div class="hint" style="margin-top:10px">Когда линия работает не все смены, на каждый новый день добавляется наладка при перезапуске (задаётся в линии или в проекте).</div></div>
+  </div>
+  <div class="grid g11">
+    <div class="card"><div class="card-h"><div class="card-t">Влияние на отгрузки</div><div class="card-s">заказы, у которых меняется срок или есть опоздание</div></div>
+      ${ords.length?`<div class="tw"><table><tr><th>Заказ</th><th>Срок</th><th>Действующий план</th><th>Сценарий</th><th class="num">Δ</th></tr>${ords.map(x=>`<tr><td><b>${esc(x.o.no)}</b><div class="muted" style="font-size:12px">${esc(projName(x.o.projectId))}</div></td><td>${fdate(x.o.due)}</td><td>${onTime(x.a,x.o)}</td><td>${onTime(x.b,x.o)}</td><td class="num">${x.a&&x.b?(x.b>=x.a?'+':'−')+Q(Math.abs(x.b-x.a)/H,1)+' ч':'—'}</td></tr>`).join('')}</table></div>`:'<div class="empty">Сроки отгрузок не меняются</div>'}</div>
+    <div class="card"><div class="card-h"><div class="card-t">Влияние на сырьё</div><div class="card-s">позиции с дефицитом хотя бы в одном варианте</div></div>
+      ${raws.length?`<div class="tw"><table><tr><th>Сырьё</th><th>Действующий план</th><th>Сценарий</th></tr>${raws.map(r=>{ const a=fa[r.id], b=fb[r.id], t=x=>x.deficitDate?`<span class="tag t-red">−${QU(x.maxLack,r.unit)} с ${fdate(x.deficitDate)}</span>`:'<span class="tag t-green">хватает</span>'; return `<tr><td>${esc(r.name)}</td><td>${t(a)}</td><td>${t(b)}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Дефицита сырья нет ни в одном варианте</div>'}</div>
+  </div>`;
+}
+async function newScenario(fromId){
+  const src=fromId?byId(DB.scenarios,fromId):null;
+  const s={id:uid(),name:src?src.name+' (копия)':'Сценарий '+(DB.scenarios.length+1)+' · '+fdate(iso(new Date())),created:Date.now(),by:state.me.name,
+    items:src?clone(A(src.items)):DB.plan.map(clone),downs:src?clone(A(src.downs)):[],lineShifts:src?clone(src.lineShifts||{}):{}};
+  state.scnId=s.id; await Store.put('scenarios',s); toast('Сценарий создан');
+}
+function renameScenario(id){ const s=byId(DB.scenarios,id); const n=prompt('Название сценария',s.name); if(n&&n.trim()) Store.put('scenarios',{...s,name:n.trim()}); }
+async function delScenario(id){ if(!confirm('Удалить сценарий?')) return; state.scnId=''; await Store.del('scenarios',id); }
+async function setScnShift(id,lineId,n,on){
+  const s=clone(byId(DB.scenarios,id)); s.lineShifts=s.lineShifts||{}; let cur=lineCfg(lineId,scnCtx(s)).shifts.filter(x=>x!==n); if(on) cur.push(n); cur.sort();
+  if(!cur.length) return toast('Хотя бы одна смена'); s.lineShifts[lineId]=cur; await Store.put('scenarios',s);
+}
+async function scnReflow(id,mode){
+  const s=clone(byId(DB.scenarios,id)), ctx={...scnCtx(s),id:'tmp'+uid()}; s.items=A(s.items); ctx.items=s.items; let n=0;
+  DB.lines.forEach(l=>n+=(mode==='push'?pushOverlaps(s.items,l.id,ctx):compactLine(s.items,l.id,ctx)).length);
+  await Store.put('scenarios',s); toast(n?`Сдвинуто позиций: ${n}`:'Нечего сдвигать');
+}
+async function applyScenario(id){
+  const s=byId(DB.scenarios,id), items=A(s.items), downs=A(s.downs), ls=s.lineShifts||{};
+  const lsTxt=Object.entries(ls).filter(([lid,v])=>JSON.stringify(A(v).map(Number))!==JSON.stringify(lineCfg(lid,LIVE).shifts)).map(([lid,v])=>`${lineName(lid)}: смены ${A(v).join('+')}`);
+  if(!confirm(`Применить сценарий «${s.name}» к действующему плану?\n\n• позиции плана будут заменены позициями сценария (${items.length})\n• простои сценария добавятся в действующий план (${downs.length})${lsTxt.length?'\n• изменится сменность: '+lsTxt.join(', '):''}\n\nИзменение попадёт в журнал плана.`)) return;
+  const ids=new Set(items.map(i=>i.id)), list=[];
+  DB.plan.filter(p=>!ids.has(p.id)).forEach(p=>list.push({col:'plan',id:p.id,del:true}));
+  items.forEach(it=>list.push({col:'plan',obj:it}));
+  downs.forEach(d=>list.push({col:'downs',obj:d}));
+  Object.entries(ls).forEach(([lid,v])=>{ const l=byId(DB.lines,lid); if(l) list.push({col:'lines',obj:{...l,workShifts:A(v).map(Number)}}); });
+  list.push(logEntry(`Применён сценарий «${s.name}»: ${items.length} позиций${downs.length?`, простоев ${downs.length}`:''}${lsTxt.length?', '+lsTxt.join(', '):''}`));
+  await Store.batch(list); state.planTab='live'; toast('Сценарий применён'); go('plan');
+}
+
+// ═════════════════════════════════════════════
 //  DEMAND — потребность и поставки
 // ═════════════════════════════════════════════
 function renderDemand(){
   const fc=demandForecast(), rows=Object.values(fc).filter(x=>x.need>0||x.incoming>0||x.deficitDate).sort((a,b)=>(a.deficitDate||'9999').localeCompare(b.deficitDate||'9999')||b.need-a.need);
-  const def=rows.filter(x=>x.deficitDate), chk=planMaterialCheck(), active=activePlanReq();
-  const sup=DB.supplies.slice().sort((a,b)=>(a.status==='received')-(b.status==='received')||a.date.localeCompare(b.date));
-  const today=new Date();
+  const def=rows.filter(x=>x.deficitDate), chk=planMaterialCheck(), active=activePlanReq(), noReport=active.filter(x=>x.overdue);
+  const sup=DB.supplies.slice().sort((a,b)=>(a.status==='received')-(b.status==='received')||a.date.localeCompare(b.date)), today=new Date();
   const ordCost=def.filter(x=>x.end<0).reduce((a,x)=>a+(-x.end)*(+x.r.cost||0),0);
   $('#content').innerHTML=`<div class="grid kpis k4">
     <div class="card kpi ${def.length?'accent':''}"><div class="kl">Позиций в дефиците</div><div class="kv">${def.length}</div><div class="kd ${def.length?'':'up'}">${def.length?'ближайший с '+fdate(def[0].deficitDate):'сырья хватает на весь план'}</div></div>
     <div class="card kpi"><div class="kl">Позиций плана под угрозой</div><div class="kv">${Object.values(chk).filter(c=>c.lacks.length).length} <small>из ${active.length}</small></div><div class="kd flat">по наличию сырья</div></div>
     <div class="card kpi"><div class="kl">Ожидается поставок</div><div class="kv">${DB.supplies.filter(s=>s.status!=='received').length}</div><div class="kd flat">на ${money(DB.supplies.filter(s=>s.status!=='received').reduce((a,s)=>a+(+s.qty||0)*(+byId(DB.raw,s.rawId)?.cost||0),0))}</div></div>
     <div class="card kpi"><div class="kl">Нужно дозаказать</div><div class="kv" style="font-size:20px">${money(ordCost)}</div><div class="kd flat">чтобы закрыть дефицит</div></div></div>
+  <div class="note row-gap" style="background:var(--blueBg)">Потребность считается по <b>плановым нормам проектов</b> и количествам <b>действующего плана</b>. Позиция перестаёт резервировать сырьё, когда по ней сохранён тех. отчёт с фактическим расходом — в этот момент сырьё списывается со склада.</div>
+  ${noReport.length?`<div class="card row-gap"><div class="card-h"><div class="card-t">⚠ Наработки без тех. отчёта</div><div class="card-s">позиция закончилась, но фактический расход ещё не внесён — сырьё остаётся зарезервированным по норме</div></div>
+    <div class="tw"><table><tr><th>Окончание по плану</th><th>Проект</th><th>Линия</th><th class="num">Кол-во</th><th></th></tr>${noReport.map(({it,p})=>`<tr><td>${fdt(endMs(it))}</td><td>${esc(p.name)}</td><td>${esc(lineName(it.lineId))}</td><td class="num">${N(it.qty)}</td><td>${can('edit')?`<button class="btn btn-p btn-sm" onclick="openRun('${p.id}',null,'${it.id}')">Заполнить тех. отчёт</button>`:''}</td></tr>`).join('')}</table></div></div>`:''}
   <div class="card row-gap"><div class="card-h"><div class="card-t">Прогноз сырья по действующему плану</div><div class="card-s">остаток + поставки − потребность позиций плана в хронологии</div><div class="sp"></div>${can('edit')?`<button class="btn btn-s btn-sm" onclick="openFeasibility()">🧮 Когда сможем выполнить проект?</button>`:''}</div>
     ${rows.length?`<div class="tw"><table><tr><th>Сырьё</th><th class="num">Остаток</th><th class="num">Потребность</th><th class="num">Ожидается</th><th class="num">Прогноз</th><th>Дефицит</th><th>Заказать до</th><th></th></tr>
-    ${rows.map(x=>{ const ob=x.deficitDate?addD(pd(x.deficitDate),-(+x.r.leadDays||0)):null, urgent=ob&&iso(ob)<iso(today);
-      const u=x.r.unit, short=x.end<0, lack=short?-x.end:0;
+    ${rows.map(x=>{ const ob=x.deficitDate?addD(pd(x.deficitDate),-(+x.r.leadDays||0)):null, urgent=ob&&iso(ob)<iso(today), u=x.r.unit, short=x.end<0, lack=short?-x.end:0;
       return `<tr><td><b>${esc(x.r.name)}</b><div class="muted" style="font-size:12px">${esc(x.r.supplier||'')}${x.r.leadDays?' · поставка '+x.r.leadDays+' дн.':''}</div></td><td class="num">${QU(x.stock,u)} ${esc(u)}</td><td class="num">${QU(x.need,u)}</td><td class="num">${x.incoming?'+'+QU(x.incoming,u):'—'}</td>
       <td class="num"><b style="color:${short?'var(--red)':'inherit'}">${QU(x.end,u)}</b></td><td>${x.deficitDate?`<span class="tag t-red">−${QU(x.maxLack,u)} с ${fdate(x.deficitDate)}</span>`:'<span class="tag t-green">хватает</span>'}</td>
       <td>${!x.deficitDate?'':short?`<span class="tag ${urgent?'t-red':'t-amber'}">${urgent?'срочно!':fdate(iso(ob))}</span>`:'<span class="tag t-amber" data-tip="Поставка уже заказана, но приходит позже, чем нужно сырьё">ускорить поставку</span>'}</td>
-      <td>${short&&can('edit')?`<button class="btn btn-s btn-sm" onclick="openSupply(null,'${x.r.id}',${u==='шт'?Math.ceil(lack):Math.ceil(lack*10)/10},'${iso(ob&&!urgent?ob:addD(today,+x.r.leadDays||0))}')">Заказать ${QU(lack,u)}</button>`:''}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Нет потребности: в плане нет будущих позиций или у проектов не заданы рецептуры</div>'}</div>
+      <td>${short&&can('edit')?`<button class="btn btn-s btn-sm" onclick="openSupply(null,'${x.r.id}',${u==='шт'?Math.ceil(lack):Math.ceil(lack*10)/10},'${iso(ob&&!urgent?ob:addD(today,+x.r.leadDays||0))}')">Заказать ${QU(lack,u)}</button>`:''}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Нет потребности: в плане нет позиций без тех. отчёта или у проектов не заданы рецептуры</div>'}</div>
   <div class="grid g11">
     <div class="card"><div class="card-h"><div class="card-t">Позиции плана и сырьё</div><div class="card-s">когда реально можно начинать</div></div>
-      ${active.length?`<div class="tw"><table><tr><th>Старт по плану</th><th>Проект</th><th class="num">Кол-во</th><th>Сырьё</th></tr>${active.map(({it,p})=>`<tr class="${can('edit')?'click':''}" ${can('edit')?`onclick="openPlanItem('${it.id}')"`:''}><td>${fdt(tms(it.start))}</td><td><span class="sw" style="background:${pColor(p)}"></span>${esc(p.name)}</td><td class="num">${N(it.qty)}</td><td>${matTag(chk[it.id])}</td></tr>`).join('')}</table></div>`:'<div class="empty">Будущих позиций нет</div>'}</div>
+      ${active.length?`<div class="tw"><table><tr><th>Старт по плану</th><th>Проект</th><th class="num">Кол-во</th><th>Сырьё</th></tr>${active.map(({it,p,overdue})=>`<tr class="${can('edit')?'click':''}" ${can('edit')?`onclick="openPlanItem('${it.id}')"`:''}><td>${fdt(itemStart(it))}${overdue?' <span class="tag t-amber">ждёт тех. отчёт</span>':''}</td><td><span class="sw" style="background:${pColor(p)}"></span>${esc(p.name)}</td><td class="num">${N(it.qty)}</td><td>${matTag(chk[it.id])}</td></tr>`).join('')}</table></div>`:'<div class="empty">Позиций нет</div>'}</div>
     <div class="card"><div class="card-h"><div class="card-t">Поставки сырья</div><div class="sp"></div>${can('edit')?`<button class="btn btn-p btn-sm" onclick="openSupply()">+ Поставка</button>`:''}</div>
       ${sup.length?`<div class="tw"><table><tr><th>Дата</th><th>Сырьё</th><th class="num">Кол-во</th><th>Поставщик</th><th>Статус</th><th></th></tr>
-      ${sup.map(s=>{ const r=byId(DB.raw,s.rawId), late=s.status!=='received'&&s.date<iso(today); return `<tr><td>${fdate(s.date)}</td><td>${esc(r?.name||'—')}</td><td class="num">${Q(s.qty)} ${esc(r?.unit||'')}</td><td class="muted">${esc(s.supplier||'')}</td>
+      ${sup.map(s=>{ const r=byId(DB.raw,s.rawId), late=s.status!=='received'&&s.date<iso(today); return `<tr><td>${fdate(s.date)}</td><td>${esc(r?.name||'—')}</td><td class="num">${QU(s.qty,r?.unit)} ${esc(r?.unit||'')}</td><td class="muted">${esc(s.supplier||'')}</td>
         <td>${s.status==='received'?'<span class="tag t-green">получено</span>':late?'<span class="tag t-red">опаздывает</span>':'<span class="tag t-blue">ожидается</span>'}</td>
         <td>${s.status!=='received'&&can('edit')?`<button class="btn btn-g btn-sm" onclick="receiveSupply('${s.id}')">Принять</button> <button class="btn btn-s btn-sm" onclick="openSupply('${s.id}')">✎</button>`:''}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Поставок нет</div>'}</div>
   </div>`;
@@ -1276,7 +1643,7 @@ async function receiveSupply(id){
     toast('Поставка принята на склад'); },'Принять на склад');
 }
 function openFeasibility(){
-  modal('Когда сможем выполнить проект?',`<div class="hint" style="margin-bottom:12px">Расчёт учитывает остатки, уже запланированную потребность действующего плана и ожидаемые поставки.</div>
+  modal('Когда сможем выполнить проект?',`<div class="hint" style="margin-bottom:12px">Учитываются остатки, резерв действующего плана, ожидаемые поставки и календарь линии (смены, простои, перезапуски).</div>
     <div class="fg"><label class="fl">Проект</label><select class="fi" name="projectId">${opts(DB.projects.filter(p=>p.status!=='Архив'),'',p=>p.name)}</select></div>
     <div class="frow"><div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="number" name="qty" value="200000"></div><div class="fg"><label class="fl">Срок отгрузки</label><input class="fi" type="date" name="due" value="${iso(addD(new Date(),21))}"></div></div>
     <div id="feasOut"></div>`,
@@ -1284,23 +1651,20 @@ function openFeasibility(){
 }
 function feasCalc(f){
   const p=byId(DB.projects,f.projectId), qty=+f.qty||0; if(!p||!qty) return;
-  const fc=demandForecast(), req=projectReq(p,qty), sup=DB.supplies.filter(s=>s.status!=='received'), today=iso(new Date());
-  const lines=[]; let ready=today, impossible=false, orderBy=null;
+  const fc=demandForecast(), req=projectReq(p,qty), sup=DB.supplies.filter(s=>s.status!=='received'), today=iso(new Date()), lines=[]; let ready=today, impossible=false;
   Object.entries(req).forEach(([rid,need])=>{
-    const x=fc[rid]; if(!x) return; const base=x.stock-x.need;
-    const dates=[...new Set(sup.filter(s=>s.rawId===rid).map(s=>s.date))].sort();
-    const supBy=d=>sup.filter(s=>s.rawId===rid&&s.date<=d).reduce((a,s)=>a+(+s.qty||0),0);
-    let when=base+supBy(today)>=need?today:dates.find(d=>base+supBy(d)>=need);
-    let lack=0; if(!when){ lack=need-base-supBy('9999'); const ld=iso(addD(new Date(),+x.r.leadDays||0)); when=ld; impossible=true; orderBy=orderBy&&orderBy>ld?orderBy:ld; }
+    const x=fc[rid]; if(!x) return; const base=x.stock-x.need, supBy=d=>sup.filter(s=>s.rawId===rid&&s.date<=d).reduce((a,s)=>a+(+s.qty||0),0);
+    let when=base+supBy(today)>=need?today:[...new Set(sup.filter(s=>s.rawId===rid).map(s=>s.date))].sort().find(d=>base+supBy(d)>=need), lack=0;
+    if(!when){ lack=need-base-supBy('9999'); when=iso(addD(new Date(),+x.r.leadDays||0)); impossible=true; }
     if(when>ready) ready=when;
-    lines.push(`<tr><td>${esc(x.r.name)}</td><td class="num">${Q(need,2)} ${esc(x.r.unit)}</td><td class="num">${Q(Math.max(0,base+supBy('9999')),2)}</td><td>${lack?`<span class="tag t-red">заказать ${Q(lack,1)} → ${fdate(when)}</span>`:when===today?'<span class="tag t-green">есть</span>':`<span class="tag t-amber">с ${fdate(when)}</span>`}</td></tr>`);
+    lines.push(`<tr><td>${esc(x.r.name)}</td><td class="num">${QU(need,x.r.unit)} ${esc(x.r.unit)}</td><td class="num">${QU(Math.max(0,base+supBy('9999')),x.r.unit)}</td><td>${lack?`<span class="tag t-red">заказать ${QU(lack,x.r.unit)} → ${fdate(when)}</span>`:when===today?'<span class="tag t-green">есть</span>':`<span class="tag t-amber">с ${fdate(when)}</span>`}</td></tr>`);
   });
-  const hours=planHours(p,qty), lineFree=lineEnd(p.lineId), startMs=Math.max(pd(ready).getTime()+8*H,lineFree||0,Date.now()), finish=startMs+hours*H, ok=finish<=pd(f.due).getTime()+864e5;
+  const lineFree=lineEnd(p.lineId), startMs=Math.max(pd(ready).getTime(),lineFree||0,Date.now()), s=sched({id:'__feas'+Math.random(),projectId:p.id,lineId:p.lineId,qty,start:toDT(startMs)}), ok=s.end<=pd(f.due).getTime()+864e5;
   $('#feasOut').innerHTML=`<div class="card" style="padding:14px;margin-top:6px;box-shadow:none">
     <div class="stat"><span>Сырьё будет готово</span><b>${fdate(ready)}${impossible?' <span class="tag t-red">нужен дозаказ</span>':''}</b></div>
-    <div class="stat"><span>Линия ${esc(lineName(p.lineId))} свободна с</span><b>${lineFree?fdt(lineFree):'сейчас'}</b></div>
-    <div class="stat"><span>Время производства</span><b>${Q(hours,1)} ч</b></div>
-    <div class="stat"><span>Реальный старт → окончание</span><b>${fdt(startMs)} → ${fdt(finish)}</b></div>
+    <div class="stat"><span>${esc(lineName(p.lineId))} свободна с</span><b>${lineFree?fdt(lineFree):'сейчас'} · ${esc(shiftLabel(p.lineId))}</b></div>
+    <div class="stat"><span>Работа / наладка</span><b>${Q(s.run/60,1)} ч / ${N(s.setup)} мин${s.restarts?` (перезапусков ${s.restarts})`:''}</b></div>
+    <div class="stat"><span>Старт → окончание по календарю линии</span><b>${fdt(s.start)} → ${fdt(s.end)}</b></div>
     <div class="stat"><span>Срок ${fdate(f.due)}</span><b>${ok?'<span class="tag t-green">успеваем</span>':'<span class="tag t-red">не успеваем</span>'}</b></div>
     <div class="tw" style="margin:10px -14px -14px"><table><tr><th>Сырьё</th><th class="num">Нужно</th><th class="num">Свободно с учётом плана</th><th>Статус</th></tr>${lines.join('')}</table></div></div>`;
 }
@@ -1365,7 +1729,7 @@ function shipOrderOpts(pid){ return opts(DB.orders.filter(o=>o.projectId===pid&&
 // ═════════════════════════════════════════════
 function renderOrders(){
   const list=[...DB.orders].sort((a,b)=>a.due.localeCompare(b.due)), s=orderStats();
-  const planEnd=o=>{ const its=DB.plan.filter(i=>i.orderId===o.id); return its.length?Math.max(...its.map(endMs)):null; };
+  const planEnd=o=>orderFinish(o,LIVE);
   $('#content').innerHTML=`<div class="toolbar"><span class="tag t-blue">${s.work} в работе</span><span class="tag t-gray">${s.new} новых</span><span class="tag t-red">${s.overdue} просрочено</span><span class="tag t-green">${s.done+s.shipped} готово</span><div class="sp"></div>${can('edit')?`<button class="btn btn-s" onclick="openShip()">Отгрузка</button><button class="btn btn-p" onclick="openOrderModal()">+ Заказ</button>`:''}</div>
   <div class="card">${list.length?`<div class="tw flush"><table><tr><th>№</th><th>Проект</th><th class="num">Заказано</th><th>Произведено</th><th class="num">Отгружено</th><th>Срок отгрузки</th><th>По плану готово</th><th>Статус</th><th></th></tr>
   ${list.map(o=>{ const d=orderDone(o), sh=orderShipped(o), pct=Math.min(d/o.qty*100,100), st=OST[orderStatus(o)], pe=planEnd(o), late=pe&&pe>pd(o.due).getTime()+864e5, p=byId(DB.projects,o.projectId);
@@ -1445,17 +1809,19 @@ async function removeMember(id){ if(!confirm('Удалить сотрудник�
 //  SETTINGS
 // ═════════════════════════════════════════════
 function renderSettings(){
-  const s=DB.settings, wd=s.workDays||[1,2,3,4,5];
+  const s=DB.settings, wd=s.workDays||[1,2,3,4,5], sh=shiftDefs();
   $('#content').innerHTML = `<div class="grid g11">
   <div class="card"><div class="card-h"><div class="card-t">Производство</div></div>
     <div class="frow"><div class="fg"><label class="fl">Название предприятия</label><input class="fi" id="sOrg" value="${esc(s.orgName||'')}"></div>
     <div class="fg"><label class="fl">Валюта</label><select class="fi" id="sCur">${['€','₴','$','zł','Kč','₸','₽'].map(c=>`<option ${c===(s.currency||'€')?'selected':''}>${c}</option>`).join('')}</select></div></div>
+    <div class="fg"><label class="fl">Время смен</label>${sh.map((x,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><b style="width:70px">${x.n}-я смена</b><input class="fi sShF" type="time" value="${x.from}" style="max-width:130px"><span>—</span><input class="fi sShT" type="time" value="${x.to}" style="max-width:130px"></div>`).join('')}</div>
     <div class="frow"><div class="fg"><label class="fl">Коэфф. плана от мощности</label><input class="fi" id="sK" type="number" step="0.01" min="0.1" max="1.2" value="${s.planFactor??.85}"></div>
-    <div class="fg"><label class="fl">Длительность смены, ч</label><input class="fi" id="sH" type="number" value="${s.shiftHours||8}"></div></div>
+    <div class="fg"><label class="fl">Длительность смены, ч (для расчётов выработки)</label><input class="fi" id="sH" type="number" value="${s.shiftHours||8}"></div></div>
     <div class="frow"><div class="fg"><label class="fl">Цель по переналадке, %</label><input class="fi" id="sSet" type="number" step="0.5" value="${s.setupTarget??5}"></div>
     <div class="fg"><label class="fl">Цель по браку, %</label><input class="fi" id="sDef" type="number" step="0.1" value="${s.defectTarget??2}"></div></div>
-    <div class="fg"><label class="fl">Рабочие дни (для плана по мощности)</label><div style="display:flex;gap:6px;flex-wrap:wrap">${WD.map((d,i)=>{ const n=(i+1)%7; return `<label class="chip ${wd.includes(n)?'on':''}" style="cursor:pointer"><input type="checkbox" value="${n}" ${wd.includes(n)?'checked':''} style="display:none" class="sWD" onchange="this.parentNode.classList.toggle('on',this.checked)">${d}</label>`; }).join('')}</div></div>
-    <div class="fg"><label class="fl">Причины брака (по одной в строке)</label><textarea class="fi" id="sR" rows="6">${esc((s.defectReasons||[]).join('\n'))}</textarea></div>
+    <div class="fg"><label class="fl">Рабочие дни (для плана по мощности, если месяц не утверждён)</label><div style="display:flex;gap:6px;flex-wrap:wrap">${WD.map((d,i)=>{ const n=(i+1)%7; return `<label class="chip ${wd.includes(n)?'on':''}" style="cursor:pointer"><input type="checkbox" value="${n}" ${wd.includes(n)?'checked':''} style="display:none" class="sWD" onchange="this.parentNode.classList.toggle('on',this.checked)">${d}</label>`; }).join('')}</div></div>
+    <div class="frow"><div class="fg"><label class="fl">Причины брака (по одной в строке)</label><textarea class="fi" id="sR" rows="7">${esc((s.defectReasons||[]).join('\n'))}</textarea></div>
+    <div class="fg"><label class="fl">Причины простоев (по одной в строке)</label><textarea class="fi" id="sDR" rows="7">${esc((s.downReasons||DEFAULT_SETTINGS.downReasons).join('\n'))}</textarea></div></div>
     <div class="fg"><label class="fl">Параметры машины для тех. отчёта (по одному в строке)</label><textarea class="fi" id="sM" rows="6">${esc((s.machineParams||[]).join('\n'))}</textarea></div>
     <button class="btn btn-p" onclick="saveSettings()">Сохранить</button></div>
   <div class="card"><div class="card-h"><div class="card-t">Подключение и данные</div></div>
@@ -1466,9 +1832,10 @@ function renderSettings(){
     </div></div></div>`;
 }
 async function saveSettings(){
-  const lines=id=>$(id).value.split('\n').map(x=>x.trim()).filter(Boolean);
+  const lines=id=>$(id).value.split('\n').map(x=>x.trim()).filter(Boolean), F=[...document.querySelectorAll('.sShF')], T=[...document.querySelectorAll('.sShT')];
   const s={...DB.settings,orgName:$('#sOrg').value.trim(),currency:$('#sCur').value,planFactor:+$('#sK').value||.85,shiftHours:+$('#sH').value||8,setupTarget:+$('#sSet').value||5,defectTarget:+$('#sDef').value||2,
-    workDays:[...document.querySelectorAll('.sWD:checked')].map(x=>+x.value),defectReasons:lines('#sR'),machineParams:lines('#sM')};
+    workDays:[...document.querySelectorAll('.sWD:checked')].map(x=>+x.value),defectReasons:lines('#sR'),downReasons:lines('#sDR'),machineParams:lines('#sM'),
+    shifts:shiftDefs().map((x,i)=>({n:x.n,from:F[i].value||x.from,to:T[i].value||x.to}))};
   await Store.settings(s); toast('Настройки сохранены');
 }
 function exportJSON(){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(DB,null,1)],{type:'application/json'})); a.download=`proizvodstvo-backup-${iso(new Date())}.json`; a.click(); }
@@ -1497,6 +1864,7 @@ function buildNav(){
 }
 function go(sec){ if(!SECTIONS.find(s=>s.id===sec)?.hidden){ state.draft=null; state.back=null; } state.q=''; state.sec=sec; toggleSide(false); render(); scrollTo(0,0); }
 function render(){
+  _sch.clear();
   let s=SECTIONS.find(x=>x.id===state.sec);
   if(!s||(s.admin&&!can('admin'))){ s=SECTIONS[1]; state.sec=s.id; }
   $('#pageTitle').textContent=s.t; buildNav();
@@ -1522,29 +1890,32 @@ function normalize(db){
   COLS.forEach(c=>db[c]=A(db[c]));
   db.projects.forEach(p=>p.stations=A(p.stations));
   db.semis.forEach(s=>{ s.items=A(s.items); s.history=A(s.history); });
-  db.runs.forEach(r=>{ r.stations=A(r.stations); r.settings=A(r.settings); });
-  Object.values(db.approved||{}).forEach(a=>{ if(a) a.items=A(a.items); });
+  db.runs.forEach(r=>{ r.stations=A(r.stations); r.settings=A(r.settings); r.rawFact=r.rawFact||{}; r.writtenMap=r.writtenMap||{}; });
+  db.scenarios.forEach(s=>{ s.items=A(s.items); s.downs=A(s.downs); s.lineShifts=s.lineShifts||{}; });
+  db.lines.forEach(l=>{ l.workShifts=A(l.workShifts); l.workDays=A(l.workDays); });
+  Object.values(db.approved||{}).forEach(a=>{ if(a){ a.items=A(a.items); a.items.forEach(i=>i.segs=A(i.segs)); } });
   return db;
 }
+// изменения сразу применяются локально (и в демо, и при работе с базой), затем уходят в базу
+function applyLocal(list){
+  list.forEach(x=>{
+    if(x.path){ let o=DB; x.path.slice(0,-1).forEach(k=>{ o[k]=o[k]||{}; o=o[k]; }); o[x.path[x.path.length-1]]=x.val==null?undefined:clone(x.val); }
+    else if(x.del) DB[x.col]=DB[x.col].filter(o=>o.id!==x.id);
+    else { const obj=clone(x.obj), i=DB[x.col].findIndex(o=>o.id===obj.id); if(i>=0) DB[x.col][i]=obj; else DB[x.col].push(obj); }
+  });
+  normalize(DB);
+}
 const Store = {
-  async put(col,obj){
-    if(state.mode==='fb') return fdb.ref(`${ROOT}/data/${col}/${obj.id}`).set(clone(obj));
-    const i=DB[col].findIndex(x=>x.id===obj.id); if(i>=0) DB[col][i]=obj; else DB[col].push(obj); demoSave(); render();
-  },
-  async del(col,id){
-    if(state.mode==='fb') return fdb.ref(`${ROOT}/data/${col}/${id}`).remove();
-    DB[col]=DB[col].filter(x=>x.id!==id); demoSave(); render();
-  },
+  async put(col,obj){ return this.batch([{col,obj}]); },
+  async del(col,id){ return this.batch([{col,id,del:true}]); },
   async batch(list){
-    if(state.mode==='fb'){ const up={}; list.forEach(x=>{ if(x.path) up[x.path.join('/')]=x.val==null?null:clone(x.val); else up[`${x.col}/${x.obj?x.obj.id:x.id}`]=x.del?null:clone(x.obj); }); return fdb.ref(`${ROOT}/data`).update(up); }
-    list.forEach(x=>{
-      if(x.path){ let o=DB; x.path.slice(0,-1).forEach(k=>{ o[k]=o[k]||{}; o=o[k]; }); o[x.path.at(-1)]=x.val; }
-      else if(x.del) DB[x.col]=DB[x.col].filter(o=>o.id!==x.id);
-      else { const i=DB[x.col].findIndex(o=>o.id===x.obj.id); if(i>=0) DB[x.col][i]=x.obj; else DB[x.col].push(x.obj); }
-    }); demoSave(); render();
+    applyLocal(list);
+    if(state.mode==='fb'){ const up={}; list.forEach(x=>{ if(x.path) up[x.path.join('/')]=x.val==null?null:clone(x.val); else up[`${x.col}/${x.obj?x.obj.id:x.id}`]=x.del?null:clone(x.obj); });
+      if(!$('#modal').classList.contains('open')) render(); return fdb.ref(`${ROOT}/data`).update(up); }
+    demoSave(); render();
   },
   async settings(s){
-    if(state.mode==='fb') return fdb.ref(`${ROOT}/data/settings`).set(s);
+    if(state.mode==='fb'){ DB.settings=clone(s); return fdb.ref(`${ROOT}/data/settings`).set(s); }
     DB.settings=s; demoSave(); $('#orgName').textContent=s.orgName; render();
   },
   async user(u,delId){
@@ -1558,31 +1929,34 @@ const Store = {
 //  DEMO DATA — завод декорирования стеклянной тары
 // ═════════════════════════════════════════════
 const DEFAULT_SETTINGS = {orgName:'Моё производство', currency:'€', planFactor:.85, shiftHours:8, setupTarget:5, defectTarget:2, workDays:[1,2,3,4,5,6,0],
+  shifts:[{n:1,from:'06:00',to:'14:00'},{n:2,from:'14:00',to:'22:00'},{n:3,from:'22:00',to:'06:00'}],
+  rawCats:['Основы и лаки','Пигменты','Эффектные пигменты','Добавки','Растворители','Тара','Упаковка','Прочее'],
+  downReasons:['Нет персонала','Плановый ремонт (ППР)','Аварийный ремонт','Нет сырья','Санитарный день / уборка','Праздник / выходной','Прочее'],
   defectReasons:['Потёки / наплывы','Непрокрас, просвет','Включения, пыль, сорность','Разнотон, цвет вне допуска','Плохая адгезия','Дефект стекла от поставщика','Царапины, сколы при съёме'],
   machineParams:['Скорость конвейера, шт/мин','Температура печи / мощность УФ, %','Время сушки, с','Давление в магистрали, бар','Температура в камере, °C','Влажность в камере, %','Пламенная активация (расстояние), мм']};
 function genDemo(){
   let seed=11; const rnd=()=>(seed=seed*16807%2147483647)/2147483647, pick=a=>a[Math.floor(rnd()*a.length)];
-  const now=new Date(), T=iso(now), R2=v=>Math.round(v*100)/100;
+  const now=new Date(), NOW=now.getTime(), T=iso(now), R3=v=>Math.round(v*1000)/1000;
   const lines=[
-    {id:'L1',name:'Линия 1 · Покраска',type:'Пистолетная покраска + УФ-сушка',stations:7,cap:36000,shifts:3},
-    {id:'L2',name:'Линия 2 · Покраска',type:'Пистолетная покраска + печь',stations:9,cap:33000,shifts:3},
-    {id:'L3',name:'Линия 3 · Шелкография',type:'Трафаретная печать',stations:4,cap:26000,shifts:3}];
+    {id:'L1',name:'Линия 1 · Покраска',type:'Пистолетная покраска + УФ-сушка',stations:7,cap:36000,shifts:3,workShifts:[1,2,3],workDays:[0,1,2,3,4,5,6],restartMin:40},
+    {id:'L2',name:'Линия 2 · Покраска',type:'Пистолетная покраска + печь',stations:9,cap:33000,shifts:2,workShifts:[1,2],workDays:[1,2,3,4,5,6],restartMin:35},
+    {id:'L3',name:'Линия 3 · Шелкография',type:'Трафаретная печать',stations:4,cap:26000,shifts:1,workShifts:[1],workDays:[1,2,3,4,5],restartMin:25}];
   const raw=[
-    ['R1','Лак-связующее УФ, прозрачный','Основы и лаки','кг',8.4,540,300,'ChemCoat',10],
-    ['R2','Паста пигментная белая TiO2','Пигменты','кг',12.5,120,80,'PigmentPro',14],
-    ['R3','Паста пигментная чёрная','Пигменты','кг',11,40,25,'PigmentPro',14],
+    ['R1','Лак-связующее УФ, прозрачный','Основы и лаки','кг',8.4,900,300,'ChemCoat',10],
+    ['R2','Паста пигментная белая TiO2','Пигменты','кг',12.5,160,80,'PigmentPro',14],
+    ['R3','Паста пигментная чёрная','Пигменты','кг',11,55,25,'PigmentPro',14],
     ['R4','Паста пигментная красная','Пигменты','кг',18.9,14,15,'PigmentPro',14],
     ['R5','Паста пигментная синяя','Пигменты','кг',17.2,34,20,'PigmentPro',14],
     ['R6','Паста пигментная жёлтая','Пигменты','кг',16.5,22,15,'PigmentPro',14],
     ['R7','Пигмент металлик «золото»','Эффектные пигменты','кг',46,0.9,3,'MetaFX',21],
     ['R8','Пигмент металлик «серебро»','Эффектные пигменты','кг',39,9,5,'MetaFX',21],
-    ['R9','Матирующая добавка','Добавки','кг',22,16,10,'ChemCoat',10],
+    ['R9','Матирующая добавка','Добавки','кг',22,24,10,'ChemCoat',10],
     ['R10','Разбавитель','Растворители','л',3.2,260,150,'SolvTrade',5],
-    ['R11','Грунт-адгезив для стекла','Основы и лаки','кг',14.8,24,40,'ChemCoat',10],
+    ['R11','Грунт-адгезив для стекла','Основы и лаки','кг',14.8,90,40,'ChemCoat',10],
     ['R12','Отвердитель','Добавки','кг',19,20,10,'ChemCoat',10],
     ['R13','Промывочный растворитель','Растворители','л',2.1,180,150,'SolvTrade',5],
-    ['R14','Бутылка 0,5 л «Классик»','Тара','шт',0.18,780000,300000,'GlassWorks',14],
-    ['R15','Бутылка 0,7 л «Флинт»','Тара','шт',0.24,520000,200000,'GlassWorks',14],
+    ['R14','Бутылка 0,5 л «Классик»','Тара','шт',0.18,1400000,300000,'GlassWorks',14],
+    ['R15','Бутылка 0,7 л «Флинт»','Тара','шт',0.24,900000,200000,'GlassWorks',14],
   ].map(([id,name,cat,unit,cost,qty,min,supplier,leadDays])=>({id,name,cat,unit,cost,qty,min,supplier,leadDays}));
   const it=(kind,id,qty)=>({kind,id,qty});
   const semis=[
@@ -1600,109 +1974,129 @@ function genDemo(){
   ].map(s=>({unit:'кг',ver:1,history:[],updated:iso(addD(now,-40)),by:'Марина Коваль',note:'',...s}));
   const st=(semiId,norm,visc,press,nozzle,note='')=>({semiId,norm,visc,press,nozzle,note});
   const projects=[
-    {id:'P1',name:'Водка «Премиум» 0,5 — матовое золото',client:'Spirits Co',tareId:'R14',lineId:'L1',speed:90,setupMin:120,color:'#b8860b',status:'Активный',
+    {id:'P1',name:'Водка «Премиум» 0,5 — матовое золото',client:'Spirits Co',tareId:'R14',lineId:'L1',speed:90,setupMin:120,restartMin:45,color:'#b8860b',status:'Активный',
       stations:[st('S1',32,'19 с','2,2','1,0','грунт по всей поверхности'),st('S2',46,'22 с','2,5','1,2','1-й слой'),st('S2',40,'22 с','2,5','1,2','2-й слой'),st('S9',28,'21 с','2,3','1,0','низ, градиент'),st('S6',22,'24 с','2,0','0,8','плечо и горло'),st('S8',38,'20 с','2,4','1,2'),st('S8',32,'20 с','2,4','1,2','финиш')],
       quality:'Золото на плече: не допускать потёков — давление не выше 2,1 бар.\nПроверять адгезию тестом скотча в начале каждой смены.\nГрадиент розового — сверять с эталоном при каждой смене партии краски.'},
-    {id:'P2',name:'Джин «Лондон» 0,7 — синий градиент',client:'Botanica',tareId:'R15',lineId:'L1',speed:75,setupMin:150,color:'#1f5fa8',status:'Активный',
+    {id:'P2',name:'Джин «Лондон» 0,7 — синий градиент',client:'Botanica',tareId:'R15',lineId:'L1',speed:75,setupMin:150,restartMin:50,color:'#1f5fa8',status:'Активный',
       stations:[st('S1',35,'19 с','2,2','1,0'),st('S2',44,'22 с','2,5','1,2','подложка'),st('S5',40,'23 с','2,6','1,2','низ'),st('S5',26,'23 с','2,2','1,0','переход'),st('S7',18,'24 с','2,0','0,8','ободок'),st('S10',42,'18 с','2,4','1,2'),st('S10',30,'18 с','2,4','1,2')],
       quality:'Градиент: переход без «ступеньки» — расстояние пистолета ст.4 строго 220 мм.\nСиний 300C чувствителен к толщине слоя — контроль цвета спектрофотометром раз в 2 часа.'},
-    {id:'P3',name:'Ликёр «Ягодный» 0,5 — розовый',client:'Berry Drinks',tareId:'R14',lineId:'L2',speed:110,setupMin:90,color:'#d9577b',status:'Активный',
+    {id:'P3',name:'Ликёр «Ягодный» 0,5 — розовый',client:'Berry Drinks',tareId:'R14',lineId:'L2',speed:110,setupMin:90,restartMin:'',color:'#d9577b',status:'Активный',
       stations:[st('S1',33,'19 с','2,2','1,0'),st('S2',42,'22 с','2,5','1,2'),st('S2',36,'22 с','2,5','1,2'),st('S9',34,'21 с','2,4','1,2'),st('S9',28,'21 с','2,4','1,2'),st('S4',10,'22 с','1,9','0,8','точки-ягоды'),st('S6',9,'24 с','1,8','0,8','логотип'),st('S10',38,'18 с','2,4','1,2'),st('S10',28,'18 с','2,4','1,2')],
       quality:'Розовый пастель легко даёт разнотон — одна партия П/Ф на весь заказ.\nТочки-ягоды: следить за засорением сопла 0,8 — продувка каждые 2 ч.'},
-    {id:'P4',name:'Виски «Oak» 0,7 — чёрный глянец',client:'Highland Import',tareId:'R15',lineId:'L2',speed:85,setupMin:100,color:'#333333',status:'Активный',
+    {id:'P4',name:'Виски «Oak» 0,7 — чёрный глянец',client:'Highland Import',tareId:'R15',lineId:'L2',speed:85,setupMin:100,restartMin:'',color:'#333333',status:'Активный',
       stations:[st('S1',35,'19 с','2,2','1,0'),st('S3',50,'21 с','2,6','1,2'),st('S3',44,'21 с','2,6','1,2'),st('S3',30,'21 с','2,4','1,2'),st('S7',15,'24 с','2,0','0,8','надпись по кругу'),st('S10',40,'18 с','2,4','1,2'),st('S10',34,'18 с','2,4','1,2')],
       quality:'На чёрном видна любая пыль — перед сменой влажная уборка камеры, фильтры проверить.\nГлянец: печь не ниже 180 °C, иначе «апельсиновая корка».'},
-    {id:'P5',name:'Коньяк «Резерв» 0,5 — золотая шелкография',client:'Spirits Co',tareId:'R14',lineId:'L3',speed:60,setupMin:70,color:'#8a6d1f',status:'Активный',
+    {id:'P5',name:'Коньяк «Резерв» 0,5 — золотая шелкография',client:'Spirits Co',tareId:'R14',lineId:'L3',speed:60,setupMin:70,restartMin:'',color:'#8a6d1f',status:'Активный',
       stations:[st('S2',12,'—','—','сетка 120','подложка под логотип'),st('S6',8,'—','—','сетка 100','логотип'),st('S3',6,'—','—','сетка 140','мелкий текст')],
       quality:'Совмещение цветов ±0,2 мм — проверять лупой каждые 500 шт.\nЗолото — только свежий замес, срок жизни 6 ч.'},
-    {id:'P6',name:'Вино «Розе» 0,7 — красный и серебро',client:'Vinoteka',tareId:'R15',lineId:'L3',speed:65,setupMin:80,color:'#b0303a',status:'Разработка',
+    {id:'P6',name:'Вино «Розе» 0,7 — красный и серебро',client:'Vinoteka',tareId:'R15',lineId:'L3',speed:65,setupMin:80,restartMin:'',color:'#b0303a',status:'Разработка',
       stations:[st('S4',10,'—','—','сетка 120'),st('S7',7,'—','—','сетка 100'),st('S2',6,'—','—','сетка 140')],quality:'Новый проект: первая наработка — пробная партия 5 000 шт, согласование образца с клиентом.'},
   ];
-  // заказы
-  const m0=new Date(now.getFullYear(),now.getMonth(),1), mEnd=new Date(now.getFullYear(),now.getMonth()+1,1);
+  const settings={...DEFAULT_SETTINGS}, m0=new Date(now.getFullYear(),now.getMonth(),1), mEnd=new Date(now.getFullYear(),now.getMonth()+1,1), mk=monthKey(now);
   const orders=[]; let on=101;
-  projects.forEach((p,i)=>{ [0,1].forEach(k=>orders.push({id:'O'+on,no:'З-'+(on++),projectId:p.id,qty:0,due:iso(addD(m0,10+k*14+i*2)),note:''})); });
-  // действующий и утверждённый план на текущий месяц
-  const approvedItems=[]; let pn=0;
+  projects.forEach((p,i)=>{ [0,1,2].forEach(k=>orders.push({id:'O'+on,no:'З-'+(on++),projectId:p.id,qty:0,due:iso(addD(m0,9+k*13+i*2)),note:''})); });
+  const nextWork=(lid,from)=>{ const l=lines.find(x=>x.id===lid); let d=new Date(from); for(let i=0;i<14&&!l.workDays.includes(d.getDay());i++) d=addD(d,1); return iso(d); };
+  const at=(ds,h)=>ds+'T'+String(h).padStart(2,'0')+':00';
+  const dn1=nextWork('L1',addD(m0,6)), dn2=nextWork('L2',addD(now,1)), dn3=nextWork('L3',addD(now,4));
+  const downs=[
+    {id:'DN1',lineId:'L1',start:at(dn1,6),end:at(dn1,14),reason:'Нет персонала',note:'Два оператора на больничном',by:'Ольга Петренко'},
+    {id:'DN2',lineId:'L2',start:at(dn2,14),end:at(dn2,22),reason:'Нет персонала',note:'2-я смена не укомплектована',by:'Ольга Петренко'},
+    {id:'DN3',lineId:'L3',start:at(dn3,6),end:at(dn3,14),reason:'Плановый ремонт (ППР)',note:'Замена ракельного узла',by:'Марина Коваль'}];
+  const keep=DB; DB=normalize({...emptyDB(),lines,projects,raw,semis,settings,downs,orders}); _sch.clear();
+  // план: позиции подряд по календарю каждой линии
+  const plan=[]; let pn=0;
   lines.forEach(l=>{
-    const ps=projects.filter(p=>p.lineId===l.id); let t=m0.getTime()+6*H, k=0;
-    while(t<mEnd.getTime()-12*H){
-      const p=ps[k%ps.length], qty=Math.round((140+rnd()*260))*1000, hours=Math.round(planHours(p,qty)*10)/10;
-      const o=orders.filter(o=>o.projectId===p.id).find(o=>!approvedItems.some(a=>a.orderId===o.id));
-      approvedItems.push({id:'PL'+(pn++),projectId:p.id,lineId:l.id,orderId:o?.id||'',qty,start:toDT(t),hours,note:''});
-      t+=hours*H+Math.round(rnd()*4)*H; k++;
+    const ps=projects.filter(p=>p.lineId===l.id); let t=m0.getTime(), k=0;
+    while(t<mEnd.getTime()+10*864e5){
+      const p=ps[k%ps.length], hrs=l.id==='L3'?14+rnd()*14:26+rnd()*40, qty=Math.round(p.speed*60*hrs/1000)*1000;
+      const o=orders.filter(o=>o.projectId===p.id).find(o=>!plan.some(a=>a.orderId===o.id));
+      const item={id:'PL'+(pn++),projectId:p.id,lineId:l.id,orderId:o?.id||'',qty,start:toDT(t),note:''};
+      const s=sched(item,{id:'appr',downs:[]}); plan.push(item); t=s.end+(rnd()<.25?Math.round(1+rnd()*3)*H:0); k++;
     }
   });
-  const plan=clone(approvedItems), planLog=[]; const logAt=(d,h,by,text,kind)=>planLog.push({id:'LG'+planLog.length,ts:new Date(d.getFullYear(),d.getMonth(),d.getDate(),h,Math.floor(rnd()*30)).getTime(),by,text,kind});
-  logAt(addD(m0,-2),15,'Администратор',`Утвердил план на ${monthLabel(monthKey(now))}: ${approvedItems.length} позиций`);
-  // корректировки после оперативок
-  const l1=plan.filter(x=>x.lineId==='L1'), l2=plan.filter(x=>x.lineId==='L2');
-  if(l1.length>3){ const shiftFrom=l1[2]; l1.slice(2).forEach(x=>x.start=toDT(tms(x.start)+14*H)); const d=pd(shiftFrom.start.slice(0,10));
+  const APPR={id:'appr',downs:[]};
+  const approvedItems=monthItems(plan,mk,APPR).map(x=>snapItem(x,APPR));
+  const planLog=[]; const logAt=(d,h,by,text,kind)=>planLog.push({id:'LG'+planLog.length,ts:new Date(d.getFullYear(),d.getMonth(),d.getDate(),h,Math.floor(rnd()*30)).getTime(),by,text,...(kind?{kind}:{})});
+  logAt(addD(m0,-2),15,'Администратор',`Утвердил план на ${monthLabel(mk)}: ${approvedItems.length} позиций`);
+  const byLine=lid=>plan.filter(x=>x.lineId===lid).sort((a,b)=>tms(a.start)-tms(b.start));
+  const l1=byLine('L1'); if(l1.length>3){ const x=l1[2], d=pd(x.start.slice(0,10)); l1.slice(2).forEach(y=>y.start=toDT(tms(y.start)+14*H));
     logAt(d,9,'Ольга Петренко','Оперативка: Линия 1 — замена форсунки ст.5 и чистка камеры, сдвиг на 14 ч. Заказчик предупреждён.','meeting');
-    logAt(d,9,'Ольга Петренко',`«${projects.find(p=>p.id===shiftFrom.projectId).name}» и далее на Линии 1: старт ${fdt(tms(shiftFrom.start)-14*H)} → ${fdt(tms(shiftFrom.start))} (+14 ч)`); }
-  if(l2.length>2){ const x=l2[1], old=x.qty; x.qty=Math.round(old*1.2/1000)*1000; x.hours=Math.round(planHours(projects.find(p=>p.id===x.projectId),x.qty)*10)/10;
-    l2.slice(2).forEach(y=>y.start=toDT(tms(y.start)+(x.hours-approvedItems.find(a=>a.id===x.id).hours)*H));
-    logAt(pd(x.start.slice(0,10)),9,'Марина Коваль',`«${projects.find(p=>p.id===x.projectId).name}»: кол-во ${N(old)} → ${N(x.qty)} (клиент увеличил заказ)`); }
-  logAt(now,9,'Ольга Петренко','Оперативка: план на сегодня без изменений. Золото Au-7 заканчивается — снабжению ускорить поставку.','meeting');
-  // журнал выпуска: 180 дней, 3 смены
+    logAt(d,9,'Ольга Петренко',`«${projects.find(p=>p.id===x.projectId).name}» и далее на Линии 1: сдвиг +14 ч`); }
+  const l2=byLine('L2'); if(l2.length>2){ const x=l2[1], old=x.qty; x.qty=Math.round(old*1.2/1000)*1000; logAt(pd(x.start.slice(0,10)),9,'Марина Коваль',`«${projects.find(p=>p.id===x.projectId).name}»: кол-во ${N(old)} → ${N(x.qty)} (клиент увеличил заказ)`); }
+  logAt(pd(dn1),8,'Ольга Петренко',`Добавил простой Линия 1 · Покраска: ${fdate(dn1)} 1-я смена, Нет персонала (два оператора на больничном)`);
+  _sch.clear(); lines.forEach(l=>pushOverlaps(plan,l.id,LIVE));
+  logAt(now,9,'Ольга Петренко',`Оперативка: ${fdate(dn2)} на Линии 2 не будет 2-й смены — нет людей, поставили простой, план сдвинулся. Золото Au-7 заканчивается — снабжению ускорить поставку.`,'meeting');
+  logAt(now,9,'Ольга Петренко',`Добавил простой Линия 2 · Покраска: ${fdate(dn2)} 2-я смена, Нет персонала`);
+  plan.filter(x=>!x.orderId&&sched(x,LIVE).end>NOW).forEach(x=>{ const o={id:'O'+on,no:'З-'+(on++),projectId:x.projectId,qty:0,due:iso(addD(new Date(sched(x,LIVE).end),2+Math.floor(rnd()*5))),note:''}; orders.push(o); x.orderId=o.id; });
+  { const S2={id:'s2',lineShifts:{L3:[1,2]}}; const cand=plan.filter(x=>x.lineId==='L3'&&sched(x,LIVE).start>NOW).find(x=>iso(new Date(sched(x,LIVE).end))>iso(addD(new Date(sched(x,S2).end),1)));
+    if(cand){ const o=orders.find(o=>o.id===cand.orderId); o.due=iso(new Date(sched(cand,S2).end)); o.note='Клиент просит раньше'; } }
+  // журнал выпуска: текущий месяц — по плану, раньше — по календарю линий
   const ops=['Иванов А.','Петренко О.','Коваль М.','Сидорук В.','Мельник Т.','Бондар Р.','Шевчук Л.'];
   const reasons=DEFAULT_SETTINGS.defectReasons, rw=[26,20,18,12,10,8,6];
   const reason=()=>{ let x=rnd()*100; for(let i=0;i<rw.length;i++){ if((x-=rw[i])<0) return reasons[i]; } return reasons[0]; };
-  const output=[], cur={};
+  const output=[], cur={}, lastEnd={};
   for(let d=addD(now,-180); iso(d)<=T; d=addD(d,1)){
-    const s=iso(d), age=(now-d)/864e5;
-    lines.forEach(l=>{
-      for(let sh=1; sh<=3; sh++){
-        const mid=new Date(d.getFullYear(),d.getMonth(),d.getDate(),[10,18,26][sh-1]).getTime(); if(mid>now.getTime()) continue;
-        const pi=plan.find(x=>x.lineId===l.id&&tms(x.start)<=mid&&endMs(x)>mid);
-        let p, orderId='';
-        if(pi){ p=projects.find(q=>q.id===pi.projectId); orderId=pi.orderId; }
-        else if(s>=iso(m0)) continue; // в текущем месяце работаем только по плану
-        else { const ps=projects.filter(q=>q.lineId===l.id&&q.status==='Активный'); p=(!cur[l.id]||rnd()<.25)?pick(ps):projects.find(q=>q.id===cur[l.id]); }
-        let setup=0; if(cur[l.id]!==p.id){ setup=Math.round(p.setupMin*(.85+rnd()*(.4+age/180*.9))); cur[l.id]=p.id; }
-        setup=Math.min(setup,400);
-        const brk=rnd()<.03, down=brk?90+Math.round(rnd()*150):Math.round(rnd()*rnd()*50), runMin=Math.max(0,480-setup-down);
-        const good=Math.round(p.speed*runMin*(.82+rnd()*.14)), defect=Math.round(good*(.006+rnd()*rnd()*.045));
-        output.push({id:'R'+output.length,date:s,shift:sh,lineId:l.id,projectId:p.id,orderId,good,defect,reason:defect?reason():'',setup,downtime:down,operator:pick(ops),ts:d.getTime()+sh});
-      }
+    const s=iso(d), age=(now-d)/864e5, inMonth=s>=iso(m0);
+    lines.forEach(l=>{ if(!l.workDays.includes(d.getDay())) return;
+      l.workShifts.forEach(sh=>{
+        const [a,b0]=shiftWindow(s,sh); if(a>=NOW) return; const b=Math.min(b0,NOW);
+        if(downs.some(x=>x.lineId===l.id&&tms(x.start)<b&&tms(x.end)>a)){ lastEnd[l.id]=null; return; }
+        if(inMonth){
+          plan.filter(x=>x.lineId===l.id).forEach(x=>{ let run=0,setup=0,fa=null,fb=null;
+            sched(x,LIVE).segs.forEach(([sa,sb,k])=>{ const ov=Math.max(0,Math.min(sb,b)-Math.max(sa,a)); if(ov<=0) return; if(k==='r') run+=ov/60e3; else setup+=ov/60e3; const u=Math.max(sa,a), v=Math.min(sb,b); fa=fa==null?u:Math.min(fa,u); fb=fb==null?v:Math.max(fb,v); });
+            if(run+setup<5) return; const p=projects.find(q=>q.id===x.projectId), down=Math.round(rnd()*rnd()*Math.min(40,run*.3));
+            const good=Math.round(p.speed*Math.max(0,run-down)*(.86+rnd()*.12)), defect=Math.round(good*(.006+rnd()*rnd()*.04));
+            output.push({id:'R'+output.length,date:s,shift:sh,lineId:l.id,planItemId:x.id,projectId:p.id,orderId:x.orderId,startAt:toDT(fa),endAt:toDT(fb),good,defect,reason:defect?reason():'',setup:Math.round(setup),downtime:down,operator:pick(ops),ts:a+1}); });
+        } else {
+          const ps=projects.filter(q=>q.lineId===l.id&&q.status==='Активный'), p=(!cur[l.id]||rnd()<.22)?pick(ps):projects.find(q=>q.id===cur[l.id]); let setup=0;
+          if(cur[l.id]!==p.id){ setup=Math.round(p.setupMin*(.85+rnd()*(.4+age/180*.9))); cur[l.id]=p.id; } else if(lastEnd[l.id]!==a){ setup=Math.round((+p.restartMin||l.restartMin)*(.9+rnd()*.5)); }
+          setup=Math.min(setup,Math.round((b-a)/60e3*.8)); lastEnd[l.id]=b0;
+          const down=rnd()<.03?90+Math.round(rnd()*120):Math.round(rnd()*rnd()*40), runMin=Math.max(0,(b-a)/60e3-setup-down);
+          const good=Math.round(p.speed*runMin*(.82+rnd()*.14)), defect=Math.round(good*(.006+rnd()*rnd()*.045));
+          output.push({id:'R'+output.length,date:s,shift:sh,lineId:l.id,planItemId:'',projectId:p.id,orderId:'',startAt:toDT(a),endAt:toDT(b),good,defect,reason:defect?reason():'',setup,downtime:down,operator:pick(ops),ts:a+1});
+        }
+      });
     });
   }
-  orders.forEach(o=>{ const inPlan=plan.filter(x=>x.orderId===o.id).reduce((a,x)=>a+x.qty,0); const done=output.filter(r=>r.orderId===o.id).reduce((a,r)=>a+r.good,0); o.qty=Math.max(20000,Math.round((inPlan||done||60000)*(.95+rnd()*.1)/1000)*1000); });
-  // тех. отчёты наработок (прошлые месяцы)
+  orders.forEach(o=>{ const inPlan=plan.filter(x=>x.orderId===o.id).reduce((a,x)=>a+x.qty,0); o.qty=Math.max(20000,Math.round((inPlan||60000)*(.95+rnd()*.1)/1000)*1000); });
+  // тех. отчёты: прошлые наработки и завершённые позиции текущего месяца (сырьё списано)
   const runs=[], moves=[];
-  projects.filter(p=>p.status==='Активный').forEach((p,pi)=>{
-    [70,35].forEach((back,k)=>{
-      const df=iso(addD(now,-back-pi)), dt=iso(addD(now,-back-pi+2)), good=Math.round((150+rnd()*150))*1000, defect=Math.round(good*.018), q=good+defect;
-      const stations=A(p.stations).map((s0,i)=>{ const s=semis.find(x=>x.id===s0.semiId); const plan=s0.norm*q/1e6; return {n:i+1,semiId:s.id,name:s.name,color:s.color,ver:s.id==='S2'&&k===0?1:(s.ver||1),rawPerKg:{},norm:s0.norm,visc:s0.visc,press:s0.press,nozzle:s0.nozzle,factKg:R2(plan*(.96+rnd()*.14))}; });
-      runs.push({id:'RN'+runs.length,projectId:p.id,lineId:p.lineId,dateFrom:df,dateTo:dt,qtyGood:good,qtyDefect:defect,setupFact:Math.round(p.setupMin*(1.1+rnd()*.5)),speedFact:Math.round(p.speed*(.9+rnd()*.08)),
-        settings:DEFAULT_SETTINGS.machineParams.map((kk,j)=>({k:kk,v:[String(p.speed),'85','45','6,0','24','45','60'][j]})),stations,note:k?'':'Первая наработка после смены поставщика пигмента — вязкость пришлось поднять на 1–2 с.',writtenOff:true,by:'Ольга Петренко',ts:pd(dt).getTime()});
-    });
-  });
-  // поставки
+  const mkRun=(p,o)=>{ const q=o.good+o.defect;
+    const stations=A(p.stations).map((s0,i)=>({s0,i})).filter(x=>x.s0.semiId).map(({s0,i})=>{ const s=semis.find(x=>x.id===s0.semiId); return {n:i+1,semiId:s.id,name:s.name,color:s.color,ver:o.oldVer&&s.id==='S2'?1:(s.ver||1),rawPerKg:expand('semi',s.id,1),norm:s0.norm,visc:s0.visc,press:s0.press,nozzle:s0.nozzle,factKg:R3(stationKg(s0.norm,q)*(.97+rnd()*.1))}; });
+    const r={id:o.id,projectId:p.id,planItemId:o.planItemId||'',lineId:o.lineId,tareId:p.tareId,startAt:o.startAt,endAt:o.endAt,dateFrom:o.startAt.slice(0,10),dateTo:o.endAt.slice(0,10),qtyGood:o.good,qtyDefect:o.defect,setupFact:o.setup,speedFact:o.speed,
+      settings:DEFAULT_SETTINGS.machineParams.map((kk,j)=>({k:kk,v:[String(p.speed),'85','45','6,0','24','45','60'][j]})),stations,note:o.note||'',by:'Ольга Петренко',ts:tms(o.endAt)};
+    const pl=runPlanRaw(r); r.rawFact={}; Object.entries(pl).forEach(([rid,v])=>r.rawFact[rid]=R3(v*(rid===p.tareId?1:(.98+rnd()*.08)))); r.writtenMap={...r.rawFact}; r.writtenOff=true; return r; };
+  projects.filter(p=>p.status==='Активный').forEach((p,pi)=>[70,40].forEach((back,k)=>{ const df=iso(addD(now,-back-pi)), dt=iso(addD(now,-back-pi+2)), good=Math.round((150+rnd()*150))*1000;
+    runs.push(mkRun(p,{id:'RN'+runs.length,lineId:p.lineId,startAt:at(df,6),endAt:at(dt,20),good,defect:Math.round(good*.018),setup:Math.round(p.setupMin*(1.1+rnd()*.5)),speed:Math.round(p.speed*(.9+rnd()*.08)),oldVer:k===0,note:k?'':'Первая наработка после смены поставщика пигмента — вязкость пришлось поднять на 1–2 с.'})); }));
+  plan.filter(x=>sched(x,LIVE).end<NOW).forEach(x=>{ const rs=output.filter(r=>r.planItemId===x.id); if(!rs.length) return; const p=projects.find(q=>q.id===x.projectId);
+    const g=rs.reduce((a,r)=>a+r.good,0), df=rs.reduce((a,r)=>a+r.defect,0), su=rs.reduce((a,r)=>a+r.setup,0), fa=Math.min(...rs.map(r=>tms(r.startAt))), fb=Math.max(...rs.map(r=>tms(r.endAt)));
+    const r=mkRun(p,{id:'RN'+runs.length,planItemId:x.id,lineId:x.lineId,startAt:toDT(fa),endAt:toDT(fb),good:g,defect:df,setup:su,speed:Math.round(p.speed*(.9+rnd()*.06))}); runs.push(r);
+    Object.entries(r.rawFact).forEach(([rid,q])=>moves.push({id:'MV'+(100+moves.length),date:r.dateTo,type:'out',rawId:rid,qty:q,projectId:p.id,runId:r.id,note:'Списание по тех. отчёту',by:'Ольга Петренко',ts:tms(r.endAt)})); });
   const supplies=[
     {id:'SP1',rawId:'R7',qty:12,date:iso(addD(now,6)),supplier:'MetaFX',status:'ordered',note:'Заказ MF-2231'},
     {id:'SP2',rawId:'R4',qty:25,date:iso(addD(now,9)),supplier:'PigmentPro',status:'ordered',note:''},
     {id:'SP3',rawId:'R15',qty:200000,date:iso(addD(now,1)),supplier:'GlassWorks',status:'ordered',note:'2 фуры'},
-    {id:'SP6',rawId:'R15',qty:200000,date:iso(addD(now,2)),supplier:'GlassWorks',status:'ordered',note:'2 фуры'},
-    {id:'SP7',rawId:'R14',qty:200000,date:iso(addD(now,2)),supplier:'GlassWorks',status:'ordered',note:''},
+    {id:'SP6',rawId:'R15',qty:200000,date:iso(addD(now,3)),supplier:'GlassWorks',status:'ordered',note:'2 фуры'},
+    {id:'SP7',rawId:'R14',qty:250000,date:iso(addD(now,2)),supplier:'GlassWorks',status:'ordered',note:''},
+    {id:'SP8',rawId:'R14',qty:700000,date:iso(addD(now,5)),supplier:'GlassWorks',status:'ordered',note:'4 фуры'},
+    {id:'SP9',rawId:'R15',qty:450000,date:iso(addD(now,6)),supplier:'GlassWorks',status:'ordered',note:'3 фуры'},
     {id:'SP4',rawId:'R1',qty:400,date:iso(addD(now,-12)),supplier:'ChemCoat',status:'received',receivedQty:400,receivedDate:iso(addD(now,-12)),note:''},
     {id:'SP5',rawId:'R14',qty:300000,date:iso(addD(now,-8)),supplier:'GlassWorks',status:'received',receivedQty:300000,receivedDate:iso(addD(now,-8)),note:''}];
   moves.push({id:'MV1',date:iso(addD(now,-12)),type:'in',rawId:'R1',qty:400,cost:8.4,doc:'ТН-4411',note:'Приёмка поставки · ChemCoat',by:'Администратор',ts:1});
   moves.push({id:'MV2',date:iso(addD(now,-8)),type:'in',rawId:'R14',qty:300000,cost:.18,doc:'ТН-9020',note:'Приёмка поставки · GlassWorks',by:'Администратор',ts:2});
   moves.push({id:'MV3',date:iso(addD(now,-5)),type:'inv',rawId:'R10',qty:-6,note:'было 266, стало 260',by:'Ольга Петренко',ts:3});
-  orders.filter(o=>o.due<T).forEach((o,i)=>moves.push({id:'MV'+(10+i),date:o.due,type:'ship',projectId:o.projectId,orderId:o.id,qty:Math.min(o.qty,orderDoneLocal(o)),doc:'ТТН-'+(500+i),by:'Администратор',ts:10+i}));
-  function orderDoneLocal(o){ return output.filter(r=>r.orderId===o.id).reduce((a,r)=>a+r.good,0); }
+  orders.filter(o=>o.due<T).forEach((o,i)=>{ const made=output.filter(r=>r.orderId===o.id).reduce((a,r)=>a+r.good,0); if(made>0) moves.push({id:'MV'+(10+i),date:o.due,type:'ship',projectId:o.projectId,orderId:o.id,qty:Math.min(o.qty,made),doc:'ТТН-'+(500+i),by:'Администратор',ts:10+i}); });
   const members=[{id:'admin',login:'admin',name:'Администратор',password:'1234',role:'admin'},{id:'olga',login:'olga',name:'Ольга Петренко',password:'1234',role:'master'},{id:'andriy',login:'andriy',name:'Андрей Иванов',password:'1234',role:'operator'},{id:'marina',login:'marina',name:'Марина Коваль',password:'1234',role:'technologist'}];
-  const db={lines,projects,raw,semis,orders,output,runs,plan,planLog,supplies,moves:moves.filter(m=>m.qty>0||m.type==='inv'),members,approved:{[monthKey(now)]:{at:addD(m0,-2).getTime()+15*H,by:'Администратор',items:approvedItems}},settings:{...DEFAULT_SETTINGS}};
-  // снимок состава рецептур в тех. отчётах
-  const keep=DB; DB=normalize(clone(db)); db.runs.forEach(r=>r.stations.forEach(s=>s.rawPerKg=expand('semi',s.semiId,1))); DB=keep;
+  const scenarios=[{id:'SC1',name:'Линия 3 во 2 смены',created:NOW-3*H,by:'Администратор',items:plan.map(clone),downs:[],lineShifts:{L3:[1,2]},note:'Что если набрать людей на 2-ю смену шелкографии?'}];
+  const db={lines,projects,raw,semis,orders,output,runs,plan,planLog,supplies,moves,downs,scenarios,members,approved:{[mk]:{at:addD(m0,-2).getTime()+15*H,by:'Администратор',items:approvedItems}},settings};
+  DB=keep; _sch.clear();
   return db;
 }
-function demoSave(){ if(state.mode!=='demo') return; try{ localStorage.setItem('pdd_demo_v3',JSON.stringify(DB)); }catch(e){} }
-function resetDemo(){ if(!confirm('Сбросить демо-данные к исходным?')) return; try{ localStorage.removeItem('pdd_demo_v3'); }catch(e){} DB=normalize(genDemo()); render(); toast('Демо-данные сброшены'); }
+function demoSave(){ if(state.mode!=='demo') return; try{ localStorage.setItem('pdd_demo_v4',JSON.stringify(DB)); }catch(e){} }
+function resetDemo(){ if(!confirm('Сбросить демо-данные к исходным?')) return; try{ localStorage.removeItem('pdd_demo_v4'); }catch(e){} DB=normalize(genDemo()); render(); toast('Демо-данные сброшены'); }
 function startDemo(){
   state.mode='demo';
-  let saved=null; try{ saved=JSON.parse(localStorage.getItem('pdd_demo_v3')||'null'); }catch(e){}
+  let saved=null; try{ saved=JSON.parse(localStorage.getItem('pdd_demo_v4')||'null'); }catch(e){}
   DB=normalize(saved&&saved.plan?saved:genDemo());
   state.me={...DB.members[0]}; enterApp();
 }
