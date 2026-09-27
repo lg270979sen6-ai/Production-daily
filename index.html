@@ -805,7 +805,7 @@ function tlCalc(od){
     cur=Math.max(cur,r.b);
     const m=(Math.min(r.b,B0)-Math.max(r.a,A0))/60e3, ac=actById(r.act); if(m<=0) return;
     byAct[ac.id]=(byAct[ac.id]||0)+m; byCat[ac.cat]=(byCat[ac.cat]||0)+m;
-    if(ac.cat==='work'||ac.cat==='setup'){ const pid=r.projectId||od.projectId; byProj[pid]=byProj[pid]||{work:0,setup:0,a:r.a,b:r.b}; byProj[pid][ac.cat]+=m; byProj[pid].a=Math.min(byProj[pid].a,r.a); byProj[pid].b=Math.max(byProj[pid].b,r.b); }
+    { const pid=r.projectId||od.projectId, bp=byProj[pid]=byProj[pid]||{work:0,setup:0,down:0,break:0,downBy:{},a:r.a,b:r.b}; bp[ac.cat]+=m; if(ac.cat==='down') bp.downBy[fbKey(ac.id)]=(bp.downBy[fbKey(ac.id)]||0)+m; bp.a=Math.min(bp.a,r.a); bp.b=Math.max(bp.b,r.b); }
   });
   const ongoing=Date.now()<B0;
   if(cur<B0-60e3){ if(ongoing) warns.push(`Смена ещё идёт — заполнено до ${hhmm(cur)}`); else gaps.push([cur,B0]); }
@@ -873,12 +873,12 @@ function tlBar(od,c,h=26){
 function odRender(){
   const od=state.od, c=tlCalc(od), ro=!can('output'), main=byId(DB.projects,od.projectId), t=od.tasks.find(x=>x.it.id===od.taskId);
   const actOpts=sel=>Object.entries(ACAT).map(([k,v])=>`<optgroup label="${v.n}">${acts().filter(a=>a.cat===k).map(a=>`<option value="${a.id}" ${a.id===sel?'selected':''}>${esc(a.name)}</option>`).join('')}</optgroup>`).join('');
-  const projs=[...new Set([od.projectId,...od.rows.filter(r=>['work','setup'].includes(actById(r.act).cat)&&r.projectId).map(r=>r.projectId)].filter(Boolean))];
+  const projs=[...new Set([od.projectId,...od.rows.filter(r=>r.projectId).map(r=>r.projectId)].filter(Boolean))];
   const taskHtml=od.tasks.length?od.tasks.map(x=>`<label class="task ${x.it.id===od.taskId?'on':''}"><input type="radio" name="odTask" ${x.it.id===od.taskId?'checked':''} onchange="odSet('taskId','${x.it.id}')">
       <span class="sw" style="background:${pColor(x.p)}"></span><span style="flex:1;min-width:0"><b>${esc(x.p?.name||'—')}</b><small>${hhmm(x.from)}–${hhmm(x.to)} · ${x.it.orderId?'заказ '+esc(byId(DB.orders,x.it.orderId)?.no||'')+' · ':''}${esc(x.p?.client||'')}</small></span>
       <span style="text-align:right"><b>${N(x.qty)} шт</b><small>${x.setupMin>=1?'наладка '+minTxt(x.setupMin)+' · ':''}работа ${minTxt(x.runMin)}</small></span></label>`).join('')
     :'<div class="hint">На эту смену в действующем плане для линии ничего не запланировано — выберите проект вручную.</div>';
-  const rows=od.rows.map((r,i)=>{ const ac=actById(r.act), pj=['work','setup'].includes(ac.cat);
+  const rows=od.rows.map((r,i)=>{ const ac=actById(r.act), pj=true;
     return `<tr><td><span class="sw" style="background:${ACAT[ac.cat].c};width:10px;height:28px;border-radius:3px;margin:0"></span></td>
       <td><input class="fi" type="time" step="300" value="${r.from}" ${ro?'disabled':''} onchange="odRow(${i},'from',this.value)" style="width:120px"></td>
       <td><input class="fi" type="time" step="300" value="${r.to}" ${ro?'disabled':''} onchange="odRow(${i},'to',this.value)" style="width:120px"></td>
@@ -888,7 +888,7 @@ function odRender(){
       <td style="white-space:nowrap">${ro?'':`<button type="button" class="btn btn-s btn-sm" title="Разделить пополам" onclick="odSplit(${i})">⇹</button> <button type="button" class="btn btn-s btn-sm" onclick="state.od.rows.splice(${i},1);odRender()">✕</button>`}</td></tr>`; }).join('');
   const good=projs.reduce((s,p)=>s+(+od.outs[p]?.good||0),0), defect=projs.reduce((s,p)=>s+(+od.outs[p]?.defect||0),0), speed=c.byCat.work?(good+defect)/c.byCat.work:0;
   const outRows=projs.map(pid=>{ const o=od.outs[pid]||(od.outs[pid]={good:'',defect:0,reason:''}), p=byId(DB.projects,pid);
-    return `<div class="${projs.length>1?'card':''}" style="${projs.length>1?'padding:12px;margin-bottom:8px;box-shadow:none':''}">${projs.length>1?`<div style="font-weight:800;margin-bottom:8px"><span class="sw" style="background:${pColor(p)}"></span>${esc(p?.name||'—')} <span class="muted" style="font-weight:600">· работа ${minTxt(c.byProj[pid]?.work)}</span></div>`:''}
+    return `<div class="${projs.length>1?'card':''}" style="${projs.length>1?'padding:12px;margin-bottom:8px;box-shadow:none':''}">${projs.length>1?`<div style="font-weight:800;margin-bottom:8px"><span class="sw" style="background:${pColor(p)}"></span>${esc(p?.name||'—')} <span class="muted" style="font-weight:600">· работа ${minTxt(c.byProj[pid]?.work)}${c.byProj[pid]?.down?' · простои '+minTxt(c.byProj[pid].down):''}</span></div>`:''}
       <div class="frow3"><div class="fg"><label class="fl">Годные, шт</label><input class="fi" type="number" min="0" inputmode="numeric" value="${o.good}" ${ro?'disabled':''} onchange="state.od.outs['${pid}'].good=this.value;odRender()"></div>
       <div class="fg"><label class="fl">Брак, шт</label><input class="fi" type="number" min="0" inputmode="numeric" value="${o.defect}" ${ro?'disabled':''} onchange="state.od.outs['${pid}'].defect=this.value;odRender()"></div>
       <div class="fg"><label class="fl">Основная причина брака</label><select class="fi" ${ro?'disabled':''} onchange="state.od.outs['${pid}'].reason=this.value"><option value="">—</option>${(DB.settings.defectReasons||[]).map(x=>`<option ${x===o.reason?'selected':''}>${esc(x)}</option>`).join('')}</select></div></div></div>`; }).join('');
@@ -925,17 +925,16 @@ async function odSave(){
   const od=state.od, c=tlCalc(od);
   if(!od.projectId){ toast('Выберите проект'); return false; }
   if(c.errs.length){ toast(c.errs[0]); return false; }
-  const projs=[...new Set([od.projectId,...c.rows.filter(r=>['work','setup'].includes(actById(r.act).cat)&&r.projectId).map(r=>r.projectId)])];
+  const projs=[...new Set([od.projectId,...c.rows.filter(r=>r.projectId).map(r=>r.projectId)])];
   if(projs.some(p=>od.outs[p]?.good===''||od.outs[p]?.good==null)){ toast('Укажите количество годных'+(projs.length>1?' по каждому проекту':'')); return false; }
   const timeline=od.rows.filter(r=>r.from&&r.to).map(r=>({from:r.from,to:r.to,act:r.act,projectId:r.projectId||'',note:r.note||''})).sort((x,y)=>tlAbs(od,x.from)-tlAbs(od,y.from));
-  const downBy={}; Object.entries(c.byAct).forEach(([id,m])=>{ const a=actById(id); if(a.cat==='down') downBy[a.name]=Math.round(m); });
   const oldRecs=od.recs.map(id=>byId(DB.output,id)).filter(Boolean), list=[];
   projs.forEach((pid,k)=>{
-    const bp=c.byProj[pid]||{work:0,setup:0,a:c.rows[0]?.a,b:c.end}, isMain=pid===od.projectId, task=od.tasks.find(x=>x.it.projectId===pid), old=oldRecs.find(r=>r.projectId===pid);
+    const bp=c.byProj[pid]||{work:0,setup:0,down:0,break:0,downBy:{},a:c.rows[0]?.a,b:c.end}, isMain=pid===od.projectId, task=od.tasks.find(x=>x.it.projectId===pid), old=oldRecs.find(r=>r.projectId===pid);
     list.push({col:'output',obj:{...(old||{}),id:old?.id||uid(),reportId:od.id,date:od.date,shift:+od.shift,shiftScheme:lineScheme(od.lineId).id,shiftMin:Math.round(c.total),lineId:od.lineId,projectId:pid,
       planItemId:isMain&&od.taskId?od.taskId:(task?.it.id||''),orderId:isMain?od.orderId:(task?.it.orderId||''),
       startAt:toDT(isMain?c.rows[0]?.a??od.win[0]:bp.a),endAt:toDT(isMain?c.end:bp.b),good:+od.outs[pid].good||0,defect:+od.outs[pid].defect||0,reason:od.outs[pid].reason||'',
-      workMin:Math.round(bp.work),setup:Math.round(bp.setup),downtime:isMain?Math.round(c.byCat.down):0,breakMin:isMain?Math.round(c.byCat.break):0,downBy:isMain?downBy:{},timeline:isMain?timeline:[],
+      workMin:Math.round(bp.work),setup:Math.round(bp.setup),downtime:Math.round(bp.down),breakMin:Math.round(bp.break),downBy:Object.fromEntries(Object.entries(bp.downBy).map(([k,v])=>[k,Math.round(v)])),timeline:isMain?timeline:[],
       operator:od.operator,ts:Date.now(),by:state.me.id}});
   });
   oldRecs.filter(r=>!projs.includes(r.projectId)).forEach(r=>list.push({col:'output',id:r.id,del:true}));
@@ -958,7 +957,7 @@ function renderOutput(){
     <tr><th>Дата</th><th>Смена</th><th>Линия</th><th>Проект</th><th>Хронометраж</th><th class="num">Годные</th><th class="num">Брак</th><th class="num">Работа</th><th class="num">Наладка</th><th class="num">Простои</th><th>Оператор</th><th></th></tr>
     ${shown.map(r=>`<tr class="${can('output')?'click':''}" ${can('output')?`onclick="if(!event.target.closest('button'))openOutputModal('${r.id}')"`:''}><td>${fdate(r.date)}</td><td>${esc(shiftName(r.lineId,r.shift))}</td><td>${esc(lineName(r.lineId))}</td><td>${esc(projName(r.projectId))}${r.planItemId?'':' <span class="tag t-gray" data-tip="Не по сменному заданию">вне плана</span>'}</td>
       <td>${miniTL(r)}</td><td class="num"><b>${N(r.good)}</b></td><td class="num">${N(r.defect)}</td><td class="num">${r.workMin!=null?minTxt(r.workMin):'—'}</td><td class="num">${r.setup?minTxt(r.setup):'—'}</td>
-      <td class="num">${r.downtime?`<span data-tip="${Object.entries(r.downBy||{}).map(([k,v])=>esc(k)+': '+minTxt(v)).join('<br>')||'без детализации'}">${minTxt(r.downtime)}</span>`:'—'}</td><td>${esc(r.operator||'')}</td>
+      <td class="num">${r.downtime?`<span data-tip="${Object.entries(r.downBy||{}).map(([k,v])=>esc(downName(k))+': '+minTxt(v)).join('<br>')||'без детализации'}">${minTxt(r.downtime)}</span>`:'—'}</td><td>${esc(r.operator||'')}</td>
       <td>${can('edit')?`<button class="btn btn-d btn-sm" onclick="delItem('output','${r.id}')">✕</button>`:''}</td></tr>`).join('')}
   </table></div>${recs.length>300?`<div class="muted" style="padding:14px 0 0;font-size:12px">Показаны последние 300 записей.</div>`:''}`:'<div class="empty">Нет записей за выбранный период</div>'}</div>`;
 }
@@ -984,7 +983,7 @@ function renderQuality(){
     <div class="card"><div class="card-h"><div class="card-t">Причины брака</div></div>${donut(groupSum(recs,r=>r.reason||'Не указана').filter(x=>x.v>0).slice(0,8))}</div>
     <div class="card"><div class="card-h"><div class="card-t">Брак по линиям</div></div>${byLine.map(x=>`<div class="hb"><div class="hb-top"><b>${esc(x.l.name)}</b><span>${N(x.d)} шт · ${P(x.p)}</span></div><div class="track"><div class="fill" style="width:${x.p/maxP*100}%;background:${x.p>target?'var(--red)':'var(--green)'}"></div></div></div>`).join('')}</div>
   </div>
-  ${(()=>{ const agg={}, T={work:0,setup:0,down:0,break:0}; recs.forEach(r=>{ const by=r.downBy&&Object.keys(r.downBy).length?r.downBy:(+r.downtime?{'Без детализации':+r.downtime}:{}); Object.entries(by).forEach(([k,v])=>agg[k]=(agg[k]||0)+(+v||0));
+  ${(()=>{ const agg={}, T={work:0,setup:0,down:0,break:0}; recs.forEach(r=>{ const by=r.downBy&&Object.keys(r.downBy).length?r.downBy:(+r.downtime?{'Без детализации':+r.downtime}:{}); Object.entries(by).forEach(([k,v])=>agg[downName(k)]=(agg[downName(k)]||0)+(+v||0));
       T.work+=r.workMin!=null?+r.workMin:0; T.setup+=+r.setup||0; T.down+=+r.downtime||0; T.break+=+r.breakMin||0; });
     const tot=Object.values(T).reduce((a,b)=>a+b,0)||1;
     return `<div class="grid g11 row-gap"><div class="card"><div class="card-h"><div class="card-t">Простои по видам</div><div class="card-s">из хронометража смен</div></div>${donut(Object.entries(agg).map(([k,v])=>({k,v:Math.round(v)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,8),'мин простоя')}</div>
@@ -2065,6 +2064,9 @@ function normalize(db){
   return db;
 }
 // изменения сразу применяются локально (и в демо, и при работе с базой), затем уходят в базу
+const fbKey = k => String(k).replace(/[.#$\/\[\]]/g,'_');
+const downName = k => { const a=acts().find(x=>x.id===k||fbKey(x.id)===k); return a?a.name:k; };
+function fbSafe(v){ if(Array.isArray(v)) return v.map(fbSafe); if(v&&typeof v==='object'){ const o={}; Object.entries(v).forEach(([k,x])=>{ if(x!==undefined) o[fbKey(k)]=fbSafe(x); }); return o; } return v; }
 function applyLocal(list){
   list.forEach(x=>{
     if(x.path){ let o=DB; x.path.slice(0,-1).forEach(k=>{ o[k]=o[k]||{}; o=o[k]; }); o[x.path[x.path.length-1]]=x.val==null?undefined:clone(x.val); }
@@ -2078,12 +2080,12 @@ const Store = {
   async del(col,id){ return this.batch([{col,id,del:true}]); },
   async batch(list){
     applyLocal(list);
-    if(state.mode==='fb'){ const up={}; list.forEach(x=>{ if(x.path) up[x.path.join('/')]=x.val==null?null:clone(x.val); else up[`${x.col}/${x.obj?x.obj.id:x.id}`]=x.del?null:clone(x.obj); });
+    if(state.mode==='fb'){ const up={}; list.forEach(x=>{ if(x.path) up[x.path.map(fbKey).join('/')]=x.val==null?null:fbSafe(clone(x.val)); else up[`${x.col}/${fbKey(x.obj?x.obj.id:x.id)}`]=x.del?null:fbSafe(clone(x.obj)); });
       if(!$('#modal').classList.contains('open')) render(); return fdb.ref(`${ROOT}/data`).update(up); }
     demoSave(); render();
   },
   async settings(s){
-    if(state.mode==='fb'){ DB.settings=clone(s); return fdb.ref(`${ROOT}/data/settings`).set(s); }
+    if(state.mode==='fb'){ DB.settings=clone(s); return fdb.ref(`${ROOT}/data/settings`).set(fbSafe(clone(s))); }
     DB.settings=s; demoSave(); $('#orgName').textContent=s.orgName; render();
   },
   async user(u,delId){
@@ -2212,7 +2214,7 @@ function genDemo(){
     const full=[]; let t=a; segs.forEach(x=>{ if(x.a>t+60e3) full.push({a:t,b:x.a,act:'other'}); full.push(x); t=Math.max(t,x.b); }); if(t<b-60e3) full.push({a:t,b,act:'other'}); t=Math.max(t,b);
     const per={}; full.forEach(x=>{ if(!x.pid||!['work','setup'].includes(x.act)) return; const v=per[x.pid]=per[x.pid]||{work:0,setup:0,a:x.a,b:x.b,pi:x.pi,o:x.o}; v[x.act]+=(x.b-x.a)/60e3; v.a=Math.min(v.a,x.a); v.b=Math.max(v.b,x.b); });
     const pids=Object.keys(per).sort((x,y)=>per[y].work-per[x].work); if(!pids.length) return; const main=pids[0], rid='RP'+output.length;
-    const downBy={}; let down=0; full.forEach(x=>{ const ac=DEFAULT_SETTINGS.activities.find(q=>q.id===x.act); if(ac&&ac.cat==='down'){ const m=(x.b-x.a)/60e3; down+=m; downBy[ac.name]=(downBy[ac.name]||0)+Math.round(m); } });
+    const downBy={}; let down=0; full.forEach(x=>{ const ac=DEFAULT_SETTINGS.activities.find(q=>q.id===x.act); if(ac&&ac.cat==='down'){ const m=(x.b-x.a)/60e3; down+=m; downBy[ac.id]=(downBy[ac.id]||0)+Math.round(m); } });
     const timeline=full.map(x=>({from:hhmm(x.a),to:hhmm(x.b),act:x.act,projectId:x.pid&&x.pid!==main?x.pid:'',note:x.act==='brk'?pick(['замена форсунки ст.5','засор пистолета','сбой конвейера','перегрев печи']):x.act==='staff'?'нет операторов':''}));
     pids.forEach(pid=>{ const p=projects.find(q=>q.id===pid), v=per[pid], good=Math.round(p.speed*v.work*(.86+rnd()*.12)), defect=Math.round(good*(.006+rnd()*rnd()*.04)), isM=pid===main;
       output.push({id:'R'+output.length,reportId:rid,date:s,shift:sh,shiftScheme:l.scheme,shiftMin:Math.round((b-a)/60e3),lineId:l.id,planItemId:v.pi||'',projectId:pid,orderId:v.o||'',startAt:toDT(isM?a:v.a),endAt:toDT(isM?t:v.b),good,defect,reason:defect?reason():'',
@@ -2346,7 +2348,7 @@ async function seedLive(){
   if(!confirm('Заполнить базу примером? Текущие данные (кроме пользователей и настроек) будут заменены.')) return;
   const g=genDemo(), up={}, o=x=>Object.fromEntries(x.map(i=>[i.id,i]));
   COLS.forEach(c=>up[c]=o(g[c])); up.approved=g.approved; up.products=null; up.stock=null;
-  await fdb.ref(`${ROOT}/data`).update(clone(up)); toast('Пример загружен');
+  await fdb.ref(`${ROOT}/data`).update(fbSafe(clone(up))); toast("Пример загружен");
 }
 async function clearLive(){
   if(!confirm('Удалить ВСЕ данные: выпуск, план, проекты, рецептуры, сырьё, склад? Пользователи и настройки останутся.')) return;
