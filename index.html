@@ -204,7 +204,7 @@ tfoot td{font-weight:800;background:var(--card2)}
 .app.full .side{transform:translateX(-100%)} .app.full .side.open{transform:none;box-shadow:0 0 40px rgba(0,0,0,.25)}
 .app.full .scrim.open{display:block;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:25}
 .app.full .main{margin-left:0} .app.full .burger{display:flex} .app.full .content{max-width:none;padding:4px 18px 40px}
-.qt td{vertical-align:middle} .qt td:nth-child(2){white-space:normal;min-width:280px} .qt td:nth-child(2) b{font-size:13px} .qt td:nth-child(8){white-space:normal;min-width:120px} .qt td:nth-child(9){white-space:normal;min-width:150px} .qt td:nth-child(9) .tag{margin:1px 0} .qt tr.q-line td{background:var(--card2);padding:9px 12px;border-top:2px solid var(--line2)} .qt tr.q-run td:first-child{box-shadow:inset 4px 0 0 var(--blue)} .qt tr.q-done{opacity:.5}
+.qt td{vertical-align:middle} .q-st{padding:5px 6px;font-size:12px;width:178px} .q-st.fix{border-color:var(--brand);background:var(--brandBg)} .qt td:nth-child(2){white-space:normal;min-width:220px} .qt td:nth-child(2) b{font-size:13px} .qt td:nth-child(8){white-space:normal;min-width:120px} .qt td:nth-child(9){white-space:normal;min-width:150px} .qt td:nth-child(9) .tag{margin:1px 0} .qt tr.q-line td{background:var(--card2);padding:9px 12px;border-top:2px solid var(--line2)} .qt tr.q-run td:first-child{box-shadow:inset 4px 0 0 var(--blue)} .qt tr.q-done{opacity:.5}
 .q-arr{white-space:nowrap} .q-arr .btn{padding:3px 8px;margin-right:3px;font-size:13px} .q-arr .btn:disabled{opacity:.25}
 .sg td{vertical-align:top;font-size:12px;padding:6px 8px;border-left:1px solid var(--line)} .sg th{border-left:1px solid var(--line)} .sg th.c{text-align:center}
 .sg tr.sg-last td{border-bottom:2px solid var(--line2)} .sg-date{font-weight:800;white-space:nowrap;background:var(--card2);font-size:12.5px!important;line-height:1.5} .sg-today td.sg-date,.sg-today td.sg-line{color:var(--brand)}
@@ -603,7 +603,11 @@ function delta(cur,prev,lowerBetter){
   if(Math.abs(d)<0.5) return `<div class="kd flat">≈ как в пред. периоде</div>`;
   return `<div class="kd ${good?'up':'down'}">${d>0?'▲':'▼'} ${P(Math.abs(d),0)} к пред. периоду</div>`;
 }
-function orderDone(o){ return DB.output.filter(r=>r.orderId===o.id).reduce((s,r)=>s+(+r.good||0),0); }
+function orderOuts(o,onlyOk){ const pis=new Set(DB.plan.filter(i=>i.orderId===o.id).map(i=>i.id)); return DB.output.filter(r=>(r.orderId===o.id||(r.planItemId&&pis.has(r.planItemId)))&&(!onlyOk||r.approved!==false)); }
+function orderDone(o,onlyOk){ return orderOuts(o,onlyOk).reduce((s,r)=>s+(+r.good||0),0); }
+// баланс заказа: сделано (подтверждено) + осталось сделать по всем позициям плана (на всех линиях) против количества заказа
+function orderBal(o){ const its=DB.plan.filter(i=>i.orderId===o.id), done=orderDone(o,true), rest=its.reduce((s,i)=>s+sched(i,LIVE).rest,0);
+  return {qty:+o.qty||0,done,rest,its,lines:new Set(its.map(i=>i.lineId)).size,diff:done+rest-(+o.qty||0)}; }
 function orderShipped(o){ return DB.moves.filter(m=>m.type==='ship'&&m.orderId===o.id).reduce((s,m)=>s+(+m.qty||0),0); }
 function orderStatus(o){ if(orderShipped(o)>=o.qty) return 'shipped'; const d=orderDone(o); if(d>=o.qty) return 'done'; if(o.due<iso(new Date())) return 'overdue'; return d>0?'work':'new'; }
 function orderStats(){ const s={shipped:0,done:0,overdue:0,work:0,new:0}; DB.orders.forEach(o=>s[orderStatus(o)]++); return s; }
@@ -658,15 +662,13 @@ function shiftWins(lineId,from,to,ctx){
 //   • с временем (12:00) — в это время; «каждую смену» — каждый день в это время
 //   • без времени, «каждую смену» — в начале каждой смены, в которую идёт работа
 //   • без времени, разово — в конце позиции
-function sched(it,ctx){
+function schedCore(it,ctx,start,qty,withSetup,withOnce){
   const ex=A(it.extras);
-  const key=(ctx?.id||'live')+'|'+it.id+'|'+it.start+'|'+it.qty+'|'+it.lineId+'|'+it.projectId+'|'+(it.noSetup?1:0)+'|'+it.speedPlan+'|'+it.setupPlan+'|'+JSON.stringify(ex);
-  if(_sch.has(key)) return _sch.get(key);
-  const p=byId(DB.projects,it.projectId), start=tms(it.start), res={start,end:start,segs:[],setup:0,run:0,pause:0,restarts:0,hours:0,ok:true};
-  if(p&&+it.qty>0&&isFinite(start)){
-    const need=[], su=itemSetup(it); if(!it.noSetup&&su>0) need.push({k:'s',m:su,l:'Наладка'});
-    need.push({k:'r',m:(+it.qty)/Math.max(0.01,itemSpeed(it)),l:''});
-    ex.filter(e=>!e.time&&!e.every&&+e.min>0).forEach(e=>need.push({k:'p',m:+e.min,l:e.kind||'Пауза'}));
+  const p=byId(DB.projects,it.projectId), res={start,end:start,segs:[],setup:0,run:0,pause:0,restarts:0,hours:0,ok:true};
+  if(p&&qty>0&&isFinite(start)){
+    const need=[], su=itemSetup(it); if(withSetup&&su>0) need.push({k:'s',m:su,l:'Наладка'});
+    need.push({k:'r',m:qty/Math.max(0.01,itemSpeed(it)),l:''});
+    ex.filter(e=>withOnce&&!e.time&&!e.every&&+e.min>0).forEach(e=>need.push({k:'p',m:+e.min,l:e.kind||'Пауза'}));
     const perShift=ex.filter(e=>!e.time&&e.every&&+e.min>0), timed=ex.filter(e=>e.time&&+e.min>0), done=new Set();
     let t=start, from=start;
     const put=(a,b,k,l)=>{ if(b-a<1000) return; const last=res.segs[res.segs.length-1]; if(last&&last[2]===k&&last[3]===l&&Math.abs(last[1]-a)<1000) last[1]=b; else res.segs.push([a,b,k,l]); const m=(b-a)/60e3; if(k==='s') res.setup+=m; else if(k==='r') res.run+=m; else res.pause+=m; };
@@ -691,6 +693,30 @@ function sched(it,ctx){
     if(res.segs.length){ res.start=res.segs[0][0]; res.end=res.segs[res.segs.length-1][1]; }
     res.hours=(res.end-res.start)/H;
   }
+  return res;
+}
+// подтверждённый факт по позициям плана (для пересчёта остатка)
+let _factMap=null;
+function factMap(){ if(_factMap) return _factMap; const m={}; DB.output.forEach(r=>{ if(!r.planItemId||r.approved===false) return; const x=m[r.planItemId]=m[r.planItemId]||{good:0,end:0}; x.good+=+r.good||0; const e=tms(r.endAt); if(isFinite(e)&&e>x.end) x.end=e; }); return _factMap=m; }
+// Позиция: наладка → работа → паузы. Когда есть подтверждённый факт — план до последнего отчёта
+// остаётся как был, а ОСТАТОК (кол-во − факт) планируется заново с момента окончания последней отчётной смены.
+function sched(it,ctx){
+  const fm=ctx&&ctx.noFact?null:factMap()[it.id], done=fm?fm.good:0, dT=fm?fm.end:0;
+  const key=(ctx?.id||'live')+'|'+it.id+'|'+it.start+'|'+it.qty+'|'+it.lineId+'|'+it.projectId+'|'+(it.noSetup?1:0)+'|'+it.speedPlan+'|'+it.setupPlan+'|'+JSON.stringify(A(it.extras))+'|'+done+'|'+dT;
+  if(_sch.has(key)) return _sch.get(key);
+  const start=tms(it.start); let res;
+  if(done>0&&dT>start){
+    // если после последнего отчёта по этой позиции линия уже работала по другой — остаток сам не планируется (не добрали; доделать — отдельной позицией)
+    let nx=Infinity; DB.output.forEach(r=>{ if(r.lineId!==it.lineId||!r.planItemId||r.planItemId===it.id) return; const o2=byId(DB.plan,r.planItemId); if(!o2||seqOf(o2)<=seqOf(it)) return; const s2=tms(r.startAt); if(s2>start&&s2<nx) nx=s2; });
+    const closed=isFinite(nx), cutT=closed?Math.min(dT,nx):dT;
+    const orig=schedCore(it,ctx,start,+it.qty||0,!it.noSetup,false), rest=closed?0:Math.max(0,(+it.qty||0)-done);
+    const segs=orig.segs.filter(s=>s[0]<cutT).map(s=>[s[0],Math.min(s[1],cutT),s[2],s[3]]);
+    const tail=rest>0?schedCore(it,ctx,dT,rest,false,true):null;
+    if(tail) segs.push(...tail.segs);
+    res={start:segs.length?segs[0][0]:start,end:segs.length?Math.max(segs[segs.length-1][1],tail?0:cutT):cutT,segs,setup:0,run:0,pause:0,restarts:0,hours:0,ok:tail?tail.ok:true,done,doneAt:dT,rest,closed,short:closed?Math.max(0,(+it.qty||0)-done):0};
+    segs.forEach(([a,b,k])=>{ const m=(b-a)/60e3; if(k==='s') res.setup+=m; else if(k==='r') res.run+=m; else res.pause+=m; });
+    res.hours=(res.end-res.start)/H;
+  } else { res=schedCore(it,ctx,start,+it.qty||0,!it.noSetup,true); res.done=done; res.rest=Math.max(0,(+it.qty||0)-done); }
   _sch.set(key,res); return res;
 }
 const itemSegs = (it,ctx) => it.fixed ? A(it.segs).map(s=>[+s.a,+s.b,s.k,s.l||'']) : sched(it,ctx).segs;
@@ -700,11 +726,13 @@ const itemHours = (it,ctx) => (endMs(it,ctx)-itemStart(it,ctx))/H;
 function snapItem(it,ctx){ const s=sched(it,ctx); const o=clone(it); delete o.fixed; return {...o,fixed:true,startMs:s.start,end:s.end,hours:Math.round(s.hours*100)/100,setupMin:Math.round(s.setup),pauseMin:Math.round(s.pause),restarts:0,segs:s.segs.map(([a,b,k,l])=>({a,b,k,l:l||''}))}; }
 // очередь линии: каждый следующий проект стартует, когда закончился предыдущий (или не раньше заданного времени)
 const seqOf = it => it.seq!=null&&it.seq!==''?+it.seq:1e9+(tms(it.start)||0)/1e6;
+const hasOutputs = it => DB.output.some(r=>r.planItemId===it.id);
+const itemStarted = it => hasOutputs(it)||itemStart(it,LIVE)<=Date.now();
 function relineChain(items,lineId,ctx){
   const now=Date.now(), li=items.filter(i=>i.lineId===lineId).sort((a,b)=>seqOf(a)-seqOf(b)||(tms(a.start)-tms(b.start))), ch=new Set(); let prevEnd=null;
   li.forEach((it,k)=>{
     if(+it.seq!==k){ it.seq=k; ch.add(it); }
-    const st=tms(it.start), started=isFinite(st)&&st<=now&&sched(it,ctx).start<=now;
+    const st=tms(it.start), ss=isFinite(st)?sched(it,ctx).start:NaN, started=hasOutputs(it)||(isFinite(st)&&st<=now&&ss<=now&&(prevEnd==null||prevEnd<=ss+60e3));
     if(!started){ const nb=it.notBefore?tms(it.notBefore):0; let want=prevEnd!=null?Math.max(prevEnd,nb):Math.max(isFinite(st)?st:now,nb); want=Math.max(want,prevEnd??0);
       const w=toDT(want); if(it.start!==w){ it.start=w; ch.add(it); } }
     const e=sched(it,ctx).end; prevEnd=prevEnd==null?e:Math.max(prevEnd,e);
@@ -730,7 +758,7 @@ function compactLine(items,lineId,ctx){
   });
   return changed;
 }
-function overlapsCount(items,ctx){ let n=0; DB.lines.forEach(l=>{ let pe=0; items.filter(i=>i.lineId===l.id).sort((a,b)=>itemStart(a,ctx)-itemStart(b,ctx)).forEach(it=>{ if(pe&&itemStart(it,ctx)<pe-60e3&&endMs(it,ctx)>Date.now()) n++; pe=Math.max(pe,endMs(it,ctx)); }); }); return n; }
+function overlapsCount(items,ctx){ let n=0; DB.lines.forEach(l=>{ let pe=0; items.filter(i=>i.lineId===l.id).sort((a,b)=>itemStart(a,ctx)-itemStart(b,ctx)).forEach(it=>{ if(pe&&itemStart(it,ctx)<pe-60e3&&pe>Date.now()) n++; pe=Math.max(pe,endMs(it,ctx)); }); }); return n; }
 function lineEnd(lineId,exceptId,ctx){ const its=ctxItems(ctx).filter(i=>i.lineId===lineId&&i.id!==exceptId); return its.length?Math.max(...its.map(i=>endMs(i,ctx))):null; }
 function orderFinish(o,ctx){ const its=ctxItems(ctx).filter(i=>i.orderId===o.id); return its.length?Math.max(...its.map(i=>endMs(i,ctx))):null; }
 function itemFact(it){
@@ -1764,6 +1792,9 @@ function itemRisk(it,chk){
   if(o&&e>pd(o.due).getTime()+864e5) out.push(['Не успеваем к отгрузке','t-red',`окончание ${fdt(e)}<br>срок отгрузки ${fdate(o.due)}`]);
   if(chk&&chk.lacks.length&&(!chk.ready||pd(chk.ready).getTime()>a)) out.push([chk.ready?'Сырьё позже старта':'Нет сырья',chk.ready?'t-amber':'t-red',chk.ready?`старт ${fdt(a)}, сырьё будет ${fdate(chk.ready)}`:'поставка не запланирована']);
   if(/Отстаём|Не добрали/.test(x.st[0])) out.push([x.st[0],'t-red','по подтверждённому факту']);
+  if(o){ const b=orderBal(o), tol=Math.max(500,b.qty*.01);
+    if(b.diff>tol) out.push([`Лишнее +${N(b.diff)}`,'t-amber',`Заказ ${esc(o.no)}: ${N(b.qty)} шт<br>уже сделано ${N(b.done)} + в плане осталось ${N(b.rest)}${b.lines>1?` (на ${b.lines} линиях)`:''}<br>наработаем лишних ${N(b.diff)} шт — уменьшите количество в деталях`]);
+    else if(b.diff<-tol) out.push([`Не хватает ${N(-b.diff)}`,'t-amber',`Заказ ${esc(o.no)}: ${N(b.qty)} шт<br>сделано ${N(b.done)} + в плане ${N(b.rest)} — не хватает ${N(-b.diff)} шт`]); }
   return out;
 }
 // сохранить изменения очереди: пересчитать цепочку на линиях и записать только изменившиеся позиции
@@ -1782,32 +1813,32 @@ function planQueue(chk){
   const rows=DB.lines.map(l=>{
     const all=lineQueue(l.id), li=all.filter(i=>endMs(i,LIVE)>=from);
     const last=all[all.length-1];
-    const head=`<tr class="q-line"><td colspan="10"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:14px">${esc(l.name)}</b><span class="muted">${esc(shiftLabel(l.id,LIVE))}</span><span class="muted">· в очереди ${li.filter(i=>endMs(i,LIVE)>now).length}${last?` · линия занята до ${fdt(endMs(last,LIVE))}`:''}</span><div style="flex:1"></div>${ce?`<button class="btn btn-s btn-sm" onclick="openQAdd('${l.id}')">+ Проект</button>`:''}</div></td></tr>`;
+    const head=`<tr class="q-line"><td colspan="9"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:14px">${esc(l.name)}</b><span class="muted">${esc(shiftLabel(l.id,LIVE))}</span><span class="muted">· в очереди ${li.filter(i=>endMs(i,LIVE)>now).length}${last?` · линия занята до ${fdt(endMs(last,LIVE))}`:''}</span>${ce?`<button class="btn btn-s btn-sm" onclick="openQAdd('${l.id}')">+ Проект в эту линию</button>`:''}</div></td></tr>`;
     const body=li.map(it=>{
-      const k=all.indexOf(it), prev=all[k-1], next=all[k+1], p=byId(DB.projects,it.projectId), o=byId(DB.orders,it.orderId), a=itemStart(it,LIVE), e=endMs(it,LIVE), started=a<=now;
-      const canUp=ce&&!started&&prev&&itemStart(prev,LIVE)>now, canDn=ce&&!started&&next;
+      const k=all.indexOf(it), prev=all[k-1], next=all[k+1], p=byId(DB.projects,it.projectId), o=byId(DB.orders,it.orderId), a=itemStart(it,LIVE), e=endMs(it,LIVE), started=itemStarted(it);
+      const canUp=ce&&!started&&prev&&!itemStarted(prev), canDn=ce&&!started&&next, ob=o?orderBal(o):null;
       const f=itemFact(it), q=+it.qty||0, risk=itemRisk(it,chk[it.id]), s=sched(it,LIVE);
       return `<tr class="${ce?'click':''} ${started&&e>now?'q-run':''} ${e<=now?'q-done':''}" onclick="if(!event.target.closest('button'))openQItem('${it.id}')">
-        <td class="q-arr">${ce?`<button class="btn btn-s btn-sm" ${canUp?'':'disabled'} onclick="qMove('${it.id}',-1)" title="Выше в очереди">↑</button><button class="btn btn-s btn-sm" ${canDn?'':'disabled'} onclick="qMove('${it.id}',1)" title="Ниже в очереди">↓</button>`:''}</td>
+        <td class="q-arr">${ce?`<button class="btn btn-s btn-sm" ${canUp?'':'disabled'} onclick="qMove('${it.id}',-1)" title="Выше в очереди">↑</button><button class="btn btn-s btn-sm" ${canDn?'':'disabled'} onclick="qMove('${it.id}',1)" title="Ниже в очереди">↓</button><div style="margin-top:3px">${e>now?`<button class="btn btn-s btn-sm" onclick="openQSplit('${it.id}')" title="Остановить / разделить: доделать остаток позже или на другой линии">⏸</button>`:''}<button class="btn btn-d btn-sm" onclick="delPlanItem('${it.id}')" title="Удалить из плана">🗑</button></div>`:''}</td>
         <td><div style="display:flex;gap:8px;align-items:center"><span class="sw" style="background:${pColor(p)};flex-shrink:0"></span><div><b>${esc(p?.name||'—')}</b><small class="muted" style="display:block">${esc(p?.client||'')}${s.pause?` · паузы ${minTxt(s.pause)}`:''}${started&&e>now?' · <b style="color:var(--blue)">в работе</b>':''}</small></div></div></td>
-        <td>${o?esc(o.no):'<span class="muted">—</span>'}</td>
-        <td class="num"><b>${N(q)}</b><small class="muted" style="display:block">факт ${N(f.good)}${q?' · '+P(f.good/q*100,0):''}${f.pending?` · ⏳ ${N(f.pending)}`:''}</small></td>
-        <td>${fdt(a)}</td>
+        <td>${o?`${esc(o.no)}<small class="muted" style="display:block">сделано ${short(ob.done)} из ${short(ob.qty)}${ob.lines>1?` · ${ob.lines} линии`:''}</small>`:'<span class="muted">—</span>'}</td>
+        <td class="num"><b>${N(q)}</b><small class="muted" style="display:block">факт ${N(f.good)}${q?' · '+P(f.good/q*100,0):''}${f.pending?` · ⏳ ${N(f.pending)}`:''}${f.good&&s.rest>0?`<br>осталось ${N(s.rest)}`:''}</small></td>
+        <td>${ce?`<input class="fi q-st ${it.notBefore&&!started?'fix':''}" type="datetime-local" value="${toDT(a)}" title="${started?'Фактическое начало':'Задать начало вручную (пусто — сразу за предыдущим)'}" onchange="qSetStart('${it.id}',this.value)">`:fdt(a)}${it.notBefore&&!started?'<small class="muted" style="display:block">📌 задано вручную</small>':''}</td>
         <td>${fdt(e)}<small class="muted" style="display:block">${Q((e-a)/H,1)} ч · наладка ${minTxt(s.setup)}</small></td>
         <td>${o?fdate(o.due):'<span class="muted">—</span>'}</td>
         <td>${matTag(chk[it.id])}</td>
         <td>${risk.length?risk.map(r=>`<span class="tag ${r[1]}" data-tip="${r[2]}">${r[0]}</span>`).join(' '):(e<=now?'<span class="tag t-gray">завершён</span>':'<span class="tag t-green">в срок</span>')}</td>
-        <td>${ce&&!started?`<button class="btn btn-d btn-sm" onclick="delPlanItem('${it.id}')" title="Удалить из плана">🗑</button>`:''}</td></tr>`;
-    }).join('')||`<tr><td colspan="10" class="muted" style="padding:10px 14px">Очередь пуста</td></tr>`;
+</tr>`;
+    }).join('')||` <tr><td colspan="9" class="muted" style="padding:10px 14px">Очередь пуста</td></tr>`;
     return head+body;
   }).join('');
-  return `<div class="tw flush"><table class="qt"><tr><th style="width:74px"></th><th>Проект</th><th>Заказ</th><th class="num">Кол-во</th><th>Начало</th><th>Конец</th><th>Срок отгрузки</th><th>Сырьё</th><th>Риск</th><th style="width:44px"></th></tr>${rows}</table></div>`;
+  return `<div class="tw flush"><table class="qt"><tr><th style="width:74px"></th><th>Проект</th><th>Заказ</th><th class="num">Кол-во</th><th>Начало</th><th>Конец</th><th>Срок отгрузки</th><th>Сырьё</th><th>Риск</th></tr>${rows}</table></div>`;
 }
 async function qMove(id,dir){
   const it=byId(DB.plan,id); if(!it) return;
   const work=DB.plan.map(clone), li=work.filter(i=>i.lineId===it.lineId).sort((a,b)=>seqOf(a)-seqOf(b)||tms(a.start)-tms(b.start));
   li.forEach((x,k)=>x.seq=k); const i=li.findIndex(x=>x.id===id), j=i+dir; if(j<0||j>=li.length) return;
-  const now=Date.now(); if(itemStart(byId(DB.plan,li[i].id),LIVE)<=now||itemStart(byId(DB.plan,li[j].id),LIVE)<=now) return toast('Проект уже в работе — его место в очереди не меняется');
+  if(itemStarted(byId(DB.plan,li[i].id))||itemStarted(byId(DB.plan,li[j].id))) return toast('Проект уже в работе — его место в очереди не меняется');
   const A1=li[i], B1=li[j]; [A1.seq,B1.seq]=[B1.seq,A1.seq]; const first=dir<0?A1:B1, second=dir<0?B1:A1; first.start=[A1.start,B1.start].sort()[0];
   await qCommit(work,[it.lineId],[],`Очередь ${lineName(it.lineId)}: «${projName(first.projectId)}» поставлен перед «${projName(second.projectId)}»`);
 }
@@ -1824,13 +1855,14 @@ function openQAdd(lineId){
     <div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="qty" oninput="qaCalc()"></div></div>
     <div class="frow"><div class="fg"><label class="fl">Скорость наработки, шт/мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="speed" oninput="qaCalc()"></div>
     <div class="fg"><label class="fl">Первичная наладка, мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="setup" oninput="qaCalc()"></div></div>
-    <div class="fg"><label class="fl">Не раньше (необязательно)</label><input class="fi" type="datetime-local" name="notBefore" onchange="qaCalc()"></div>
+    <div class="hint" id="qaOrd" style="margin:-4px 0 10px"></div>
+    <div class="fg"><label class="fl">Начало вручную (необязательно — иначе сразу за последним в очереди)</label><input class="fi" type="datetime-local" name="notBefore" onchange="qaCalc()"></div>
     <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:12px"><input type="checkbox" name="saveProj"> Записать скорость и наладку в карточку проекта</label>
     <div class="note" id="qaHint" style="margin-bottom:10px;background:var(--blueBg)"></div>
     <div class="hint">Проект встанет в конец очереди линии. Обед, уборку, пересменку, подсчёт материалов добавьте потом — нажмите на строку проекта в плане.</div>`,
   async f=>{
     const r=qaRec(); if(!r){ toast('Укажите проект, количество и скорость'); return false; } r.id=uid();
-    const p=byId(DB.projects,r.projectId), work=DB.plan.map(clone).concat([r]);
+    const p=byId(DB.projects,r.projectId), work=DB.plan.map(clone).concat([r]); if(r.notBefore){ r.start=r.notBefore; placeByTime(work,r); }
     const extra=f.saveProj&&(+p.speed!==r.speedPlan||+p.setupMin!==r.setupPlan)?[{col:'projects',obj:{...clone(p),speed:r.speedPlan,setupMin:r.setupPlan}}]:[];
     await qCommit(work,[r.lineId],extra,(w,c)=>{ const x=w.find(i=>i.id===r.id), s=sched(x,c); return `Добавил «${p.name}» в очередь ${lineName(r.lineId)}: ${N(r.qty)} шт, ${fdt(s.start)} → ${fdt(s.end)}`; });
     toast('Проект добавлен в план');
@@ -1845,7 +1877,9 @@ function qaProj(){
   if(p.lineId&&byId(DB.lines,p.lineId)&&!F.lineId.dataset.touched) F.lineId.value=p.lineId;
   qaOrder();
 }
-function qaOrder(){ const F=$('#mForm').elements, o=byId(DB.orders,F.orderId.value); if(o){ const inPlan=DB.plan.filter(i=>i.orderId===o.id).reduce((a,i)=>a+(+i.qty||0),0); F.qty.value=Math.max(0,o.qty-inPlan)||o.qty; } qaCalc(); }
+function qaOrder(){ const F=$('#mForm').elements, o=byId(DB.orders,F.orderId.value), h=$('#qaOrd');
+  if(o){ const b=orderBal(o), left=Math.max(0,b.qty-b.done-b.rest); F.qty.value=left||''; if(h) h.innerHTML=`Заказ ${esc(o.no)}: ${N(b.qty)} шт · сделано ${N(b.done)} · уже в плане ${N(b.rest)}${b.lines?` (линий: ${b.lines})`:''} → <b>осталось поставить ${N(left)}</b>`; }
+  else if(h) h.innerHTML=''; qaCalc(); }
 function qaRec(){
   const F=$('#mForm').elements, p=byId(DB.projects,F.projectId.value), qty=nv(F.qty.value), sp=nv(F.speed.value); if(!p||!(qty>0)||!(sp>0)) return null;
   const li=DB.plan.filter(i=>i.lineId===F.lineId.value), mx=li.length?Math.max(...li.map(seqOf)):-1, le=lineEnd(F.lineId.value,null,LIVE);
@@ -1853,7 +1887,7 @@ function qaRec(){
 }
 function qaCalc(){
   const h=$('#qaHint'); if(!h) return; const r=qaRec(); if(!r){ h.innerHTML='Выберите проект, укажите количество и скорость'; return; }
-  const work=DB.plan.map(clone).concat([r]), c={id:'tmp'+uid(),items:work}; relineChain(work,r.lineId,c);
+  const work=DB.plan.map(clone).concat([r]); if(r.notBefore){ r.start=r.notBefore; placeByTime(work,r); } const c={id:'tmp'+uid(),items:work}; relineChain(work,r.lineId,c);
   const x=work.find(i=>i.id===r.id), s=sched(x,c), prev=work.filter(i=>i.lineId===r.lineId&&i.id!==r.id).sort((a,b)=>seqOf(a)-seqOf(b)).pop();
   h.innerHTML=`<b>${fdt(s.start)} → ${fdt(s.end)}</b> · всего ${Q(s.hours,1)} ч${prev?`<br>после «${esc(projName(prev.projectId))}»`:''}<br>Наладка ${minTxt(s.setup)} · работа ${Q(s.run/60,1)} ч (${N(r.speedPlan)} шт/мин)${s.ok?'':'<br>⚠ не помещается в рабочее время линии'}`;
 }
@@ -1872,11 +1906,12 @@ function openQItem(id){
   modal('Проект в плане',`
     <div style="display:flex;gap:10px;align-items:center;margin:-6px 0 14px"><span class="sw" style="background:${pColor(p)};width:14px;height:14px"></span><div><b style="font-size:15px">${esc(p?.name||'—')}</b><div class="muted" style="font-size:12px">${esc(p?.client||'')} · факт ${N(f.good)} из ${N(it.qty)}${f.pending?` · на проверке ${N(f.pending)}`:''}</div></div></div>
     <div class="frow"><div class="fg"><label class="fl">Линия</label><select class="fi" name="lineId" ${started||!ce?'disabled':''} onchange="qiCalc()">${opts(DB.lines,it.lineId)}</select></div>
-    <div class="fg"><label class="fl">Заказ</label><select class="fi" name="orderId" ${ro}>${opts(DB.orders.filter(o=>o.projectId===it.projectId||o.id===it.orderId),it.orderId,o=>o.no+' · '+N(o.qty)+' шт · срок '+fdate(o.due),'— без заказа —')}</select></div></div>
+    <div class="fg"><label class="fl">Заказ</label><select class="fi" name="orderId" ${ro} onchange="qiOrd()">${opts(DB.orders.filter(o=>o.projectId===it.projectId||o.id===it.orderId),it.orderId,o=>o.no+' · '+N(o.qty)+' шт · срок '+fdate(o.due),'— без заказа —')}</select></div></div>
+    <div class="note" id="qiOrd" style="margin:-4px 0 12px;display:none"></div>
     <div class="frow3"><div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="qty" value="${it.qty}" ${ro} oninput="qiCalc()"></div>
     <div class="fg"><label class="fl">Скорость, шт/мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="speed" value="${itemSpeed(it)}" ${ro} oninput="qiCalc()"></div>
     <div class="fg"><label class="fl">Первичная наладка, мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="setup" value="${itemSetup(it)}" ${ro} oninput="qiCalc()"></div></div>
-    <div class="frow"><div class="fg"><label class="fl">${started?'Начало (уже в работе)':'Не раньше (необязательно)'}</label>${started?`<input class="fi" type="datetime-local" name="start" value="${esc(it.start)}" ${ro} onchange="qiCalc()">`:`<input class="fi" type="datetime-local" name="notBefore" value="${esc(it.notBefore||'')}" ${ro} onchange="qiCalc()">`}</div>
+    <div class="frow"><div class="fg"><label class="fl">${started?'Начало (уже в работе)':'Начало вручную (пусто — сразу за предыдущим)'}</label>${started?`<input class="fi" type="datetime-local" name="start" value="${esc(it.start)}" ${ro} onchange="qiCalc()">`:`<input class="fi" type="datetime-local" name="notBefore" value="${esc(it.notBefore||'')}" ${ro} onchange="qiCalc()">`}</div>
     <div class="fg" style="align-self:end"><label style="display:flex;gap:8px;align-items:center;font-size:13px;padding-bottom:10px"><input type="checkbox" name="noSetup" ${it.noSetup?'checked':''} ${ro} onchange="qiCalc()"> Без наладки (продолжение того же проекта)</label></div></div>
     <div style="display:flex;align-items:center;margin:4px 0 8px"><b style="font-size:14px">Паузы и детали</b><span class="muted" style="font-size:12px;margin-left:8px">обед, уборка, пересменка, подсчёт материалов…</span></div>
     <div class="ex-head"><span>Что</span><span>Минут</span><span>Во сколько</span><span></span><span></span></div>
@@ -1891,12 +1926,13 @@ function openQItem(id){
     const r=qiRead(it); if(!(r.qty>0)||!(r.speedPlan>0)){ toast('Укажите количество и скорость'); return false; }
     const work=DB.plan.map(clone).map(x=>x.id===r.id?r:x);
     if(r.lineId!==it.lineId){ const li=work.filter(i=>i.lineId===r.lineId&&i.id!==r.id); r.seq=li.length?Math.max(...li.map(seqOf))+1:0; }
+    if(r.notBefore&&!itemStarted(it)&&r.notBefore!==it.notBefore){ r.start=r.notBefore; placeByTime(work,r); }
     const old=sched(it,LIVE);
     await qCommit(work,[it.lineId,r.lineId],[],(w,c)=>{ const x=w.find(i=>i.id===r.id), s=sched(x,c); return qiDiff(it,x)+` · окончание ${fdt(old.end)} → ${fdt(s.end)}`; });
     toast('План обновлён');
-  },ce?'Сохранить':'Закрыть',ce&&!started?`<button class="btn btn-d" type="button" onclick="delPlanItem('${id}')">🗑 Удалить из плана</button>`:'');
+  },ce?'Сохранить':'Закрыть',ce?`<button class="btn btn-d" type="button" onclick="delPlanItem('${id}')">🗑 Удалить</button> <button class="btn btn-s" type="button" onclick="openQSplit('${id}')">⏸ Остановить / разделить</button>`:'');
   $('#modalC').classList.add('wide');
-  setTimeout(qiCalc,0);
+  setTimeout(()=>{ qiOrd(); qiCalc(); },0);
 }
 const itemSpeed = it => +it.speedPlan||+byId(DB.projects,it.projectId)?.speed||1;
 const itemSetup = it => it.setupPlan!=null&&it.setupPlan!==''?+it.setupPlan:(+byId(DB.projects,it.projectId)?.setupMin||0);
@@ -1912,6 +1948,7 @@ function qiCalc(){
   const r=qiRead(it); if(!(r.qty>0)||!(r.speedPlan>0)){ h.innerHTML='Укажите количество и скорость'; return; }
   const work=DB.plan.map(clone).map(x=>x.id===r.id?r:x);
   if(r.lineId!==it.lineId){ const li=work.filter(i=>i.lineId===r.lineId&&i.id!==r.id); r.seq=li.length?Math.max(...li.map(seqOf))+1:0; }
+  if(r.notBefore&&!itemStarted(it)&&r.notBefore!==it.notBefore){ r.start=r.notBefore; placeByTime(work,r); }
   const c={id:'tmp'+uid(),items:work}; relineChain(work,it.lineId,c); if(r.lineId!==it.lineId) relineChain(work,r.lineId,c);
   const s=sched(r,c), old=sched(it,LIVE), pz={};
   s.segs.filter(x=>x[2]==='p').forEach(([a,b,,l])=>{ const k=l||'Пауза'; pz[k]=pz[k]||{n:0,m:0}; pz[k].n++; pz[k].m+=(b-a)/60e3; });
@@ -1931,6 +1968,77 @@ function qiDiff(o,n){
   if(ex(o)!==ex(n)) ch.push(`паузы: ${ex(n)||'нет'}`);
   if((o.orderId||'')!==(n.orderId||'')) ch.push(`заказ ${byId(DB.orders,n.orderId)?.no||'—'}`);
   return `«${p}»: ${ch.join('; ')||'комментарий'}${n.note&&n.note!==o.note?' — '+n.note:''}`;
+}
+
+// ставит позицию в очередь линии по времени начала (среди ещё не начатых)
+function placeByTime(work,w){
+  const li=work.filter(x=>x.lineId===w.lineId&&x.id!==w.id).sort((a,b)=>seqOf(a)-seqOf(b)||tms(a.start)-tms(b.start)); li.forEach((x,k)=>x.seq=k);
+  const t=tms(w.notBefore||w.start), tgt=li.find(x=>{ const o=byId(DB.plan,x.id); return !(o&&itemStarted(o))&&(o?itemStart(o,LIVE):tms(x.start))>=t; });
+  w.seq=tgt?tgt.seq-0.5:li.length;
+}
+async function qSetStart(id,v){
+  const it=byId(DB.plan,id); if(!it||!can('edit')) return;
+  const work=DB.plan.map(clone), w=work.find(x=>x.id===id), started=itemStarted(it);
+  if(started){ if(!v) return render(); w.start=v; }
+  else { w.notBefore=v||''; if(v){ w.start=v; placeByTime(work,w); } }
+  await qCommit(work,[it.lineId],[],v?`«${projName(it.projectId)}» (${lineName(it.lineId)}): начало ${started?'(факт) ':''}вручную ${fdt(tms(v))}`:`«${projName(it.projectId)}»: снято ручное начало — сразу за предыдущим`);
+  if(v&&!started){ const s=itemStart(byId(DB.plan,id),LIVE); if(s>tms(v)+30*60e3){ const q=lineQueue(it.lineId), k=q.findIndex(x=>x.id===id), pr=q[k-1];
+    toast(`Раньше ${fdt(s)} не получится: линия занята${pr?` «${projName(pr.projectId)}»`:''}${pr?' — остановите его кнопкой ⏸, остаток перенесётся':''}`); } }
+}
+function qiOrd(){
+  const box=$('#qiOrd'), it=byId(DB.plan,state._qi); if(!box||!it) return; const F=$('#mForm').elements, o=byId(DB.orders,F.orderId.value);
+  if(!o){ box.style.display='none'; return; }
+  const b=orderBal(o), s=sched(it,LIVE), others=b.rest-(it.orderId===o.id?s.rest:0), need=Math.max(0,b.qty-b.done-others), target=s.done+need;
+  box.style.display=''; box.innerHTML=`Заказ <b>${esc(o.no)}</b>: ${N(b.qty)} шт · уже сделано ${N(b.done)} (подтверждено, все линии)${others?` · в других позициях плана ещё ${N(others)}`:''}<br>Этой позиции нужно: ${N(need)} шт${s.done?` + уже сделано по ней ${N(s.done)} = <b>${N(target)}</b>`:''}
+    ${Math.abs(target-nv(F.qty.value))>=100&&can('edit')?` <button type="button" class="btn btn-s btn-sm" onclick="document.querySelector('#mForm [name=qty]').value=${target};qiCalc();qiOrd()">Поставить ${N(target)}</button>`:' ✓'}`;
+}
+// остановить / разделить: доделать до N шт (или до времени), остаток — новой позицией позже или на другой линии
+function openQSplit(id){
+  const it=byId(DB.plan,id); if(!it||!can('edit')) return; const s=sched(it,LIVE), p=byId(DB.projects,it.projectId);
+  state._qs=id;
+  modal('Остановить / разделить проект',`
+    <div style="margin:-6px 0 12px"><b>${esc(p?.name||'—')}</b> · ${esc(lineName(it.lineId))} · план ${N(it.qty)} шт${s.done?` · сделано ${N(s.done)}`:''}</div>
+    <div class="seg" style="margin-bottom:12px"><button type="button" class="on" id="qsM1" onclick="qsMode('qty')">По количеству</button><button type="button" id="qsM2" onclick="qsMode('time')">По времени</button></div>
+    <input type="hidden" name="mode" value="qty">
+    <div class="frow"><div class="fg" id="qsQ"><label class="fl">Сделать сейчас, шт (потом стоп)</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="cut" value="${Math.max(s.done,Math.round((+it.qty||0)/2/100)*100)}" oninput="qsCalc()"></div>
+    <div class="fg" id="qsT" style="display:none"><label class="fl">Остановить в</label><input class="fi" type="datetime-local" name="at" value="${toDT(Math.max(Date.now(),s.start))}" onchange="qsCalc()"></div>
+    <div class="fg"><label class="fl">Остаток доделать на линии</label><select class="fi" name="lineId" onchange="qsPos()">${opts(DB.lines,it.lineId)}</select></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Место в очереди</label><select class="fi" name="pos" onchange="qsCalc()"></select></div>
+    <div class="fg"><label class="fl">Начало остатка вручную (тогда место в очереди — по времени)</label><input class="fi" type="datetime-local" name="nb" onchange="qsCalc()"></div></div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:12px"><input type="checkbox" name="noSetup" onchange="qsCalc()"> Остаток без наладки (линия не перестраивается)</label>
+    <div class="note" id="qsHint" style="background:var(--blueBg)"></div>`,
+  async ()=>{
+    const r=qsBuild(); if(r.err){ toast(r.err); return false; }
+    await qCommit(r.work,[it.lineId,r.part.lineId],[],`«${p?.name}»: остановка на ${N(r.cut.qty)} шт (${lineName(it.lineId)}), остаток ${N(r.part.qty)} шт → ${lineName(r.part.lineId)}${r.part.notBefore?' с '+fdt(tms(r.part.notBefore)):''}`);
+    toast('Проект разделён — остаток в очереди');
+  },'Разделить');
+  qsPos();
+}
+function qsMode(m){ const F=$('#mForm').elements; F.mode.value=m; $('#qsM1').classList.toggle('on',m==='qty'); $('#qsM2').classList.toggle('on',m==='time'); $('#qsQ').style.display=m==='qty'?'':'none'; $('#qsT').style.display=m==='time'?'':'none'; qsCalc(); }
+function qsPos(){ const F=$('#mForm').elements, id=state._qs, it=byId(DB.plan,id), q=lineQueue(F.lineId.value).filter(x=>x.id!==id&&!itemStarted(x)||x.id===id);
+  F.pos.innerHTML=(F.lineId.value===it.lineId?`<option value="after:${id}">сразу после (пауза и продолжить)</option>`:'')+q.filter(x=>x.id!==id).map(x=>`<option value="after:${x.id}">после «${esc(projName(x.projectId))}» · до ${fdt(endMs(x,LIVE))}</option>`).join('')+`<option value="end" ${F.lineId.value===it.lineId?'':'selected'}>в конец очереди</option>`;
+  if(F.lineId.value===it.lineId) F.pos.value='end';
+  qsCalc(); }
+function qsBuild(){
+  const F=$('#mForm').elements, it=byId(DB.plan,state._qs), s=sched(it,LIVE); let cutQty;
+  if(F.mode.value==='time'){ const T=tms(F.at.value); if(!isFinite(T)) return {err:'Укажите время остановки'};
+    const sp=itemSpeed(it); cutQty=Math.round((s.done||0)+s.segs.filter(x=>x[2]==='r'&&x[0]<T&&x[1]>(s.doneAt||0)).reduce((a,x)=>a+(Math.min(T,x[1])-Math.max(x[0],s.doneAt||0))/60e3*sp,0)); cutQty=Math.round(cutQty/100)*100; }
+  else cutQty=nv(F.cut.value);
+  if(!(cutQty>=0)||cutQty>=+it.qty) return {err:`Количество до остановки должно быть меньше ${N(it.qty)}`};
+  if(cutQty<(s.done||0)) return {err:`Уже сделано ${N(s.done)} — меньше остановить нельзя`};
+  const work=DB.plan.map(clone), cut=work.find(x=>x.id===it.id), part={...clone(it),id:uid(),qty:+it.qty-cutQty,lineId:F.lineId.value,noSetup:F.noSetup.checked,notBefore:F.nb.value||'',splitOf:it.id,note:`остаток от остановки ${fdt(Date.now())}`};
+  cut.qty=cutQty; if(cutQty===0&&!hasOutputs(it)){ /* ничего не сделано — просто переносим */ }
+  const pv=F.pos.value, li=work.filter(x=>x.lineId===part.lineId).sort((a,b)=>seqOf(a)-seqOf(b)); li.forEach((x,k)=>x.seq=k);
+  if(pv.startsWith('after:')){ const a=li.find(x=>x.id===pv.slice(6)); part.seq=a?a.seq+0.5:li.length; } else part.seq=li.length;
+  part.start=toDT(endMs(it,LIVE)); work.push(part);
+  if(part.notBefore){ part.start=part.notBefore; placeByTime(work,part); }
+  return {work,cut,part};
+}
+function qsCalc(){
+  const h=$('#qsHint'); if(!h) return; const r=qsBuild(); if(r.err){ h.innerHTML='⚠ '+r.err; return; }
+  const c={id:'tmp'+uid(),items:r.work}; relineChain(r.work,byId(DB.plan,state._qs).lineId,c); if(r.part.lineId!==r.cut.lineId) relineChain(r.work,r.part.lineId,c);
+  const a=sched(r.cut,c), b=sched(r.part,c);
+  h.innerHTML=`Сейчас: <b>${N(r.cut.qty)} шт</b>, окончание ${fdt(a.end)}<br>Остаток: <b>${N(r.part.qty)} шт</b> на ${esc(lineName(r.part.lineId))} · ${fdt(b.start)} → ${fdt(b.end)}${r.part.noSetup?'':` · с наладкой ${minTxt(b.setup)}`}${r.part.notBefore&&b.start>tms(r.part.notBefore)+30*60e3?`<br>⚠ Раньше ${fdt(b.start)} нельзя — линия занята. Остановите там текущий проект или выберите другую линию.`:''}`;
 }
 
 // ─── 2. план / факт по сменам
@@ -2171,10 +2279,11 @@ function planDiff(o,n){
   return `«${p}»: ${ch.join('; ')||'комментарий'}${n.note&&n.note!==o.note?' — '+n.note:''}`;
 }
 async function delPlanItem(id,scnId){
-  if(!confirm('Удалить позицию из плана?')) return; closeModal();
+  const hasF=!scnId&&DB.output.some(r=>r.planItemId===id);
+  if(!confirm(hasF?'Удалить проект из плана?\nПо нему уже есть отчёты смен — они останутся в журнале выпуска и в заказе, но без привязки к плану.':'Удалить проект из плана?')) return; closeModal();
   if(scnId){ const scn=byId(DB.scenarios,scnId); await Store.put('scenarios',{...scn,items:A(scn.items).filter(x=>x.id!==id)}); return; }
   const it=byId(DB.plan,id); if(!it) return;
-  await qCommit(DB.plan.filter(x=>x.id!==id).map(clone),[it.lineId],[{col:'plan',id,del:true}],`Удалил «${projName(it.projectId)}» из очереди ${lineName(it.lineId)} (${fdt(itemStart(it))}, ${N(it.qty)} шт) — следующие проекты подтянулись`);
+  await qCommit(DB.plan.filter(x=>x.id!==id).map(clone),[it.lineId],[{col:'plan',id,del:true},...DB.output.filter(r=>r.planItemId===id).map(r=>({col:'output',obj:{...clone(r),planItemId:'',orderId:r.orderId||it.orderId||''}}))],`Удалил «${projName(it.projectId)}» из очереди ${lineName(it.lineId)} (${fdt(itemStart(it))}, ${N(it.qty)} шт) — следующие проекты подтянулись`);
   toast('Позиция удалена');
 }
 async function fixOverlaps(){
@@ -2736,7 +2845,7 @@ function buildNav(){
 function go(sec){ if(!SECTIONS.find(s=>s.id===sec)?.hidden){ state.draft=null; state.back=null; } state.q=''; state.sec=sec; toggleSide(false); render(); scrollTo(0,0); }
 function render(){
   const tp=$('#tip'); if(tp) tp.style.display='none'; const tpp=$('#tipPin'); if(tpp) tpp.style.display='none';
-  _sch.clear(); _res=null; _wo=null;
+  _sch.clear(); _res=null; _wo=null; _factMap=null;
   let s=SECTIONS.find(x=>x.id===state.sec);
   if(!s||(s.admin&&!can('admin'))){ s=SECTIONS[1]; state.sec=s.id; }
   $('#pageTitle').textContent=s.t; buildNav(); $('#app').classList.toggle('full',s.id==='plan');
@@ -2778,7 +2887,7 @@ function applyLocal(list){
     else if(x.del) DB[x.col]=DB[x.col].filter(o=>o.id!==x.id);
     else { const obj=clone(x.obj), i=DB[x.col].findIndex(o=>o.id===obj.id); if(i>=0) DB[x.col][i]=obj; else DB[x.col].push(obj); }
   });
-  normalize(DB);
+  normalize(DB); _factMap=null; _sch.clear();
 }
 const Store = {
   async put(col,obj){ return this.batch([{col,obj}]); },
@@ -2952,7 +3061,7 @@ function genDemo(){
   }
   // последние отчёты смен ещё не проверены технологом — факт в плане появится после подтверждения
   lines.forEach(l=>{ const rs=output.filter(r=>r.lineId===l.id).sort((a,b)=>b.ts-a.ts), rid=rs[0]?.reportId; if(rid&&l.id!=='L4') output.filter(r=>r.reportId===rid).forEach(r=>r.approved=false); });
-  orders.forEach(o=>{ const inPlan=plan.filter(x=>x.orderId===o.id).reduce((a,x)=>a+x.qty,0); o.qty=Math.max(20000,Math.round((inPlan||60000)*(.95+rnd()*.1)/1000)*1000); });
+  orders.forEach(o=>{ const inPlan=plan.filter(x=>x.orderId===o.id).reduce((a,x)=>a+x.qty,0); o.qty=inPlan||Math.max(20000,Math.round(60000*(.95+rnd()*.1)/1000)*1000); });
   // тех. отчёты: прошлые наработки и завершённые позиции текущего месяца (сырьё списано)
   const runs=[], moves=[];
   const mkRun=(p,o)=>{ const q=o.good+o.defect;
@@ -2990,7 +3099,8 @@ function genDemo(){
   const members=[{id:'admin',login:'admin',name:'Администратор',password:'1234',role:'admin'},{id:'olga',login:'olga',name:'Ольга Петренко',password:'1234',role:'master'},{id:'andriy',login:'andriy',name:'Андрей Иванов',password:'1234',role:'operator'},{id:'marina',login:'marina',name:'Марина Коваль',password:'1234',role:'technologist'}];
   const scenarios=[{id:'SC1',name:'Линия 1 принтинг во 2 смены',created:NOW-3*H,by:'Администратор',items:plan.map(clone),downs:[],lineShifts:{L3:[1,2]},note:'Что если набрать людей на 2-ю смену шелкографии?'}];
   const db={lines,projects,raw,semis,orders,output,runs,plan,planLog,supplies,moves,downs,scenarios,members,approved:{[mk]:{at:addD(m0,-2).getTime()+15*H,by:'Администратор',items:approvedItems}},settings};
-  DB=keep; _sch.clear();
+  DB.output=output; DB.plan=plan; _factMap=null; _sch.clear(); lines.forEach(l=>relineChain(plan,l.id,LIVE)); _factMap=null; _sch.clear();
+  DB=keep; _sch.clear(); _factMap=null;
   return db;
 }
 function demoSave(){ if(state.mode!=='demo') return; try{ localStorage.setItem('pdd_demo_v4',JSON.stringify(DB)); }catch(e){} }
