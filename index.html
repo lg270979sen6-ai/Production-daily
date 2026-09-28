@@ -431,6 +431,26 @@ const monthLabel = k => { const [y,m]=k.split('-'); return MONTHS[+m-1]+' '+y; }
 
 function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2800); }
 function toggleSide(o){ $('#side').classList.toggle('open',o); $('#scrim').classList.toggle('open',o); }
+// ── Ввод с клавиатуры: изменения в полях даты/времени применяются, когда ввод закончен (Tab, Enter, клик в другое место)
+(function(){
+  const DT='input[type=date],input[type=datetime-local],input[type=time]';
+  const pend=new WeakSet(), lastKey=new WeakMap(); let replay=false, down=null;
+  const isDT=t=>t&&t.matches&&t.matches(DT);
+  function flush(t){ if(!pend.has(t)) return; pend.delete(t); replay=true; try{ t.dispatchEvent(new Event('change',{bubbles:true})); } finally{ replay=false; } }
+  // запоминаем, на какую кнопку нажали — если перерисовка экрана её уберёт, нажмём её заново
+  document.addEventListener('mousedown',e=>{ const el=e.target.closest&&e.target.closest('[onclick],button'); down=el?{el,key:el.id||el.getAttribute('onclick'),t:Date.now()}:null; },true);
+  function reclick(){ const d=down; if(!d||Date.now()-d.t>1500||d.el.isConnected||!d.key) return; down=null;
+    const nb=document.getElementById(d.key)||[...document.querySelectorAll('[onclick]')].find(x=>x.getAttribute('onclick')===d.key); if(nb) nb.click(); }
+  document.addEventListener('keydown',e=>{ const t=e.target; if(!isDT(t)) return; lastKey.set(t,Date.now()); if(e.key==='Enter'&&pend.has(t)){ e.preventDefault(); flush(t); } },true);
+  document.addEventListener('change',e=>{ const t=e.target; if(replay) return;
+    if(isDT(t)&&Date.now()-(lastKey.get(t)||0)<3000){ e.stopImmediatePropagation(); pend.add(t); return; } // набор с клавиатуры — ждём окончания
+    setTimeout(reclick,0); },true);
+  document.addEventListener('focusout',e=>{ const t=e.target; if(isDT(t)&&pend.has(t)){ flush(t); setTimeout(reclick,0); } },true);
+  // числа: запятая = точка, пробелы и лишние символы убираем
+  document.addEventListener('input',e=>{ const t=e.target; if(!t.hasAttribute||!t.hasAttribute('data-num')) return;
+    let v=t.value.replace(/[\s ]/g,'').replace(/,/g,'.').replace(/[^0-9.\-]/g,''); const i=v.indexOf('.'); if(i>=0) v=v.slice(0,i+1)+v.slice(i+1).replace(/\./g,''); v=v.replace(/(?!^)-/g,'');
+    if(v!==t.value){ const pos=t.selectionStart-(t.value.length-v.length); t.value=v; try{ t.setSelectionRange(Math.max(0,pos),Math.max(0,pos)); }catch(_){} } },true);
+})();
 document.addEventListener('mousemove',e=>{
   const el=e.target.closest?.('[data-tip]'), tip=$('#tip');
   if(!el){ tip.style.display='none'; return; }
@@ -900,8 +920,8 @@ function odRender(){
   const good=projs.reduce((s,p)=>s+(+od.outs[p]?.good||0),0), defect=projs.reduce((s,p)=>s+(+od.outs[p]?.defect||0),0), speed=c.byCat.work?(good+defect)/c.byCat.work:0;
   const outRows=projs.map(pid=>{ const o=od.outs[pid]||(od.outs[pid]={good:'',defect:0,reason:''}), p=byId(DB.projects,pid);
     return `<div class="${projs.length>1?'card':''}" style="${projs.length>1?'padding:12px;margin-bottom:8px;box-shadow:none':''}">${projs.length>1?`<div style="font-weight:800;margin-bottom:8px"><span class="sw" style="background:${pColor(p)}"></span>${esc(p?.name||'—')} <span class="muted" style="font-weight:600">· работа ${minTxt(c.byProj[pid]?.work)}${c.byProj[pid]?.down?' · простои '+minTxt(c.byProj[pid].down):''}</span></div>`:''}
-      <div class="frow3"><div class="fg"><label class="fl">Годные, шт</label><input class="fi" type="number" min="0" inputmode="numeric" value="${o.good}" ${ro?'disabled':''} onchange="state.od.outs['${pid}'].good=this.value;odRender()"></div>
-      <div class="fg"><label class="fl">Брак, шт</label><input class="fi" type="number" min="0" inputmode="numeric" value="${o.defect}" ${ro?'disabled':''} onchange="state.od.outs['${pid}'].defect=this.value;odRender()"></div>
+      <div class="frow3"><div class="fg"><label class="fl">Годные, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" inputmode="numeric" value="${o.good}" ${ro?'disabled':''} onchange="state.od.outs['${pid}'].good=this.value;odRender()"></div>
+      <div class="fg"><label class="fl">Брак, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" inputmode="numeric" value="${o.defect}" ${ro?'disabled':''} onchange="state.od.outs['${pid}'].defect=this.value;odRender()"></div>
       <div class="fg"><label class="fl">Основная причина брака</label><select class="fi" ${ro?'disabled':''} onchange="state.od.outs['${pid}'].reason=this.value"><option value="">—</option>${(DB.settings.defectReasons||[]).map(x=>`<option ${x===o.reason?'selected':''}>${esc(x)}</option>`).join('')}</select></div></div></div>`; }).join('');
   const downList=Object.entries(c.byAct).filter(([id])=>actById(id).cat==='down').sort((a,b)=>b[1]-a[1]);
   const planQty=projs.reduce((s,pid)=>s+od.tasks.filter(x=>x.it.projectId===pid).reduce((a,x)=>a+x.qty,0),0);
@@ -1026,11 +1046,11 @@ function openRawModal(id,onCreated){
     <div class="fg"><label class="fl">Наименование</label><input class="fi" name="name" value="${esc(r.name)}" autofocus></div>
     <div class="frow"><div class="fg"><label class="fl">Категория <button type="button" class="link" onclick="closeModal();openCatsModal()">(изменить список)</button></label><select class="fi" name="cat">${rawCats().map(c=>`<option ${c===r.cat?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
     <div class="fg"><label class="fl">Единица измерения</label><select class="fi" name="unit">${UNITS.map(u=>`<option ${u===r.unit?'selected':''}>${u}</option>`).join('')}</select></div></div>
-    <div class="frow3"><div class="fg"><label class="fl">Цена за ед., ${esc(DB.settings.currency||'€')}</label><input class="fi" type="number" step="any" min="0" name="cost" value="${r.cost}"></div>
-    <div class="fg"><label class="fl">${id?'Остаток (через склад)':'Начальный остаток'}</label><input class="fi" type="number" step="any" name="qty" value="${r.qty||0}" ${id?'disabled':''}></div>
-    <div class="fg"><label class="fl">Мин. остаток</label><input class="fi" type="number" step="any" name="min" value="${r.min||0}"></div></div>
+    <div class="frow3"><div class="fg"><label class="fl">Цена за ед., ${esc(DB.settings.currency||'€')}</label><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" min="0" name="cost" value="${r.cost}"></div>
+    <div class="fg"><label class="fl">${id?'Остаток (через склад)':'Начальный остаток'}</label><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" name="qty" value="${r.qty||0}" ${id?'disabled':''}></div>
+    <div class="fg"><label class="fl">Мин. остаток</label><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" name="min" value="${r.min||0}"></div></div>
     <div class="frow"><div class="fg"><label class="fl">Поставщик</label><input class="fi" name="supplier" value="${esc(r.supplier||'')}"></div>
-    <div class="fg"><label class="fl">Срок поставки, дней</label><input class="fi" type="number" min="0" name="leadDays" value="${r.leadDays||''}"></div></div>`,
+    <div class="fg"><label class="fl">Срок поставки, дней</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" name="leadDays" value="${r.leadDays||''}"></div></div>`,
   async f=>{
     if(!f.name.trim()){ toast('Введите наименование'); return false; }
     const rec={...(id?r:{}),id:id||uid(),name:f.name.trim(),cat:f.cat,unit:f.unit,cost:+f.cost||0,min:+f.min||0,supplier:f.supplier.trim(),leadDays:+f.leadDays||0,qty:id?(+r.qty||0):(+f.qty||0)};
@@ -1092,7 +1112,7 @@ function renderSemiEdit(){
   const cats=[...new Set(DB.semis.map(x=>x.cat).filter(Boolean).concat(['Краска','Лак','Грунт','Смесь']))];
   const rows=d.items.map((it,i)=>{ const ref=it.kind==='semi'?byId(DB.semis,it.id):byId(DB.raw,it.id), uc=unitCost(it.kind,it.id);
     return `<tr><td><select class="fi" ${ro?'disabled':''} onchange="semiItemPick(${i},this.value)">${semiItemOpts(it,d.id)}</select></td>
-      <td><input class="fi" type="number" step="any" min="0" style="width:100px" value="${it.qty}" ${ro?'disabled':''} onchange="d_item(${i},'qty',this.value)"></td>
+      <td><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" min="0" style="width:100px" value="${it.qty}" ${ro?'disabled':''} onchange="d_item(${i},'qty',this.value)"></td>
       <td class="muted">${esc(it.kind==='semi'?(ref?.unit||'кг'):(ref?.unit||''))}</td>
       <td class="num">${tot?P((+it.qty||0)/tot*100):'—'}</td><td class="num muted">${money(uc)}</td><td class="num">${money((+it.qty||0)*uc)}</td>
       <td>${ro?'':`<button class="btn btn-s btn-sm" onclick="d_itemDel(${i})">✕</button>`}</td></tr>`; }).join('');
@@ -1105,7 +1125,7 @@ function renderSemiEdit(){
       <div class="fg"><label class="fl">Категория</label><input class="fi" value="${esc(d.cat||'')}" list="semiCats" ${ro?'disabled':''} oninput="D('cat',this.value)"><datalist id="semiCats">${cats.map(c=>`<option>${esc(c)}</option>`).join('')}</datalist></div></div>
       <div class="frow3"><div class="fg"><label class="fl">Цвет (образец)</label><input class="fi" type="color" style="height:42px;padding:4px" value="${d.color||'#cccccc'}" ${ro?'disabled':''} onchange="D('color',this.value);renderSemiEdit()"></div>
       <div class="fg"><label class="fl">Pantone / RAL / код</label><input class="fi" value="${esc(d.pantone||'')}" ${ro?'disabled':''} oninput="D('pantone',this.value)"></div>
-      <div class="fg"><label class="fl">Выход партии, ${esc(d.unit||'кг')}</label><input class="fi" type="number" step="any" min="0" value="${d.yield}" ${ro?'disabled':''} onchange="D('yield',+this.value||1);renderSemiEdit()"></div></div>
+      <div class="fg"><label class="fl">Выход партии, ${esc(d.unit||'кг')}</label><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" min="0" value="${d.yield}" ${ro?'disabled':''} onchange="D('yield',+this.value||1);renderSemiEdit()"></div></div>
       <div class="fg"><label class="fl">Технология приготовления / примечание</label><textarea class="fi" rows="3" ${ro?'disabled':''} oninput="D('note',this.value)" placeholder="Порядок смешивания, время перемешивания, вязкость на выходе…">${esc(d.note||'')}</textarea></div>
     </div>
     <div class="card"><div class="card-h"><div class="card-t">Себестоимость</div></div>
@@ -1183,7 +1203,7 @@ function renderProjectEdit(){
   const semiOpts=sel=>`<option value="">— выберите рецептуру —</option>`+DB.semis.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<option value="${s.id}" ${s.id===sel?'selected':''}>${esc(s.name)}${s.pantone&&s.pantone!=='—'?' · '+esc(s.pantone):''}</option>`).join('')+(ro?'':'<option value="__new">＋ Создать новую рецептуру…</option>');
   const stRows=d.stations.map((st,i)=>`<tr><td><span class="stn">${i+1}</span></td>
     <td><div style="display:flex;align-items:center"><span class="sw" style="background:${semiColor(st.semiId)};width:20px;height:20px"></span><select class="fi" ${ro?'disabled':''} onchange="stPick(${i},this.value)">${semiOpts(st.semiId)}</select></div></td>
-    <td><input class="fi" type="number" step="any" min="0" style="width:90px" value="${esc(st.norm)}" ${ro?'disabled':''} onchange="DS(${i},'norm',this.value);renderProjectEdit()"></td>
+    <td><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" min="0" style="width:90px" value="${esc(st.norm)}" ${ro?'disabled':''} onchange="DS(${i},'norm',this.value);renderProjectEdit()"></td>
     <td><input class="fi" style="width:80px" value="${esc(st.visc||'')}" ${ro?'disabled':''} oninput="DS(${i},'visc',this.value)" placeholder="с"></td>
     <td><input class="fi" style="width:80px" value="${esc(st.press||'')}" ${ro?'disabled':''} oninput="DS(${i},'press',this.value)" placeholder="бар"></td>
     <td><input class="fi" style="width:80px" value="${esc(st.nozzle||'')}" ${ro?'disabled':''} oninput="DS(${i},'nozzle',this.value)" placeholder="мм"></td>
@@ -1208,9 +1228,9 @@ function renderProjectEdit(){
       <div class="fg"><label class="fl">Тара (изделие)</label><select class="fi" ${ro?'disabled':''} onchange="D('tareId',this.value)">${opts(tares,d.tareId,r=>r.name,'— не указана —')}</select></div>
       <div class="fg"><label class="fl">Статус</label><select class="fi" ${ro?'disabled':''} onchange="D('status',this.value)">${PSTATUS.map(s=>`<option ${s===d.status?'selected':''}>${s}</option>`).join('')}</select></div>
       <div class="fg"><label class="fl">Цвет в плане</label><input class="fi" type="color" style="height:42px;padding:4px" value="${d.color||pColor(d)}" ${ro?'disabled':''} onchange="D('color',this.value)"></div></div>
-      <div class="frow3"><div class="fg"><label class="fl">План: скорость, шт/мин</label><input class="fi" type="number" min="1" value="${d.speed}" ${ro?'disabled':''} onchange="D('speed',+this.value);renderProjectEdit()"></div>
-      <div class="fg"><label class="fl">План: наладка, мин</label><input class="fi" type="number" min="0" value="${d.setupMin}" ${ro?'disabled':''} onchange="D('setupMin',+this.value);renderProjectEdit()"></div>
-      <div class="fg"><label class="fl">Наладка при перезапуске, мин</label><input class="fi" type="number" min="0" value="${d.restartMin??''}" placeholder="как у линии: ${N(line?.restartMin)}" ${ro?'disabled':''} onchange="D('restartMin',this.value===''?'':+this.value)"></div></div>
+      <div class="frow3"><div class="fg"><label class="fl">План: скорость, шт/мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="1" value="${d.speed}" ${ro?'disabled':''} onchange="D('speed',+this.value);renderProjectEdit()"></div>
+      <div class="fg"><label class="fl">План: наладка, мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" value="${d.setupMin}" ${ro?'disabled':''} onchange="D('setupMin',+this.value);renderProjectEdit()"></div>
+      <div class="fg"><label class="fl">Наладка при перезапуске, мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" value="${d.restartMin??''}" placeholder="как у линии: ${N(line?.restartMin)}" ${ro?'disabled':''} onchange="D('restartMin',this.value===''?'':+this.value)"></div></div>
     </div>
     <div class="card"><div class="card-h"><div class="card-t">Расчёт</div></div>
       <div class="stat"><span>Выработка в час / смену</span><b>${N(d.speed*60)} / ${N(d.speed*60*sh)} шт</b></div>
@@ -1317,12 +1337,12 @@ function renderRunEdit(){
       <td><input class="fi" style="width:84px" value="${esc(st.nozzle||'')}" ${ro?'disabled':''} oninput="DRS(${i},'nozzle',this.value,'settings')"></td></tr>`).join('');
   const stMat=d.stations.map((st,i)=>{ const pk=stationKg(st.norm,q), hasF=st.factKg!==''&&st.factKg!=null, dv=hasF&&pk?(+st.factKg/pk-1)*100:null;
     return `<tr><td><span class="stn">${st.n}</span></td><td><span class="sw" style="background:${st.color}"></span><b>${esc(st.name)}</b></td><td class="num">${Q(st.norm)}</td><td class="num">${Q(pk,3)}</td>
-      <td><input class="fi" type="number" step="any" min="0" style="width:100px" value="${st.factKg??''}" ${ro?'disabled':''} onchange="DRS(${i},'factKg',this.value===''?'':+this.value,'materials');renderRunEdit()"></td>
+      <td><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" min="0" style="width:100px" value="${st.factKg??''}" ${ro?'disabled':''} onchange="DRS(${i},'factKg',this.value===''?'':+this.value,'materials');renderRunEdit()"></td>
       <td class="num">${dv==null?'—':`<span class="tag ${Math.abs(dv)<=5?'t-green':Math.abs(dv)<=15?'t-amber':'t-red'}">${dv>0?'+':''}${P(dv,0)}</span>`}</td></tr>`; }).join('');
   const rids=[...new Set([...Object.keys(plan),...Object.keys(d.rawFact)])].sort((a,b)=>(plan[b]?1:0)-(plan[a]?1:0));
   const rawRows=rids.map(rid=>{ const r=byId(DB.raw,rid), pl=plan[rid]||0, fa=d.rawFact[rid], has=fa!==''&&fa!=null, c=+r?.cost||0, wr=d.writtenMap[rid], delta=(has?+fa:0)-(+wr||0);
     return `<tr><td>${esc(r?.name||'—')}${pl?'':' <span class="tag t-gray">вне норм</span>'}</td><td class="num">${QU(pl,r?.unit)} ${esc(r?.unit||'')}</td>
-      <td><input class="fi" type="number" step="any" min="0" style="width:110px" value="${has?fa:''}" ${ro?'disabled':''} onchange="DRF('${rid}',this.value)"></td>
+      <td><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" min="0" style="width:110px" value="${has?fa:''}" ${ro?'disabled':''} onchange="DRF('${rid}',this.value)"></td>
       <td class="num">${has?(fa-pl>0?'+':'')+QU(fa-pl,r?.unit):'—'}</td><td class="num">${has?money((fa-pl)*c):'—'}</td><td class="num muted">${wr!=null?QU(wr,r?.unit):'—'}</td>
       <td class="num">${Math.abs(delta)>1e-9?`<span class="tag ${delta>0?'t-amber':'t-blue'}">${delta>0?'спишется +':'вернётся '}${QU(Math.abs(delta),r?.unit)}</span>`:''}</td></tr>`; }).join('');
   const addable=DB.raw.filter(r=>!rids.includes(r.id));
@@ -1343,10 +1363,10 @@ function renderRunEdit(){
     <div class="fl" style="margin:4px 0 6px">Отчёты за смены, вошедшие в наработку <span class="muted">(${sel.size} из ${cand.length} · все линии, ещё не включённые в другие тех. отчёты)</span></div>
     ${cand.length?`<div class="tw ed" style="margin:0 0 12px;border:1px solid var(--line);border-radius:10px;max-height:320px;overflow:auto"><table><tr><th></th><th>Дата</th><th>Смена</th><th>Линия</th><th>Хронометраж</th><th class="num">Годные</th><th class="num">Брак</th><th class="num">Работа</th><th class="num">Наладка</th><th>Оператор</th></tr>${outRows}</table></div>`
       :'<div class="msg" style="display:block;background:var(--amberBg);color:var(--amber)">По этому проекту нет отчётов за смены без тех. отчёта. Внесите выпуск в «Журнале выпуска» или заполните количество вручную.</div>'}
-    <div class="frow4"><div class="fg"><label class="fl">Годные, шт</label><input class="fi" type="number" min="0" value="${d.qtyGood}" ${ro?'disabled':''} onchange="DR('qtyGood',+this.value);renderRunEdit()"></div>
-      <div class="fg"><label class="fl">Брак, шт</label><input class="fi" type="number" min="0" value="${d.qtyDefect}" ${ro?'disabled':''} onchange="DR('qtyDefect',+this.value);renderRunEdit()"></div>
-      <div class="fg"><label class="fl">Наладка факт, мин <span class="muted">(план ${N(p?.setupMin)})</span></label><input class="fi" type="number" min="0" value="${d.setupFact}" ${ro?'disabled':''} onchange="DR('setupFact',+this.value)"></div>
-      <div class="fg"><label class="fl">Скорость факт, шт/мин <span class="muted">(план ${N(p?.speed)})</span></label><input class="fi" type="number" min="0" value="${d.speedFact}" ${ro?'disabled':''} onchange="DR('speedFact',+this.value)"></div></div>
+    <div class="frow4"><div class="fg"><label class="fl">Годные, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" value="${d.qtyGood}" ${ro?'disabled':''} onchange="DR('qtyGood',+this.value);renderRunEdit()"></div>
+      <div class="fg"><label class="fl">Брак, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" value="${d.qtyDefect}" ${ro?'disabled':''} onchange="DR('qtyDefect',+this.value);renderRunEdit()"></div>
+      <div class="fg"><label class="fl">Наладка факт, мин <span class="muted">(план ${N(p?.setupMin)})</span></label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" value="${d.setupFact}" ${ro?'disabled':''} onchange="DR('setupFact',+this.value)"></div>
+      <div class="fg"><label class="fl">Скорость факт, шт/мин <span class="muted">(план ${N(p?.speed)})</span></label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" value="${d.speedFact}" ${ro?'disabled':''} onchange="DR('speedFact',+this.value)"></div></div>
   </div>
 
   <div class="card row-gap"><div class="card-h"><div class="card-t">2. ${RSEC.settings}</div>${secBadge(d,'settings')}<div class="sp"></div>${saveBtn('settings','Сохранить раздел')}</div>
@@ -1527,12 +1547,12 @@ function openLineModal(id){
   const scId=id?lineScheme(id).id:shiftSchemes()[0].id, ws=id?lineCfg(id).shifts:null, wd=A(l.workDays).length?A(l.workDays).map(Number):[0,1,2,3,4,5,6];
   modal(id?'Линия':'Новая линия',`<div class="fg"><label class="fl">Название</label><input class="fi" name="name" value="${esc(l.name)}" autofocus></div>
     <div class="frow"><div class="fg"><label class="fl">Технология</label><input class="fi" name="type" value="${esc(l.type||'')}" placeholder="Пистолетная покраска, печь, УФ…"></div>
-    <div class="fg"><label class="fl">Станций (пистолетов)</label><input class="fi" type="number" min="1" name="stations" value="${l.stations||7}"></div></div>
+    <div class="fg"><label class="fl">Станций (пистолетов)</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="1" name="stations" value="${l.stations||7}"></div></div>
     <div class="frow"><div class="fg"><label class="fl">Схема смен <button type="button" class="link" onclick="closeModal();go('settings')">(конструктор)</button></label><select class="fi" name="scheme" onchange="document.getElementById('lnSh').innerHTML=lineShiftChips(this.value)">${shiftSchemes().map(s=>`<option value="${esc(s.id)}" ${s.id===scId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
     <div class="fg"><label class="fl">Работающие смены</label><div id="lnSh" style="display:flex;gap:6px;flex-wrap:wrap">${lineShiftChips(scId,ws)}</div></div></div>
     <div class="fg"><label class="fl">Рабочие дни</label><div style="display:flex;gap:6px;flex-wrap:wrap">${[1,2,3,4,5,6,0].map(x=>`<label class="chip ${wd.includes(x)?'on':''}" style="cursor:pointer"><input type="checkbox" name="d_${x}" style="display:none" ${wd.includes(x)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${DAYN[x]}</label>`).join('')}</div></div>
-    <div class="frow"><div class="fg"><label class="fl">Наладка при перезапуске, мин</label><input class="fi" type="number" min="0" name="restartMin" value="${l.restartMin??30}"><div class="hint" style="margin-top:4px">Добавляется каждый раз, когда линия возобновляет работу после нерабочей смены или простоя. В проекте можно задать своё значение.</div></div>
-    <div class="fg"><label class="fl">Мощность, шт/смену</label><input class="fi" type="number" name="cap" value="${l.cap}"><div class="hint" style="margin-top:4px">Для плана по умолчанию, пока месяц не утверждён.</div></div></div>`,
+    <div class="frow"><div class="fg"><label class="fl">Наладка при перезапуске, мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" name="restartMin" value="${l.restartMin??30}"><div class="hint" style="margin-top:4px">Добавляется каждый раз, когда линия возобновляет работу после нерабочей смены или простоя. В проекте можно задать своё значение.</div></div>
+    <div class="fg"><label class="fl">Мощность, шт/смену</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="cap" value="${l.cap}"><div class="hint" style="margin-top:4px">Для плана по умолчанию, пока месяц не утверждён.</div></div></div>`,
   async f=>{ if(!f.name.trim()) return false;
     const sc=shiftSchemes().find(x=>x.id===f.scheme)||shiftSchemes()[0], workShifts=A(sc.shifts).map((_,i)=>i+1).filter(n=>f['sh_'+n]), workDays=[0,1,2,3,4,5,6].filter(x=>f['d_'+x]);
     if(!workShifts.length||!workDays.length){ toast('Выберите хотя бы одну смену и один день'); return false; }
@@ -1666,7 +1686,7 @@ function openPlanItem(id,scnId){
     <div class="fg"><label class="fl">Проект</label><select class="fi" name="projectId" onchange="planCalc(true)">${opts(DB.projects.filter(p=>p.status!=='Архив'||p.id===r.projectId),r.projectId,p=>p.name+(p.client?' · '+p.client:''))}</select></div>
     <div class="frow"><div class="fg"><label class="fl">Линия</label><select class="fi" name="lineId" onchange="planCalc()">${opts(DB.lines,r.lineId)}</select></div>
     <div class="fg"><label class="fl">Заказ (контроль срока)</label><select class="fi" name="orderId">${opts(DB.orders.filter(o=>o.projectId===r.projectId||o.id===r.orderId),r.orderId,o=>o.no+' · срок '+fdate(o.due),'— без заказа —')}</select></div></div>
-    <div class="frow"><div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="number" min="1" name="qty" value="${r.qty}" oninput="planCalc()"></div>
+    <div class="frow"><div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="1" name="qty" value="${r.qty}" oninput="planCalc()"></div>
     <div class="fg"><label class="fl">Старт</label><input class="fi" type="datetime-local" name="start" value="${r.start}" onchange="planCalc()"></div></div>
     <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin:-2px 0 10px"><input type="checkbox" name="noSetup" ${r.noSetup?'checked':''} onchange="planCalc()"> Без начальной наладки (продолжение того же проекта)</label>
     <div class="note" id="planHint" style="margin-bottom:12px;background:var(--blueBg)"></div>
@@ -1880,15 +1900,15 @@ function renderDemand(){
 function openSupply(id,rawId,qty,date){
   const s=id?byId(DB.supplies,id):{rawId:rawId||DB.raw[0]?.id,qty:qty||'',date:date||iso(addD(new Date(),7)),supplier:byId(DB.raw,rawId)?.supplier||'',status:'ordered',note:''};
   modal(id?'Поставка':'Новая поставка сырья',`<div class="fg"><label class="fl">Сырьё</label><select class="fi" name="rawId">${opts(DB.raw,s.rawId,r=>r.name+' ('+r.unit+')')}</select></div>
-    <div class="frow"><div class="fg"><label class="fl">Количество</label><input class="fi" type="number" step="any" min="0" name="qty" value="${s.qty}"></div><div class="fg"><label class="fl">Ожидаемая дата</label><input class="fi" type="date" name="date" value="${s.date}"></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Количество</label><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" min="0" name="qty" value="${s.qty}"></div><div class="fg"><label class="fl">Ожидаемая дата</label><input class="fi" type="date" name="date" value="${s.date}"></div></div>
     <div class="frow"><div class="fg"><label class="fl">Поставщик</label><input class="fi" name="supplier" value="${esc(s.supplier||'')}"></div><div class="fg"><label class="fl">Номер заказа / комментарий</label><input class="fi" name="note" value="${esc(s.note||'')}"></div></div>`,
   async f=>{ if(!(+f.qty)){ toast('Укажите количество'); return false; } await Store.put('supplies',{...(id?s:{}),id:id||uid(),rawId:f.rawId,qty:+f.qty,date:f.date,supplier:f.supplier,note:f.note,status:s.status||'ordered'}); toast('Поставка сохранена'); },
   'Сохранить', id?`<button class="btn btn-d" type="button" onclick="closeModal();delItem('supplies','${id}')">Удалить</button>`:'');
 }
 async function receiveSupply(id){
   const s=byId(DB.supplies,id), r=byId(DB.raw,s.rawId); if(!r) return;
-  modal('Приёмка поставки: '+r.name,`<div class="frow"><div class="fg"><label class="fl">Фактически принято, ${esc(r.unit)}</label><input class="fi" type="number" step="any" name="qty" value="${s.qty}" autofocus></div><div class="fg"><label class="fl">Дата и время</label><input class="fi" type="datetime-local" name="at" value="${toDT(Date.now())}"></div></div>
-    <div class="frow"><div class="fg"><label class="fl">Цена за ед. (по накладной)</label><input class="fi" type="number" step="any" name="cost" value="${r.cost||''}"></div><div class="fg"><label class="fl">Накладная №</label><input class="fi" name="doc"></div></div>`,
+  modal('Приёмка поставки: '+r.name,`<div class="frow"><div class="fg"><label class="fl">Фактически принято, ${esc(r.unit)}</label><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" name="qty" value="${s.qty}" autofocus></div><div class="fg"><label class="fl">Дата и время</label><input class="fi" type="datetime-local" name="at" value="${toDT(Date.now())}"></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Цена за ед. (по накладной)</label><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" name="cost" value="${r.cost||''}"></div><div class="fg"><label class="fl">Накладная №</label><input class="fi" name="doc"></div></div>`,
   async f=>{ const q=+f.qty; if(!q) return false;
     f.date=f.at.slice(0,10); await Store.batch([{col:'supplies',obj:{...s,status:'received',receivedQty:q,receivedDate:f.date}},{col:'raw',obj:{...r,qty:Math.round(((+r.qty||0)+q)*1000)/1000,cost:+f.cost||r.cost}},
       {col:'moves',obj:{id:uid(),date:f.date,at:f.at,type:'in',rawId:r.id,qty:q,cost:+f.cost||r.cost,doc:f.doc,note:'Приёмка поставки'+(s.supplier?' · '+s.supplier:''),by:state.me.name,ts:Date.now()}}]);
@@ -1897,7 +1917,7 @@ async function receiveSupply(id){
 function openFeasibility(){
   modal('Когда сможем выполнить проект?',`<div class="hint" style="margin-bottom:12px">Учитываются остатки, резерв действующего плана, ожидаемые поставки и календарь линии (смены, простои, перезапуски).</div>
     <div class="fg"><label class="fl">Проект</label><select class="fi" name="projectId">${opts(DB.projects.filter(p=>p.status!=='Архив'),'',p=>p.name)}</select></div>
-    <div class="frow"><div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="number" name="qty" value="200000"></div><div class="fg"><label class="fl">Срок отгрузки</label><input class="fi" type="date" name="due" value="${iso(addD(new Date(),21))}"></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="qty" value="200000"></div><div class="fg"><label class="fl">Срок отгрузки</label><input class="fi" type="date" name="due" value="${iso(addD(new Date(),21))}"></div></div>
     <div id="feasOut"></div>`,
   async f=>{ feasCalc(f); return false; },'Рассчитать');
 }
@@ -2078,8 +2098,8 @@ function openRawChart(id){
 }
 function openMove(type){
   modal(type==='in'?'Приход сырья':'Расход сырья',`<div class="fg"><label class="fl">Сырьё</label><select class="fi" name="rawId">${opts(DB.raw,'',r=>`${r.name} — остаток ${QU(r.qty,r.unit)} ${r.unit}`)}</select></div>
-    <div class="frow"><div class="fg"><label class="fl">Количество</label><input class="fi" type="number" step="any" min="0" name="qty" autofocus></div><div class="fg"><label class="fl">Дата и время</label><input class="fi" type="datetime-local" name="at" value="${toDT(Date.now())}"></div></div>
-    ${type==='in'?`<div class="frow"><div class="fg"><label class="fl">Цена за ед. (обновит карточку)</label><input class="fi" type="number" step="any" name="cost"></div><div class="fg"><label class="fl">Накладная №</label><input class="fi" name="doc"></div></div>`
+    <div class="frow"><div class="fg"><label class="fl">Количество</label><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" min="0" name="qty" autofocus></div><div class="fg"><label class="fl">Дата и время</label><input class="fi" type="datetime-local" name="at" value="${toDT(Date.now())}"></div></div>
+    ${type==='in'?`<div class="frow"><div class="fg"><label class="fl">Цена за ед. (обновит карточку)</label><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" name="cost"></div><div class="fg"><label class="fl">Накладная №</label><input class="fi" name="doc"></div></div>`
       :`<div class="fg"><label class="fl">На какой проект (необязательно)</label><select class="fi" name="projectId">${opts(DB.projects,'',p=>p.name,'—')}</select></div><div class="fg"><label class="fl">Основание</label><input class="fi" name="doc" placeholder="Замес, промывка, списание брака…"></div>`}`,
   async f=>{ const r=byId(DB.raw,f.rawId), q=+f.qty; if(!r||!q){ toast('Укажите сырьё и количество'); return false; }
     const nq=Math.round(((+r.qty||0)+(type==='in'?q:-q))*1000)/1000;
@@ -2090,7 +2110,7 @@ function openInventory(){
   $('#modalC').classList.add('wide');
   modal('Инвентаризация сырья',`<div class="hint" style="margin-bottom:10px">Внесите фактические остатки. Разница проведётся движением «Инвентаризация»; пустые строки не меняются.</div>
     <div class="fg"><label class="fl">Дата и время инвентаризации</label><input class="fi" type="datetime-local" name="at" value="${toDT(Date.now())}" style="max-width:240px"></div>
-    <div class="tw ed" style="margin:0"><table><tr><th>Сырьё</th><th class="num">По учёту</th><th>Факт</th></tr>${DB.raw.map(r=>`<tr><td>${esc(r.name)}</td><td class="num">${QU(r.qty,r.unit)} ${esc(r.unit)}</td><td><input class="fi" type="number" step="any" name="f_${r.id}" style="width:110px"></td></tr>`).join('')}</table></div>`,
+    <div class="tw ed" style="margin:0"><table><tr><th>Сырьё</th><th class="num">По учёту</th><th>Факт</th></tr>${DB.raw.map(r=>`<tr><td>${esc(r.name)}</td><td class="num">${QU(r.qty,r.unit)} ${esc(r.unit)}</td><td><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" name="f_${r.id}" style="width:110px"></td></tr>`).join('')}</table></div>`,
   async f=>{ const list=[]; DB.raw.forEach(r=>{ const v=f['f_'+r.id]; if(v===''||v==null) return; const diff=Math.round((+v-(+r.qty||0))*1000)/1000; if(!diff) return;
       list.push({col:'raw',obj:{...r,qty:+v}}); list.push({col:'moves',obj:{id:uid(),date:f.at.slice(0,10),at:f.at,type:'inv',rawId:r.id,qty:diff,note:`было ${Q(r.qty)}, стало ${Q(+v)}`,by:state.me.name,ts:Date.now()}}); });
     if(!list.length){ toast('Изменений нет'); return; } await Store.batch(list); toast(`Проведено: ${list.length/2} позиций`); },'Провести');
@@ -2099,7 +2119,7 @@ function openShip(){
   const fg=fgStock();
   modal('Отгрузка продукции',`<div class="fg"><label class="fl">Проект</label><select class="fi" name="projectId" onchange="this.form.elements.orderId.innerHTML=shipOrderOpts(this.value)">${opts(DB.projects,'',p=>`${p.name} — на складе ${N((fg[p.id]?.made||0)-(fg[p.id]?.ship||0))}`)}</select></div>
     <div class="fg"><label class="fl">Заказ</label><select class="fi" name="orderId">${shipOrderOpts(DB.projects[0]?.id)}</select></div>
-    <div class="frow"><div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="number" min="1" name="qty"></div><div class="fg"><label class="fl">Дата</label><input class="fi" type="date" name="date" value="${iso(new Date())}"></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="1" name="qty"></div><div class="fg"><label class="fl">Дата</label><input class="fi" type="date" name="date" value="${iso(new Date())}"></div></div>
     <div class="fg"><label class="fl">Накладная / машина</label><input class="fi" name="doc"></div>`,
   async f=>{ if(!(+f.qty)){ toast('Укажите количество'); return false; } await Store.put('moves',{id:uid(),date:f.date,type:'ship',projectId:f.projectId,orderId:f.orderId||'',qty:+f.qty,doc:f.doc,by:state.me.name,ts:Date.now()}); toast('Отгрузка проведена'); },'Отгрузить');
 }
@@ -2124,7 +2144,7 @@ function openOrderModal(id){
   const o=id?byId(DB.orders,id):{no:'З-'+String(DB.orders.length+101),qty:'',due:iso(addD(new Date(),21)),projectId:DB.projects[0]?.id,note:''};
   modal(id?'Заказ':'Новый заказ',`<div class="frow"><div class="fg"><label class="fl">Номер</label><input class="fi" name="no" value="${esc(o.no)}"></div><div class="fg"><label class="fl">Срок отгрузки</label><input class="fi" type="date" name="due" value="${o.due}"></div></div>
     <div class="fg"><label class="fl">Проект</label><select class="fi" name="projectId">${opts(DB.projects,o.projectId,p=>p.name+(p.client?' · '+p.client:''))}</select></div>
-    <div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="number" min="1" name="qty" value="${o.qty}"></div>
+    <div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="1" name="qty" value="${o.qty}"></div>
     <div class="fg"><label class="fl">Комментарий</label><input class="fi" name="note" value="${esc(o.note||'')}"></div>`,
   async f=>{ if(!(+f.qty)){ toast('Укажите количество'); return false; } await Store.put('orders',{...(id?o:{}),id:id||uid(),no:f.no,due:f.due,projectId:f.projectId,qty:+f.qty,note:f.note}); toast('Заказ сохранён'); },
   'Сохранить', id&&can('admin')?`<button class="btn btn-d" type="button" onclick="closeModal();delItem('orders','${id}')">Удалить</button>`:'');
@@ -2212,9 +2232,9 @@ function renderSettings(){
   <div class="card row-gap"><div class="card-h"><div class="card-t">Производство</div></div>
     <div class="frow"><div class="fg"><label class="fl">Название предприятия</label><input class="fi" id="sOrg" value="${esc(s.orgName||'')}"></div>
     <div class="fg"><label class="fl">Валюта</label><select class="fi" id="sCur">${['€','₴','$','zł','Kč','₸','₽'].map(c=>`<option ${c===(s.currency||'€')?'selected':''}>${c}</option>`).join('')}</select></div></div>
-    <div class="frow"><div class="fg"><label class="fl">Цель по переналадке, %</label><input class="fi" id="sSet" type="number" step="0.5" value="${s.setupTarget??5}"></div>
-    <div class="fg"><label class="fl">Цель по браку, %</label><input class="fi" id="sDef" type="number" step="0.1" value="${s.defectTarget??2}"></div></div>
-    <div class="frow"><div class="fg"><label class="fl">Коэфф. плана от мощности</label><input class="fi" id="sK" type="number" step="0.01" min="0.1" max="1.2" value="${s.planFactor??.85}"></div>
+    <div class="frow"><div class="fg"><label class="fl">Цель по переналадке, %</label><input class="fi" id="sSet" type="text" inputmode="decimal" data-num="1" step="0.5" value="${s.setupTarget??5}"></div>
+    <div class="fg"><label class="fl">Цель по браку, %</label><input class="fi" id="sDef" type="text" inputmode="decimal" data-num="1" step="0.1" value="${s.defectTarget??2}"></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Коэфф. плана от мощности</label><input class="fi" id="sK" type="text" inputmode="decimal" data-num="1" step="0.01" min="0.1" max="1.2" value="${s.planFactor??.85}"></div>
     <div class="fg"><label class="fl">Рабочие дни (план по мощности)</label><div style="display:flex;gap:4px;flex-wrap:wrap">${WD.map((d,i)=>{ const n=(i+1)%7; return `<label class="chip ${wd.includes(n)?'on':''}" style="cursor:pointer;padding:6px 8px"><input type="checkbox" value="${n}" ${wd.includes(n)?'checked':''} style="display:none" class="sWD" onchange="this.parentNode.classList.toggle('on',this.checked)">${d}</label>`; }).join('')}</div></div></div>
     <div class="frow"><div class="fg"><label class="fl">Причины брака</label><textarea class="fi" id="sR" rows="7">${esc((s.defectReasons||[]).join('\n'))}</textarea></div>
     <div class="fg"><label class="fl">Причины простоев линии (для плана)</label><textarea class="fi" id="sDR" rows="7">${esc((s.downReasons||DEFAULT_SETTINGS.downReasons).join('\n'))}</textarea></div></div>
