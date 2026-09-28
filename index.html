@@ -259,6 +259,10 @@ tfoot td{font-weight:800;background:var(--card2)}
 .scheme{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--card2)}
 .sh-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}.sh-row .fi{max-width:130px;padding:7px 9px}.sh-n{width:34px;font-size:12.5px}
 .act-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}.act-row .act-n{flex:1}.act-row .act-c{max-width:140px}
+.dd{position:relative}.dd summary{list-style:none;cursor:pointer;min-width:240px}.dd summary::-webkit-details-marker{display:none}
+.dd-p{position:absolute;z-index:15;top:calc(100% + 6px);left:0;width:340px;background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:12px;box-shadow:0 12px 30px rgba(0,0,0,.15)}
+.dd-i{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:6px;cursor:pointer;font-size:13px}.dd-i:hover{background:var(--card2)}.dd-i span{flex:1}.dd-i small{color:var(--text3);font-size:11px}.dd-i input{accent-color:var(--brand)}
+b.click{cursor:pointer;text-decoration:underline dotted}
 </style>
 </head>
 <body>
@@ -1883,11 +1887,11 @@ function openSupply(id,rawId,qty,date){
 }
 async function receiveSupply(id){
   const s=byId(DB.supplies,id), r=byId(DB.raw,s.rawId); if(!r) return;
-  modal('Приёмка поставки: '+r.name,`<div class="frow"><div class="fg"><label class="fl">Фактически принято, ${esc(r.unit)}</label><input class="fi" type="number" step="any" name="qty" value="${s.qty}" autofocus></div><div class="fg"><label class="fl">Дата</label><input class="fi" type="date" name="date" value="${iso(new Date())}"></div></div>
+  modal('Приёмка поставки: '+r.name,`<div class="frow"><div class="fg"><label class="fl">Фактически принято, ${esc(r.unit)}</label><input class="fi" type="number" step="any" name="qty" value="${s.qty}" autofocus></div><div class="fg"><label class="fl">Дата и время</label><input class="fi" type="datetime-local" name="at" value="${toDT(Date.now())}"></div></div>
     <div class="frow"><div class="fg"><label class="fl">Цена за ед. (по накладной)</label><input class="fi" type="number" step="any" name="cost" value="${r.cost||''}"></div><div class="fg"><label class="fl">Накладная №</label><input class="fi" name="doc"></div></div>`,
   async f=>{ const q=+f.qty; if(!q) return false;
-    await Store.batch([{col:'supplies',obj:{...s,status:'received',receivedQty:q,receivedDate:f.date}},{col:'raw',obj:{...r,qty:Math.round(((+r.qty||0)+q)*1000)/1000,cost:+f.cost||r.cost}},
-      {col:'moves',obj:{id:uid(),date:f.date,type:'in',rawId:r.id,qty:q,cost:+f.cost||r.cost,doc:f.doc,note:'Приёмка поставки'+(s.supplier?' · '+s.supplier:''),by:state.me.name,ts:Date.now()}}]);
+    f.date=f.at.slice(0,10); await Store.batch([{col:'supplies',obj:{...s,status:'received',receivedQty:q,receivedDate:f.date}},{col:'raw',obj:{...r,qty:Math.round(((+r.qty||0)+q)*1000)/1000,cost:+f.cost||r.cost}},
+      {col:'moves',obj:{id:uid(),date:f.date,at:f.at,type:'in',rawId:r.id,qty:q,cost:+f.cost||r.cost,doc:f.doc,note:'Приёмка поставки'+(s.supplier?' · '+s.supplier:''),by:state.me.name,ts:Date.now()}}]);
     toast('Поставка принята на склад'); },'Принять на склад');
 }
 function openFeasibility(){
@@ -1918,57 +1922,177 @@ function feasCalc(f){
 }
 
 // ═════════════════════════════════════════════
-//  STOCK — склад
+//  STOCK — склад: остатки на дату/время, резервы, прогноз, движения за период
 // ═════════════════════════════════════════════
 const MTYPE={in:['Приход','t-green'],out:['Расход','t-amber'],inv:['Инвентаризация','t-blue'],ship:['Отгрузка','t-gray']};
 function fgStock(){ const m={}; DB.output.forEach(r=>{ m[r.projectId]=m[r.projectId]||{made:0,ship:0}; m[r.projectId].made+=+r.good||0; }); DB.moves.filter(x=>x.type==='ship').forEach(x=>{ m[x.projectId]=m[x.projectId]||{made:0,ship:0}; m[x.projectId].ship+=+x.qty||0; }); return m; }
+// момент, когда движение проведено по складу
+function moveTime(m){
+  if(m.at&&isFinite(tms(m.at))) return tms(m.at);
+  const ts=+m.ts||0;
+  if(ts>1e12&&(m.runId||iso(new Date(ts))===m.date)) return ts;
+  return pd(m.date).getTime()+12*H;
+}
+const moveDelta = m => m.type==='in'?+m.qty||0:m.type==='out'?-(+m.qty||0):m.type==='inv'?+m.qty||0:0;
+const outTime = o => { let t=tms(o.endAt); if(!isFinite(t)) t=pd(o.date).getTime()+20*H; const s=+o.ts||0; return s>1e12?Math.min(t,s):t; };
+let _wo=null;
+function runWoAt(){ // когда тех. отчёт впервые списал сырьё
+  if(_wo) return _wo; _wo={};
+  DB.moves.forEach(m=>{ if(m.runId){ const t=moveTime(m); if(!_wo[m.runId]||t<_wo[m.runId]) _wo[m.runId]=t; } });
+  DB.runs.forEach(r=>{ if(r.writtenOff&&!_wo[r.id]) _wo[r.id]=r.sec?.materials?.ts||tms(r.endAt)||0; });
+  return _wo;
+}
+function stockAt(T){ // остаток по учёту на момент T
+  const acc={}; DB.raw.forEach(r=>acc[r.id]=+r.qty||0);
+  DB.moves.forEach(m=>{ if(m.rawId&&acc[m.rawId]!=null&&moveTime(m)>T) acc[m.rawId]-=moveDelta(m); });
+  return acc;
+}
+function reserveAt(T,detail){ // выпущено до T, но на момент T ещё не списано тех. отчётом
+  const wo=runWoAt(), acc={}, list=[];
+  DB.output.forEach(o=>{ if(o.resClosed||outTime(o)>T) return; const w=o.runId?wo[o.runId]:null; if(w&&w<=T) return;
+    const req=outputReserve(o); Object.entries(req).forEach(([rid,q])=>acc[rid]=(acc[rid]||0)+q); if(detail) list.push({o,req}); });
+  return detail?{acc,list}:acc;
+}
+function futureReserve(T,detail){ // сырьё под выпуск по действующему плану между «сейчас» и T
+  const now=Date.now(), acc={}, list=[]; if(T<=now) return detail?{acc,list}:acc;
+  const made={}; DB.output.forEach(o=>{ if(o.planItemId) made[o.planItemId]=(made[o.planItemId]||0)+(+o.good||0)+(+o.defect||0); });
+  DB.plan.forEach(it=>{ const p=byId(DB.projects,it.projectId); if(!p) return; const run=runFor(it); if(run&&run.writtenOff) return;
+    const rs=itemSegs(it).filter(x=>x[2]==='r'&&x[1]>now); const tot=rs.reduce((a,x)=>a+x[1]-Math.max(x[0],now),0); if(!tot) return;
+    const part=rs.reduce((a,x)=>a+Math.max(0,Math.min(x[1],T)-Math.max(x[0],now)),0); if(!part) return;
+    const rest=Math.max(0,(+it.qty||0)-(made[it.id]||0)), qty=rest*part/tot; if(qty<1) return;
+    const req=projectReq(p,qty); Object.entries(req).forEach(([rid,q])=>acc[rid]=(acc[rid]||0)+q); if(detail) list.push({it,p,qty,req}); });
+  return detail?{acc,list}:acc;
+}
+function suppliesUntil(T){ const acc={}, now=Date.now(); if(T<=now) return acc;
+  DB.supplies.filter(s=>s.status!=='received'&&pd(s.date).getTime()+12*H<=T).forEach(s=>acc[s.rawId]=(acc[s.rawId]||0)+(+s.qty||0)); return acc; }
+function stockSnapshot(T){
+  const future=T>Date.now()+60e3, st=stockAt(Math.min(T,Date.now())), res=reserveAt(Math.min(T,Date.now())), fut=future?futureReserve(T):{}, sup=future?suppliesUntil(T):{};
+  return DB.raw.map(r=>{ const s=st[r.id]||0, rs=res[r.id]||0, f=fut[r.id]||0, su=sup[r.id]||0; return {r,stock:s,res:rs,fut:f,sup:su,avail:s+su-rs-f}; });
+}
+function stockAtPicker(){
+  return `<div class="period"><span class="fl" style="margin:0 6px 0 0">Остатки на дату и время</span><input class="fi" type="datetime-local" value="${state.stockAt||toDT(Date.now())}" style="max-width:230px" onchange="state.stockAt=this.value||toDT(Date.now());render()"></div>`;
+}
 function renderStock(){
   const tab=state.stockTab, ce=can('edit');
   let body='';
   if(tab==='raw'){
-    const cats=[...new Set(DB.raw.map(r=>r.cat||'Прочее'))].sort();
-    const res=reservedCached();
-    body=`<div class="note row-gap" style="background:var(--blueBg)"><b>Остаток</b> — физически на складе. <b>Резерв</b> — по нормам под уже выпущенную продукцию без тех. отчёта; снимается, когда в тех. отчёте сохраняют материалы и сырьё списывается по факту. <b>Доступно</b> = остаток − резерв.</div>`+cats.map(c=>`<div class="card row-gap"><div class="card-h"><div class="card-t">${esc(c)}</div></div><div class="tw"><table><tr><th>Сырьё</th><th class="num">Остаток</th><th class="num">Резерв (выпущено, не списано)</th><th class="num">Доступно</th><th class="num">Мин.</th><th class="num">Сумма</th><th>Состояние</th></tr>
-      ${DB.raw.filter(r=>(r.cat||'Прочее')===c).map(r=>`<tr><td><b>${esc(r.name)}</b></td><td class="num">${QU(r.qty,r.unit)} ${esc(r.unit)}</td><td class="num">${res[r.id]>1e-9?`<span class="tag t-amber">${QU(res[r.id],r.unit)}</span>`:'—'}</td><td class="num"><b>${QU((+r.qty||0)-(res[r.id]||0),r.unit)}</b></td><td class="num muted">${QU(r.min,r.unit)}</td><td class="num">${money((+r.qty||0)*(+r.cost||0))}</td>
-      <td>${(+r.qty||0)<(+r.min||0)?'<span class="tag t-red">ниже минимума</span>':(+r.qty||0)<(+r.min||0)*1.5?'<span class="tag t-amber">заканчивается</span>':'<span class="tag t-green">норма</span>'}</td></tr>`).join('')}</table></div></div>`).join('')||'<div class="card"><div class="empty">Сырья нет</div></div>';
+    const T=tms(state.stockAt||toDT(Date.now())), future=T>Date.now()+60e3, past=T<Date.now()-60e3, snap=stockSnapshot(T), cats=rawCats();
+    const byCat={}; snap.forEach(x=>{ const c=x.r.cat||'Прочее'; (byCat[c]=byCat[c]||[]).push(x); });
+    const order=Object.keys(byCat).sort((a,b)=>(cats.indexOf(a)<0?99:cats.indexOf(a))-(cats.indexOf(b)<0?99:cats.indexOf(b)));
+    const tot=snap.reduce((a,x)=>a+x.stock*(+x.r.cost||0),0), totAv=snap.reduce((a,x)=>a+x.avail*(+x.r.cost||0),0);
+    body=stockAtPicker()+`<div class="note row-gap" style="background:${future?'var(--amberBg)':'var(--blueBg)'}">${future?`<b>Прогноз на ${fdt(T)}.</b> Остаток — по учёту на сейчас; <b>поставки</b> — ожидаемые до этой даты; <b>резерв</b> — выпущено, но не списано тех. отчётом; <b>резерв на будущий выпуск</b> — сырьё под объём действующего плана, который будет сделан до ${fdt(T)}.`:`<b>${past?'Остатки на '+fdt(T):'Остатки на текущий момент'}.</b> Остаток — по учёту (все приходы, списания и инвентаризации до этого момента). Резерв — выпуск, внесённый до этого момента, по которому ещё не было списания тех. отчётом.`} <b>Доступно</b> = остаток${future?' + поставки':''} − резерв${future?' − резерв на будущий выпуск':''}. Нажмите на сырьё — откроется график.</div>
+    <div class="grid kpis k4"><div class="card kpi"><div class="kl">Остаток по учёту</div><div class="kv" style="font-size:20px">${money(tot)}</div></div><div class="card kpi"><div class="kl">Доступно</div><div class="kv" style="font-size:20px">${money(totAv)}</div></div>
+      <div class="card kpi"><div class="kl">Ниже минимума (доступно)</div><div class="kv">${snap.filter(x=>x.avail<(+x.r.min||0)).length}</div></div><div class="card kpi"><div class="kl">Уйдёт в минус</div><div class="kv" style="color:${snap.some(x=>x.avail<0)?'var(--red)':'inherit'}">${snap.filter(x=>x.avail<-1e-9).length}</div></div></div>`
+    +order.map(c=>`<div class="card row-gap"><div class="card-h"><div class="card-t">${esc(c)}</div></div><div class="tw"><table><tr><th>Сырьё</th><th class="num">Остаток</th>${future?'<th class="num">Поставки до даты</th>':''}<th class="num">Резерв (выпущено, не списано)</th>${future?'<th class="num">Резерв на будущий выпуск</th>':''}<th class="num">Доступно</th><th class="num">Мин.</th><th class="num">Сумма</th><th>Состояние</th></tr>
+      ${byCat[c].sort((a,b)=>a.r.name.localeCompare(b.r.name)).map(x=>{ const u=x.r.unit, mn=+x.r.min||0;
+        return `<tr class="click" onclick="openRawChart('${x.r.id}')"><td><b>${esc(x.r.name)}</b> <span class="muted" style="font-size:11px">📈</span></td><td class="num">${QU(x.stock,u)} ${esc(u)}</td>
+        ${future?`<td class="num">${x.sup?'<span class="tag t-blue">+'+QU(x.sup,u)+'</span>':'—'}</td>`:''}
+        <td class="num">${x.res>1e-9?`<span class="tag t-amber">${QU(x.res,u)}</span>`:'—'}</td>${future?`<td class="num">${x.fut>1e-9?`<span class="tag t-amber">${QU(x.fut,u)}</span>`:'—'}</td>`:''}
+        <td class="num"><b style="color:${x.avail<0?'var(--red)':'inherit'}">${QU(x.avail,u)}</b></td><td class="num muted">${QU(mn,u)}</td><td class="num">${money(x.stock*(+x.r.cost||0))}</td>
+        <td>${x.avail<0?'<span class="tag t-red">дефицит</span>':x.avail<mn?'<span class="tag t-red">ниже минимума</span>':x.avail<mn*1.5?'<span class="tag t-amber">заканчивается</span>':'<span class="tag t-green">норма</span>'}</td></tr>`; }).join('')}</table></div></div>`).join('')||'<div class="card"><div class="empty">Сырья нет</div></div>';
   } else if(tab==='fg'){
     const m=fgStock();
     body=`<div class="card"><div class="tw flush"><table><tr><th>Проект</th><th>Клиент</th><th class="num">Произведено</th><th class="num">Отгружено</th><th class="num">На складе</th></tr>
       ${Object.entries(m).filter(([,v])=>v.made||v.ship).sort((a,b)=>(b[1].made-b[1].ship)-(a[1].made-a[1].ship)).map(([pid,v])=>`<tr><td><b>${esc(projName(pid))}</b></td><td class="muted">${esc(byId(DB.projects,pid)?.client||'')}</td><td class="num">${N(v.made)}</td><td class="num">${N(v.ship)}</td><td class="num"><b>${N(v.made-v.ship)}</b></td></tr>`).join('')}</table></div></div>`;
-  } else {
-    const resRows=DB.output.filter(o=>!o.resClosed&&o.date>=state.from&&o.date<=state.to).map(o=>{ const run=o.runId?byId(DB.runs,o.runId):null, open=!(run&&run.writtenOff), req=outputReserve(o);
-      return {date:o.date,ts:tms(o.startAt)||0,type:'res',open,run,o,req,by:o.operator}; });
-    const tf=state.moveType||'';
-    const mv=[...DB.moves.filter(x=>x.date>=state.from&&x.date<=state.to),...resRows].filter(x=>!tf||x.type===tf||(tf==='res_open'&&x.type==='res'&&x.open)).sort((a,b)=>b.date.localeCompare(a.date)||(b.ts||0)-(a.ts||0));
-    body=periodBar()+`<div class="toolbar"><select class="sel" onchange="state.moveType=this.value;render()">${[['','Все операции'],['in','Приход'],['out','Расход / списание'],['res','Резервы под выпуск'],['res_open','Только активные резервы'],['inv','Инвентаризация'],['ship','Отгрузка']].map(([k,l])=>`<option value="${k}" ${k===tf?'selected':''}>${l}</option>`).join('')}</select></div>
-      <div class="card">${mv.length?`<div class="tw flush"><table><tr><th>Дата</th><th>Операция</th><th>Позиция</th><th class="num">Кол-во</th><th>Документ / основание</th><th>Кто</th></tr>
-      ${mv.slice(0,400).map(x=>{ if(x.type==='res'){ const it=Object.entries(x.req), val=it.reduce((a,[rid,v])=>a+v*(+byId(DB.raw,rid)?.cost||0),0);
-          return `<tr${x.open?'':' style="opacity:.6"'}><td>${fdate(x.date)}</td><td><span class="tag ${x.open?'t-amber':'t-gray'}">${x.open?'Резерв':'Резерв снят'}</span></td><td>${esc(projName(x.o.projectId))}<div class="muted" style="font-size:12px">смена ${esc(shiftName(x.o.lineId,x.o.shift))} · ${esc(lineName(x.o.lineId))} · ${N((+x.o.good||0)+(+x.o.defect||0))} изд.</div></td>
-          <td class="num" data-tip="${it.map(([rid,v])=>esc(rawName(rid))+': '+QU(v,byId(DB.raw,rid)?.unit)+' '+esc(byId(DB.raw,rid)?.unit||'')).join('<br>')}">${it.length} поз. · ${money(val)}</td>
-          <td class="muted wrap">${x.open?(x.run?'тех. отчёт создан, материалы ещё не сохранены':'ждёт тех. отчёт'):`списано по факту тех. отчётом ${x.run?.endAt?fdate(x.run.endAt.slice(0,10)):''}`}</td><td class="muted">${esc(x.by||'')}</td></tr>`; }
-        const r=byId(DB.raw,x.rawId); return `<tr${x.runId?` class="click" onclick="const r=byId(DB.runs,'${x.runId}');if(r)openRun(r.projectId,r.id)"`:''}><td>${fdate(x.date)}</td><td><span class="tag ${MTYPE[x.type]?.[1]}">${MTYPE[x.type]?.[0]}</span></td><td>${x.type==='ship'?esc(projName(x.projectId)):esc(r?.name||'—')}</td>
-      <td class="num">${x.type==='out'||x.type==='ship'?'−':x.type==='inv'&&x.qty<0?'':'+'}${Q(x.qty)} ${x.type==='ship'?'шт':esc(r?.unit||'')}</td><td class="muted wrap">${esc([x.doc,x.note,x.projectId&&x.type!=='ship'?projName(x.projectId):''].filter(Boolean).join(' · '))}</td><td class="muted">${esc(x.by||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Движений за период нет</div>'}</div>`;
-  }
-  $('#content').innerHTML=`<div class="toolbar"><div class="seg">${[['raw','Остатки сырья'],['fg','Готовая продукция'],['moves','Движения']].map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="state.stockTab='${k}';render()">${l}</button>`).join('')}</div><div class="sp"></div>
+  } else body=renderMovesTab();
+  $('#content').innerHTML=`<div class="toolbar"><div class="seg">${[['raw','Остатки сырья'],['moves','Движение сырья'],['fg','Готовая продукция']].map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="state.stockTab='${k}';render()">${l}</button>`).join('')}</div><div class="sp"></div>
     ${ce?`<button class="btn btn-s" onclick="openMove('in')">+ Приход</button><button class="btn btn-s" onclick="openMove('out')">− Расход</button><button class="btn btn-s" onclick="openInventory()">Инвентаризация</button><button class="btn btn-p" onclick="openShip()">Отгрузка продукции</button>`:''}</div>${body}`;
 }
+// ── движение сырья за период
+function mvPick(){ if(!state.mvRaw) state.mvRaw=[]; return state.mvRaw; }
+function mvToggle(id,on){ const s=new Set(mvPick()); on?s.add(id):s.delete(id); state.mvRaw=[...s]; state.mvOpen=true; render(); }
+function mvSet(ids){ state.mvRaw=ids; state.mvOpen=true; render(); }
+function rawPicker(){
+  const sel=mvPick(), q=(state.mvQ||'').toLowerCase(), cats=rawCats();
+  const list=DB.raw.filter(r=>!q||(r.name+' '+(r.cat||'')).toLowerCase().includes(q)).sort((a,b)=>cats.indexOf(a.cat)-cats.indexOf(b.cat)||a.name.localeCompare(b.name));
+  const label=sel.length?(sel.length===1?rawName(sel[0]):`выбрано ${sel.length}`):`всё сырьё (${DB.raw.length})`;
+  return `<details class="dd" ${state.mvOpen?'open':''} ontoggle="state.mvOpen=this.open"><summary class="sel">Сырьё: <b>${esc(label)}</b> ▾</summary><div class="dd-p">
+    <input class="fi" id="mvQ" placeholder="Поиск сырья…" value="${esc(state.mvQ||'')}" oninput="state.mvQ=this.value;state.mvOpen=true;const p=this.selectionStart;render();const e=$('#mvQ');e.focus();e.setSelectionRange(p,p)">
+    <div style="display:flex;gap:6px;margin:8px 0"><button class="btn btn-s btn-sm" onclick="mvSet([])">Всё сырьё</button><button class="btn btn-s btn-sm" onclick="mvSet(${esc(JSON.stringify(list.map(r=>r.id)))})">Выбрать найденные</button></div>
+    <div style="max-height:280px;overflow:auto">${list.map(r=>`<label class="dd-i"><input type="checkbox" ${sel.includes(r.id)?'checked':''} onchange="mvToggle('${r.id}',this.checked)"><span>${esc(r.name)}</span><small>${esc(r.cat||'')}</small></label>`).join('')||'<div class="muted">Ничего не найдено</div>'}</div></div></details>`;
+}
+function renderMovesTab(){
+  const d0=new Date(); if(!state.mvFrom||!isFinite(tms(state.mvFrom))) state.mvFrom=toDT(new Date(d0.getFullYear(),d0.getMonth(),1).getTime()); if(!state.mvTo||!isFinite(tms(state.mvTo))) state.mvTo=toDT(Date.now());
+  let T0=tms(state.mvFrom), T1=tms(state.mvTo); if(T1<T0) [T0,T1]=[T1,T0];
+  const sel=mvPick(), ids=sel.length?sel:DB.raw.map(r=>r.id);
+  const s0=stockAt(T0-1), s1=stockAt(Math.min(T1,Date.now())), resEnd=reserveAt(Math.min(T1,Date.now()),true);
+  const inP=DB.moves.filter(m=>m.rawId&&ids.includes(m.rawId)&&moveTime(m)>=T0&&moveTime(m)<=T1).sort((a,b)=>moveTime(a)-moveTime(b));
+  const tipRows=(arr,fn)=>arr.slice(0,25).map(fn).join('<br>')+(arr.length>25?`<br>… ещё ${arr.length-25}`:'');
+  const src=m=>m.runId?(m.type==='in'?'возврат по тех. отчёту':'тех. отчёт')+' · '+projName(m.projectId):m.type==='inv'?'инвентаризация':m.note&&m.note.startsWith('Приёмка')?'поставка':m.type==='out'?'ручной расход'+(m.projectId?' · '+projName(m.projectId):''):'ручной приход';
+  const rows=ids.map(id=>{ const r=byId(DB.raw,id); if(!r) return null; const u=r.unit, ms=inP.filter(m=>m.rawId===id);
+    const ins=ms.filter(m=>moveDelta(m)>0), outs=ms.filter(m=>moveDelta(m)<0), inSum=ins.reduce((a,m)=>a+moveDelta(m),0), outSum=-outs.reduce((a,m)=>a+moveDelta(m),0);
+    const resList=resEnd.list.filter(x=>x.req[id]), res=resEnd.acc[id]||0, end=s1[id]||0;
+    return {r,u,start:s0[id]||0,ins,outs,inSum,outSum,resList,res,end,avail:end-res};
+  }).filter(Boolean).filter(x=>sel.length||x.inSum||x.outSum||x.res||x.start||x.end);
+  const fmtIn=m=>`${fdt(moveTime(m))} · +${QU(moveDelta(m),byId(DB.raw,m.rawId)?.unit)} · ${esc(m.doc?'накл. '+m.doc:'')}${m.doc?' · ':''}${esc(src(m))}`;
+  const fmtOut=m=>`${fdt(moveTime(m))} · −${QU(-moveDelta(m),byId(DB.raw,m.rawId)?.unit)} · ${esc(src(m))}${m.doc?' · '+esc(m.doc):''}`;
+  const table=rows.length?`<div class="tw flush"><table><tr><th>Сырьё</th><th class="num">Остаток на ${fdt(T0)}</th><th class="num">Приход</th><th class="num">Расход</th><th class="num">Остаток на ${T1>Date.now()?'сейчас':fdt(T1)}</th><th class="num">Резерв (выпущено, не списано)</th><th class="num">Доступно на конец</th><th class="num">Сумма на конец</th></tr>
+    ${rows.map(x=>`<tr><td><b class="click" onclick="openRawChart('${x.r.id}')">${esc(x.r.name)}</b><div class="muted" style="font-size:11px">${esc(x.r.cat||'')}</div></td><td class="num">${QU(x.start,x.u)} ${esc(x.u)}</td>
+      <td class="num">${x.inSum?`<span class="tag t-green" data-tip="<b>Приход: ${x.ins.length} опер.</b><br>${tipRows(x.ins,fmtIn)}">+${QU(x.inSum,x.u)}</span>`:'—'}</td>
+      <td class="num">${x.outSum?`<span class="tag t-amber" data-tip="<b>Расход: ${x.outs.length} опер.</b><br>${tipRows(x.outs,fmtOut)}">−${QU(x.outSum,x.u)}</span>`:'—'}</td>
+      <td class="num"><b>${QU(x.end,x.u)}</b></td>
+      <td class="num">${x.res>1e-9?`<span class="tag t-amber" data-tip="<b>Выпущено, не списано: ${x.resList.length} смен</b><br>${tipRows(x.resList,y=>`${fdate(y.o.date)} · ${esc(shiftName(y.o.lineId,y.o.shift))} · ${esc(projName(y.o.projectId))} · ${QU(y.req[x.r.id],x.u)}`)}">${QU(x.res,x.u)}</span>`:'—'}</td>
+      <td class="num"><b style="color:${x.avail<0?'var(--red)':'inherit'}">${QU(x.avail,x.u)}</b></td><td class="num">${money(x.end*(+x.r.cost||0))}</td></tr>`).join('')}
+    <tfoot><tr><td>Итого в деньгах</td><td class="num">${money(rows.reduce((a,x)=>a+x.start*(+x.r.cost||0),0))}</td><td class="num">+${money(rows.reduce((a,x)=>a+x.inSum*(+x.r.cost||0),0))}</td><td class="num">−${money(rows.reduce((a,x)=>a+x.outSum*(+x.r.cost||0),0))}</td><td class="num">${money(rows.reduce((a,x)=>a+x.end*(+x.r.cost||0),0))}</td><td class="num">${money(rows.reduce((a,x)=>a+x.res*(+x.r.cost||0),0))}</td><td class="num">${money(rows.reduce((a,x)=>a+x.avail*(+x.r.cost||0),0))}</td><td></td></tr></tfoot></table></div>`:'<div class="empty">Нет движений и остатков по выбранному сырью</div>';
+  const det=state.mvDetail?`<div class="card" style="margin-top:14px"><div class="card-h"><div class="card-t">Все операции за период</div><div class="card-s">${inP.length}</div></div>${inP.length?`<div class="tw"><table><tr><th>Дата и время</th><th>Операция</th><th>Сырьё</th><th class="num">Кол-во</th><th>Основание</th><th>Кто</th></tr>
+    ${inP.slice().reverse().slice(0,500).map(m=>{ const r=byId(DB.raw,m.rawId), d=moveDelta(m); return `<tr${m.runId?` class="click" onclick="const r=byId(DB.runs,'${m.runId}');if(r)openRun(r.projectId,r.id)"`:''}><td>${fdt(moveTime(m))}</td><td><span class="tag ${MTYPE[m.type]?.[1]}">${MTYPE[m.type]?.[0]}</span></td><td>${esc(r?.name||'—')}</td><td class="num">${d>0?'+':'−'}${QU(Math.abs(d),r?.unit)} ${esc(r?.unit||'')}</td><td class="muted wrap">${esc([m.doc,m.note,m.projectId?projName(m.projectId):''].filter(Boolean).join(' · '))}</td><td class="muted">${esc(m.by||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Операций нет</div>'}</div>`:'';
+  return `<div class="period"><span class="fl" style="margin:0 6px 0 0">Период с</span><input class="fi" type="datetime-local" value="${state.mvFrom}" style="max-width:230px" onchange="state.mvFrom=this.value||state.mvFrom;render()"><span class="fl" style="margin:0 6px">по</span><input class="fi" type="datetime-local" value="${state.mvTo}" style="max-width:230px" onchange="state.mvTo=this.value||state.mvTo;render()"></div><div class="toolbar">${rawPicker()}<label class="chip ${state.mvDetail?'on':''}" style="cursor:pointer"><input type="checkbox" style="display:none" ${state.mvDetail?'checked':''} onchange="state.mvDetail=this.checked;render()">Показать все операции</label>
+    <span class="muted" style="font-size:12px">Наведите на приход, расход или резерв — появится расшифровка</span></div><div class="card">${table}</div>${det}`;
+}
+// ── график остатка по сырью
+function openRawChart(id){
+  const r=byId(DB.raw,id); if(!r) return;
+  $('#modalC').classList.add('wide');
+  if(!state.chFrom) state.chFrom=iso(addD(new Date(),-30)); if(!state.chTo) state.chTo=iso(addD(new Date(),30));
+  modal('📈 '+r.name,`<div class="period" style="margin-bottom:12px"><span class="fl" style="margin:0 6px 0 0">Период с</span><input class="fi" type="date" value="${state.chFrom}" style="max-width:170px" onchange="state.chFrom=this.value||state.chFrom;openRawChart('${id}')"><span class="fl" style="margin:0 6px">по</span><input class="fi" type="date" value="${state.chTo}" style="max-width:170px" onchange="state.chTo=this.value||state.chTo;openRawChart('${id}')"></div><div id="rawChart"></div><div id="rawEvents"></div>`,async()=>{},'Закрыть');
+  $('#mSave').previousElementSibling.style.display='none';
+  const now=Date.now(), u=r.unit, pts=[]; let cf=state.chFrom, ct=state.chTo; if(cf>ct) [cf,ct]=[ct,cf];
+  const d0=new Date(now); d0.setHours(23,59,0,0); const k0=Math.round((pd(cf).getTime()+86340e3-d0.getTime())/864e5), k1=Math.round((pd(ct).getTime()+86340e3-d0.getTime())/864e5);
+  const days=Math.max(Math.abs(k0),Math.abs(k1));
+  for(let k=k0;k<=k1;k++){ const T=k===0?now:d0.getTime()+k*864e5, past=T<=now;
+    const st=stockAt(Math.min(T,now))[id]||0, res=reserveAt(Math.min(T,now))[id]||0, fut=past?0:(futureReserve(T)[id]||0), sup=past?0:(suppliesUntil(T)[id]||0);
+    pts.push({T,past,stock:st+sup,avail:st+sup-res-fut,res,fut,sup}); }
+  const el=$('#rawChart'), W=Math.max(el.clientWidth||760,320), Hh=300, pl=58, pr=12, pt=14, pb=30, iw=W-pl-pr, ih=Hh-pt-pb;
+  const vals=pts.flatMap(p=>[p.stock,p.avail]).concat([+r.min||0,0]), mx=Math.max(...vals), mn=Math.min(...vals), span=(mx-mn)||1, lo=mn-span*.08, hi=mx+span*.1;
+  const x=i=>pl+i/(pts.length-1)*iw, y=v=>pt+ih-(v-lo)/(hi-lo)*ih, ni=pts.findIndex(p=>!p.past);
+  const path=key=>pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join('');
+  let s=`<svg width="${W}" height="${Hh}">`;
+  for(let i=0;i<=4;i++){ const v=lo+(hi-lo)/4*i; s+=`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${pl-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--text3)" font-weight="600">${u==='шт'?short(v):Q(v,1)}</text>`; }
+  if(ni>0) s+=`<rect x="${x(ni-1)}" y="${pt}" width="${W-pr-x(ni-1)}" height="${ih}" fill="var(--card2)"/><text x="${x(ni-1)+6}" y="${pt+12}" font-size="11" fill="var(--text3)" font-weight="700">прогноз</text>`;
+  if(+r.min) s+=`<line x1="${pl}" x2="${W-pr}" y1="${y(+r.min)}" y2="${y(+r.min)}" stroke="var(--amber)" stroke-dasharray="5 4"/><text x="${W-pr-4}" y="${y(+r.min)-4}" text-anchor="end" font-size="11" fill="var(--amber)" font-weight="700">минимум</text>`;
+  if(lo<0) s+=`<line x1="${pl}" x2="${W-pr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--red)"/>`;
+  s+=`<path d="${path('stock')}" fill="none" stroke="var(--blue)" stroke-width="2.2"/><path d="${path('avail')}" fill="none" stroke="var(--brand)" stroke-width="2.2" stroke-dasharray="${'0'}"/>`;
+  const step=Math.ceil(pts.length/10);
+  pts.forEach((p,i)=>{ if(i%step===0||i===pts.length-1) s+=`<text x="${x(i)}" y="${Hh-9}" text-anchor="middle" font-size="11" fill="var(--text3)" font-weight="600">${i===ni-1?'сейчас':fdate(iso(new Date(p.T)))}</text>`;
+    s+=`<rect x="${x(i)-iw/(pts.length-1)/2}" y="${pt}" width="${iw/(pts.length-1)}" height="${ih}" fill="transparent" data-tip="<b>${p.past&&i!==ni-1?fdate(iso(new Date(p.T)))+' конец дня':i===ni-1?'Сейчас':fdate(iso(new Date(p.T)))+' (прогноз)'}</b><br>Остаток${p.past?'':' + поставки'}: ${QU(p.stock,u)} ${u}<br>Резерв (выпущено): ${QU(p.res,u)}${p.past?'':'<br>Резерв на будущий выпуск: '+QU(p.fut,u)}<br><b>Доступно: ${QU(p.avail,u)} ${u}</b>"/>`; });
+  if(ni>0) s+=`<line x1="${x(ni-1)}" x2="${x(ni-1)}" y1="${pt}" y2="${pt+ih}" stroke="var(--red)" stroke-width="1.5"/>`;
+  el.innerHTML=`<div class="legend" style="margin-bottom:6px"><span><i style="background:var(--blue)"></i>Остаток по учёту${' (в прогнозе — с поставками)'}</span><span><i style="background:var(--brand)"></i>Доступно (за вычетом резервов)</span><span><i style="background:var(--amber)"></i>Минимум</span></div>`+s+'</svg>';
+  // события
+  const T0=pd(cf).getTime(), T1=pd(ct).getTime()+864e5, ev=[];
+  DB.moves.filter(m=>m.rawId===id&&moveTime(m)>=T0&&moveTime(m)<=T1).forEach(m=>ev.push({t:moveTime(m),kind:MTYPE[m.type]?.[0]||m.type,cls:MTYPE[m.type]?.[1],q:moveDelta(m),txt:[m.doc,m.note,m.projectId?projName(m.projectId):''].filter(Boolean).join(' · ')}));
+  DB.supplies.filter(s=>s.rawId===id&&s.status!=='received').forEach(s=>ev.push({t:pd(s.date).getTime()+12*H,kind:'Поставка (ожид.)',cls:'t-blue',q:+s.qty||0,txt:[s.supplier,s.note].filter(Boolean).join(' · ')}));
+  reserveAt(now,true).list.filter(x=>x.req[id]).forEach(x=>ev.push({t:outTime(x.o),kind:'Резерв: выпуск',cls:'t-amber',q:-x.req[id],txt:`${projName(x.o.projectId)} · смена ${shiftName(x.o.lineId,x.o.shift)} · ждёт тех. отчёт`,res:true}));
+  futureReserve(T1,true).list.filter(x=>x.req[id]).forEach(x=>ev.push({t:Math.max(itemStart(x.it),now),kind:'Резерв: план',cls:'t-amber',q:-x.req[id],txt:`${x.p.name} · ${N(x.qty)} шт по плану`,res:true}));
+  ev.sort((a,b)=>b.t-a.t);
+  $('#rawEvents').innerHTML=`<div class="card-t" style="margin:14px 0 8px">События</div>${ev.length?`<div class="tw" style="margin:0;border:1px solid var(--line);border-radius:10px;max-height:300px;overflow:auto"><table><tr><th>Когда</th><th>Событие</th><th class="num">Кол-во</th><th>Основание</th></tr>${ev.map(e=>`<tr${e.t>now?' style="background:var(--card2)"':''}><td>${fdt(e.t)}${e.t>now?' <span class="muted">(план)</span>':''}</td><td><span class="tag ${e.cls||'t-gray'}">${esc(e.kind)}</span></td><td class="num">${e.q>0?'+':'−'}${QU(Math.abs(e.q),u)} ${esc(u)}</td><td class="muted wrap">${esc(e.txt)}</td></tr>`).join('')}</table></div>`:'<div class="empty">Нет событий</div>'}`;
+}
 function openMove(type){
-  modal(type==='in'?'Приход сырья':'Расход сырья',`<div class="fg"><label class="fl">Сырьё</label><select class="fi" name="rawId">${opts(DB.raw,'',r=>`${r.name} — остаток ${Q(r.qty)} ${r.unit}`)}</select></div>
-    <div class="frow"><div class="fg"><label class="fl">Количество</label><input class="fi" type="number" step="any" min="0" name="qty" autofocus></div><div class="fg"><label class="fl">Дата</label><input class="fi" type="date" name="date" value="${iso(new Date())}"></div></div>
+  modal(type==='in'?'Приход сырья':'Расход сырья',`<div class="fg"><label class="fl">Сырьё</label><select class="fi" name="rawId">${opts(DB.raw,'',r=>`${r.name} — остаток ${QU(r.qty,r.unit)} ${r.unit}`)}</select></div>
+    <div class="frow"><div class="fg"><label class="fl">Количество</label><input class="fi" type="number" step="any" min="0" name="qty" autofocus></div><div class="fg"><label class="fl">Дата и время</label><input class="fi" type="datetime-local" name="at" value="${toDT(Date.now())}"></div></div>
     ${type==='in'?`<div class="frow"><div class="fg"><label class="fl">Цена за ед. (обновит карточку)</label><input class="fi" type="number" step="any" name="cost"></div><div class="fg"><label class="fl">Накладная №</label><input class="fi" name="doc"></div></div>`
       :`<div class="fg"><label class="fl">На какой проект (необязательно)</label><select class="fi" name="projectId">${opts(DB.projects,'',p=>p.name,'—')}</select></div><div class="fg"><label class="fl">Основание</label><input class="fi" name="doc" placeholder="Замес, промывка, списание брака…"></div>`}`,
   async f=>{ const r=byId(DB.raw,f.rawId), q=+f.qty; if(!r||!q){ toast('Укажите сырьё и количество'); return false; }
     const nq=Math.round(((+r.qty||0)+(type==='in'?q:-q))*1000)/1000;
-    await Store.batch([{col:'raw',obj:{...r,qty:nq,cost:type==='in'&&+f.cost?+f.cost:r.cost}},{col:'moves',obj:{id:uid(),date:f.date,type,rawId:r.id,qty:q,cost:+f.cost||r.cost,doc:f.doc,projectId:f.projectId||'',by:state.me.name,ts:Date.now()}}]);
+    await Store.batch([{col:'raw',obj:{...r,qty:nq,cost:type==='in'&&+f.cost?+f.cost:r.cost}},{col:'moves',obj:{id:uid(),date:f.at.slice(0,10),at:f.at,type,rawId:r.id,qty:q,cost:+f.cost||r.cost,doc:f.doc,projectId:f.projectId||'',by:state.me.name,ts:Date.now()}}]);
     toast(type==='in'?'Приход проведён':'Расход проведён'); });
 }
 function openInventory(){
   $('#modalC').classList.add('wide');
   modal('Инвентаризация сырья',`<div class="hint" style="margin-bottom:10px">Внесите фактические остатки. Разница проведётся движением «Инвентаризация»; пустые строки не меняются.</div>
-    <div class="fg"><label class="fl">Дата</label><input class="fi" type="date" name="date" value="${iso(new Date())}" style="max-width:180px"></div>
-    <div class="tw ed" style="margin:0"><table><tr><th>Сырьё</th><th class="num">По учёту</th><th>Факт</th></tr>${DB.raw.map(r=>`<tr><td>${esc(r.name)}</td><td class="num">${Q(r.qty)} ${esc(r.unit)}</td><td><input class="fi" type="number" step="any" name="f_${r.id}" style="width:110px"></td></tr>`).join('')}</table></div>`,
+    <div class="fg"><label class="fl">Дата и время инвентаризации</label><input class="fi" type="datetime-local" name="at" value="${toDT(Date.now())}" style="max-width:240px"></div>
+    <div class="tw ed" style="margin:0"><table><tr><th>Сырьё</th><th class="num">По учёту</th><th>Факт</th></tr>${DB.raw.map(r=>`<tr><td>${esc(r.name)}</td><td class="num">${QU(r.qty,r.unit)} ${esc(r.unit)}</td><td><input class="fi" type="number" step="any" name="f_${r.id}" style="width:110px"></td></tr>`).join('')}</table></div>`,
   async f=>{ const list=[]; DB.raw.forEach(r=>{ const v=f['f_'+r.id]; if(v===''||v==null) return; const diff=Math.round((+v-(+r.qty||0))*1000)/1000; if(!diff) return;
-      list.push({col:'raw',obj:{...r,qty:+v}}); list.push({col:'moves',obj:{id:uid(),date:f.date,type:'inv',rawId:r.id,qty:diff,note:`было ${Q(r.qty)}, стало ${Q(+v)}`,by:state.me.name,ts:Date.now()}}); });
+      list.push({col:'raw',obj:{...r,qty:+v}}); list.push({col:'moves',obj:{id:uid(),date:f.at.slice(0,10),at:f.at,type:'inv',rawId:r.id,qty:diff,note:`было ${Q(r.qty)}, стало ${Q(+v)}`,by:state.me.name,ts:Date.now()}}); });
     if(!list.length){ toast('Изменений нет'); return; } await Store.batch(list); toast(`Проведено: ${list.length/2} позиций`); },'Провести');
 }
 function openShip(){
@@ -2121,6 +2245,7 @@ function exportJSON(){ const a=document.createElement('a'); a.href=URL.createObj
 //  MODAL & ROUTER
 // ═════════════════════════════════════════════
 function modal(title,body,onSave,label='Сохранить',extra=''){
+  $('#tip').style.display='none';
   $('#mTitle').textContent=title; $('#mBody').innerHTML=body; $('#mSave').textContent=label; $('#mExtra').innerHTML=extra; $('#modal').classList.add('open');
   setTimeout(()=>$('#mBody [autofocus]')?.focus(),50);
   $('#mSave').onclick=async()=>{ const b=$('#mSave'); b.disabled=true;
@@ -2141,7 +2266,8 @@ function buildNav(){
 }
 function go(sec){ if(!SECTIONS.find(s=>s.id===sec)?.hidden){ state.draft=null; state.back=null; } state.q=''; state.sec=sec; toggleSide(false); render(); scrollTo(0,0); }
 function render(){
-  _sch.clear(); _res=null;
+  const tp=$('#tip'); if(tp) tp.style.display='none';
+  _sch.clear(); _res=null; _wo=null;
   let s=SECTIONS.find(x=>x.id===state.sec);
   if(!s||(s.admin&&!can('admin'))){ s=SECTIONS[1]; state.sec=s.id; }
   $('#pageTitle').textContent=s.t; buildNav();
