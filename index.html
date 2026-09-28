@@ -1284,7 +1284,8 @@ function openRun(pid,rid,planItemId,outputIds){
   const d=state.draft; d.stations=A(d.stations); d.settings=A(d.settings); d.rawFact=d.rawFact||{}; d.writtenMap=d.writtenMap||{}; d.log=A(d.log); d.sec=d.sec||{};
   if(!A(d.outputIds).length&&d.id) d.outputIds=runOutputs(d).map(o=>o.id);
   if(!d.startAt&&d.dateFrom){ d.startAt=d.dateFrom+'T07:00'; d.endAt=(d.dateTo||d.dateFrom)+'T19:00'; }
-  state.runDirty={}; state.sec='runEdit'; render(); scrollTo(0,0);
+  state.runDirty={}; state.runAuto=false;
+  if(d.id&&!A(d.outputIds).length){ const c=runCandidates(d).filter(o=>!o.runId); if(c.length){ d.outputIds=c.map(o=>o.id); runRecalc(d); state.runDirty.prod=true; state.runAuto=true; } } state.sec='runEdit'; render(); scrollTo(0,0);
 }
 const dirty = s => { state.runDirty[s]=true; const b=document.getElementById('rsave_'+s); if(b){ b.classList.add('btn-p'); b.classList.remove('btn-s'); b.textContent=b.dataset.l; } };
 function DR(k,v,s='prod'){ state.draft[k]=v; dirty(s); }
@@ -1326,6 +1327,8 @@ function renderRunEdit(){
   $('#content').innerHTML=`<div class="toolbar"><button class="btn btn-s" onclick="state.draft=null;go('runs')">← Журнал тех. отчётов</button><button class="btn btn-s" onclick="openProject('${d.projectId}')">Проект: ${esc(p?.name||'—')}</button><div class="sp"></div>
     ${d.writtenOff?'<span class="tag t-green">сырьё списано</span>':'<span class="tag t-amber">сырьё в резерве, не списано</span>'}
     ${d.id?`<button class="btn btn-s" onclick="printRun('${d.id}')">🖨 Печать</button>`:''}</div>
+  ${d.id&&state.runAuto?`<div class="msg err row-gap" style="display:block">В отчёте не были отмечены смены — поэтому резерв по ним не снимался. Программа отметила свободные смены этого проекта: проверьте список в разделе «Наработка» и нажмите <b>«Сохранить раздел»</b>. Уже проведённое списание при этом не повторится.</div>`:''}
+  ${d.id&&!state.runAuto&&!A(d.outputIds).length&&!(+d.qtyGood)?`<div class="msg err row-gap" style="display:block">К отчёту не привязаны смены. Отметьте их в разделе «Наработка» и сохраните раздел — иначе резерв сырья не снимется.</div>`:''}
   ${!d.id?`<div class="note row-gap" style="background:var(--blueBg)">Новый тех. отчёт. Разделы сохраняются <b>по отдельности</b> — их могут заполнять разные сотрудники в разное время. Отчёт появится в журнале после первого сохранения любого раздела.</div>`:''}
 
   <div class="card row-gap"><div class="card-h"><div class="card-t">1. ${RSEC.prod}</div>${secBadge(d,'prod')}<div class="sp"></div>${saveBtn('prod','Сохранить раздел')}</div>
@@ -1382,6 +1385,11 @@ function runDiff(sec,o,n){
 }
 async function saveRunSection(sec){
   if(!can('edit')) return;
+  if(sec==='materials'){
+    const dd=state.draft;
+    if(!A(dd.outputIds).length&&!(+dd.qtyGood)&&!(+dd.qtyDefect)) return toast('Сначала в разделе «Наработка» отметьте смены (или укажите количество) — иначе резерв сырья не снимется');
+    if(state.runDirty.prod||!dd.id){ await saveRunSection('prod'); if(state.runDirty.prod) return; }
+  }
   const d=state.draft, isNew=!d.id, id=d.id||uid(), old=d.id?byId(DB.runs,d.id):null;
   if(sec==='prod'&&!(+d.qtyGood)&&!(+d.qtyDefect)) return toast('Укажите количество изделий или выберите отчёты за смены');
   // берём свежую версию из базы и меняем только поля этого раздела — чужие разделы не затираются
@@ -1419,7 +1427,7 @@ async function saveRunSection(sec){
   // сохраняем несохранённые правки других разделов в черновике
   const keep=state.runDirty, nd=clone(rec); nd.stations=A(nd.stations); nd.settings=A(nd.settings); nd.log=A(nd.log); nd.rawFact=nd.rawFact||{}; nd.writtenMap=nd.writtenMap||{};
   Object.keys(keep).filter(s=>s!==sec&&keep[s]).forEach(s=>{ SEC_FIELDS[s].forEach(k=>nd[k]=clone(d[k])); if(s==='settings'||s==='materials') nd.stations=nd.stations.map((x,i)=>({...x,...(s==='settings'?{visc:d.stations[i]?.visc,press:d.stations[i]?.press,nozzle:d.stations[i]?.nozzle}:{factKg:d.stations[i]?.factKg})})); });
-  delete keep[sec]; state.draft=nd; render();
+  delete keep[sec]; if(sec==='prod') state.runAuto=false; state.draft=nd; render();
   toast(sec==='materials'?(moveNotes.length?`Проведено по складу: ${moveNotes.length} поз.`:'Сохранено'):`Раздел «${RSEC[sec]}» сохранён`);
 }
 function renderRuns(){
@@ -1432,7 +1440,9 @@ function renderRuns(){
     <div class="tw"><table><tr><th>Проект</th><th class="num">Смен</th><th>Период</th><th class="num">Годные</th><th class="num">Резерв сырья</th><th></th></tr>
     ${Object.entries(byP).map(([pid,os])=>{ const res={}; os.forEach(o=>Object.entries(outputReserve(o)).forEach(([rid,v])=>res[rid]=(res[rid]||0)+v)); const val=Object.entries(res).reduce((a,[rid,v])=>a+v*(+byId(DB.raw,rid)?.cost||0),0), ds=os.map(o=>o.date).sort();
       return `<tr><td><b>${esc(projName(pid))}</b></td><td class="num">${os.length}</td><td>${fdate(ds[0])}${ds.length>1?' — '+fdate(ds[ds.length-1]):''}</td><td class="num">${N(os.reduce((a,o)=>a+(+o.good||0),0))}</td><td class="num">${money(val)}</td>
-      <td>${can('edit')?`<button class="btn btn-p btn-sm" onclick="openRun('${pid}',null,null,${esc(JSON.stringify(os.map(o=>o.id)))})">Создать тех. отчёт</button>`:''}</td></tr>`; }).join('')}</table></div></div>`:''}
+      <td>${can('edit')?(()=>{ const rids=[...new Set(os.map(o=>o.runId).filter(r=>r&&byId(DB.runs,r)))], free=os.filter(o=>!o.runId||!byId(DB.runs,o.runId));
+        return rids.map(r=>`<button class="btn btn-s btn-sm" onclick="openRun('${pid}','${r}')">Открыть тех. отчёт (материалы не сохранены)</button> `).join('')+(free.length?`<button class="btn btn-p btn-sm" onclick="openRun('${pid}',null,null,${esc(JSON.stringify(free.map(o=>o.id)))})">Создать тех. отчёт</button>`:''); })():''}</td></tr>`; }).join('')}
+    ${DB.runs.filter(r=>r.writtenOff&&!runOutputs(r).length&&DB.output.some(o=>o.projectId===r.projectId&&outputOpen(o))).map(r=>`<div class="msg err" style="display:block;margin:12px 0 0">Тех. отчёт по «${esc(projName(r.projectId))}» списал сырьё, но к нему не привязаны смены — резерв по этим сменам висит повторно. <button class="btn btn-s btn-sm" onclick="openRun('${r.projectId}','${r.id}')">Открыть и привязать смены</button></div>`).join('')}</table></div></div>`:''}
   ${periodBar()}<div class="toolbar">${searchBox('Проект или линия')}<span class="muted" style="font-weight:600">${runs.length} отчётов</span></div>
   <div class="card">${runs.length?`<div class="tw flush"><table><tr><th>Наработка</th><th>Проект</th><th>Линия</th><th class="num">Смен</th><th class="num">Годные</th><th class="num">Материалы факт / план</th><th>1 · Наработка</th><th>2 · Настройки</th><th>3 · Материалы</th><th>Последнее изменение</th></tr>
     ${runs.map(r=>{ const t=runTotals(r), last=A(r.log).slice().sort((a,b)=>b.ts-a.ts)[0], corr=A(r.log).filter(x=>x.sec==='materials').length>1;
