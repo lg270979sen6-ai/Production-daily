@@ -945,7 +945,7 @@ function shiftTasks(lineId,a,b){
   return DB.plan.filter(i=>i.lineId===lineId&&itemStart(i)<b&&endMs(i)>a).map(it=>{
     const segs=itemSegs(it), runTot=segs.filter(x=>x[2]==='r').reduce((s,x)=>s+x[1]-x[0],0); let run=0, setup=0, fa=null, fb=null;
     segs.forEach(([sa,sb,k])=>{ const ov=Math.max(0,Math.min(sb,b)-Math.max(sa,a)); if(ov<=0) return; if(k==='r') run+=ov; else setup+=ov; const u=Math.max(sa,a), v=Math.min(sb,b); fa=fa==null?u:Math.min(fa,u); fb=fb==null?v:Math.max(fb,v); });
-    return {it,p:byId(DB.projects,it.projectId),qty:runTot?(+it.qty||0)*run/runTot:0,setupMin:setup/60e3,runMin:run/60e3,from:fa,to:fb};
+    return {it,p:byId(DB.projects,it.projectId),qty:Math.round(run/60e3*itemSpeed(it)),setupMin:setup/60e3,runMin:run/60e3,from:fa,to:fb};
   }).filter(x=>x.runMin+x.setupMin>1).sort((x,y)=>x.from-y.from);
 }
 // перевод «чч:мм» внутри смены в абсолютное время (ночная смена переходит через полночь)
