@@ -201,6 +201,32 @@ tfoot td{font-weight:800;background:var(--card2)}
 .g-bar.late{box-shadow:inset 0 -3px 0 var(--red),0 1px 3px rgba(0,0,0,.25)}
 .g-bar.done{opacity:.55}
 .g-ghost{position:absolute;top:46px;height:6px;border-radius:3px;border:1.5px dashed var(--text3);opacity:.8}
+.app.full .side{transform:translateX(-100%)} .app.full .side.open{transform:none;box-shadow:0 0 40px rgba(0,0,0,.25)}
+.app.full .scrim.open{display:block;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:25}
+.app.full .main{margin-left:0} .app.full .burger{display:flex} .app.full .content{max-width:none;padding:4px 18px 40px}
+.qt td{vertical-align:middle} .qt td:nth-child(2){white-space:normal;min-width:280px} .qt td:nth-child(2) b{font-size:13px} .qt td:nth-child(8){white-space:normal;min-width:120px} .qt td:nth-child(9){white-space:normal;min-width:150px} .qt td:nth-child(9) .tag{margin:1px 0} .qt tr.q-line td{background:var(--card2);padding:9px 12px;border-top:2px solid var(--line2)} .qt tr.q-run td:first-child{box-shadow:inset 4px 0 0 var(--blue)} .qt tr.q-done{opacity:.5}
+.q-arr{white-space:nowrap} .q-arr .btn{padding:3px 8px;margin-right:3px;font-size:13px} .q-arr .btn:disabled{opacity:.25}
+.sg td{vertical-align:top;font-size:12px;padding:6px 8px;border-left:1px solid var(--line)} .sg th{border-left:1px solid var(--line)} .sg th.c{text-align:center}
+.sg tr.sg-last td{border-bottom:2px solid var(--line2)} .sg-date{font-weight:800;white-space:nowrap;background:var(--card2);font-size:12.5px!important;line-height:1.5} .sg-today td.sg-date,.sg-today td.sg-line{color:var(--brand)}
+.sg-line{font-weight:700;white-space:nowrap} .sg-pc{min-width:230px} .sg-fc{min-width:200px;background:rgba(31,169,113,.035)}
+.sg-off{background:repeating-linear-gradient(135deg,rgba(120,130,150,.13) 0 4px,transparent 4px 8px);color:var(--text3);text-align:center;vertical-align:middle!important}
+.sg-p,.sg-fr{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;cursor:pointer;padding:2px 0;border-radius:5px} .sg-p:hover,.sg-fr:hover{background:var(--card2)}
+.sg-p .sw,.sg-fr .sw{width:8px;height:8px;margin:0;align-self:center} .sg-n{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .sg-p small{width:100%;color:var(--text3);padding-left:14px}
+.sg-dn{color:var(--red);font-weight:700;cursor:pointer;padding:2px 0} .sg-f.pend{border:1.5px dashed var(--amber);border-radius:7px;padding:3px 5px;margin-bottom:3px;background:var(--amberBg)}
+.sg-pl{color:var(--amber);font-weight:700;margin-top:2px} .sg-miss{color:var(--red);font-weight:700} .sg-pct{font-weight:800;margin-top:3px;font-size:11.5px} .sg-pct.ok{color:var(--green)} .sg-pct.mid{color:var(--amber)} .sg-pct.bad{color:var(--red)}
+.dc-day{margin-top:14px;padding-top:10px;border-top:1px solid var(--line)} .dc-day:first-child{margin-top:0;border-top:0;padding-top:0} .dc-day.today .dc-dh b{color:var(--brand)}
+.dc-dh{font-size:14px;margin-bottom:4px} .dc-ticks{position:relative;height:16px;margin-left:170px;font-size:10.5px;color:var(--text3);font-weight:700}
+.dc-ticks span{position:absolute;transform:translateX(-50%)} .dc-ticks span:first-child{transform:none} .dc-ticks span:last-child{transform:translateX(-100%)}
+.dc-line{display:flex;align-items:stretch;border-top:1px solid var(--line)} .dc-lab{width:170px;flex-shrink:0;font-size:12.5px;font-weight:800;padding-right:8px} .dc-lab>div{height:34px;display:flex;align-items:center;gap:6px} .dc-lab span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .dc-lab i{margin-left:auto;font-style:normal;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em} .dc-lab>div+div{border-top:1px dashed var(--line)}
+.dc-tracks{flex:1;min-width:0} .dc-tr{position:relative;height:34px} .dc-tr+.dc-tr{border-top:1px dashed var(--line)}
+.dc-seg{position:absolute;top:4px;height:26px;border-radius:5px;overflow:hidden;font-size:11px;font-weight:700;color:#fff;padding:0 5px;line-height:26px;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);z-index:1}
+.dc-seg.s{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.5) 0 4px,transparent 4px 8px)} .dc-seg.p{background:#98a1b1;color:#fff}
+.dc-seg.pend{opacity:.6;outline:2px dashed var(--amber);outline-offset:-2px}
+.dc-off{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,rgba(120,130,150,.2) 0 3px,transparent 3px 7px)}
+.dc-down{position:absolute;top:2px;bottom:2px;background:rgba(229,72,77,.18);border:1px solid rgba(229,72,77,.5);border-radius:4px;font-size:10.5px;color:var(--red);font-weight:700;padding:0 4px;line-height:28px;overflow:hidden;white-space:nowrap}
+.dc-now{position:absolute;top:0;bottom:0;width:2px;background:var(--red);z-index:3;pointer-events:none}
+.ex-head,.ex-row{display:grid;grid-template-columns:1fr 80px 124px 130px 36px;gap:6px;align-items:center} .ex-row{margin-bottom:6px} .ex-head{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
+.ex-row .fi{padding:7px 9px} .ex-e-l{display:flex;gap:6px;align-items:center;font-size:12.5px;white-space:nowrap}
 .g-now{position:absolute;top:0;bottom:0;width:2px;background:var(--red);z-index:3;pointer-events:none}
 
 .modal{position:fixed;inset:0;background:rgba(15,20,30,.45);display:none;align-items:center;justify-content:center;padding:18px;z-index:60;backdrop-filter:blur(3px)}
@@ -577,7 +603,7 @@ function orderStats(){ const s={shipped:0,done:0,overdue:0,work:0,new:0}; DB.ord
 const OST = {shipped:['Отгружен','t-green'],done:['Произведён','t-green'],overdue:['Просрочен','t-red'],work:['В работе','t-blue'],new:['Новый','t-gray']};
 
 // ═════════════════════════════════════════════
-//  SCHEDULER — календарь линий: смены, дни, простои, наладка при перезапуске
+//  SCHEDULER — календарь линий: смены, дни, простои; паузы — только вручную
 // ═════════════════════════════════════════════
 const hm = s => { const [h,m]=String(s||'0:0').split(':').map(Number); return (h||0)*60+(m||0); };
 const LIVE = {id:'live'};
@@ -607,35 +633,77 @@ function lineWindows(lineId,from,to,ctx){
   return res.filter(([a,b])=>b>from&&a<to);
 }
 const _sch = new Map();
-// Раскладывает позицию плана по рабочему времени линии:
-// наладка в начале → работа → (перерыв: нерабочая смена или простой) → наладка при перезапуске → работа …
+const PAUSE_KINDS=['Обед','Уборка','Пересменка','Подсчёт материалов','Мойка / промывка','Смена цвета'];
+// рабочие окна линии по сменам (не склеиваем — нужны начала смен), минус простои
+function shiftWins(lineId,from,to,ctx){
+  const cfg=lineCfg(lineId,ctx), w=[], d=new Date(from); d.setHours(0,0,0,0); d.setDate(d.getDate()-1);
+  for(; d.getTime()<to; d.setDate(d.getDate()+1)){
+    if(!cfg.days.includes(d.getDay())) continue; const base=d.getTime();
+    lineShiftDefs(lineId).forEach(s=>{ if(!cfg.shifts.includes(+s.n)) return; const a=base+hm(s.from)*60e3; let b=base+hm(s.to)*60e3; if(b<=a) b+=864e5; w.push([a,b,a]); });
+  }
+  w.sort((x,y)=>x[0]-y[0]); let res=w;
+  ctxDowns(ctx).filter(dn=>dn.lineId===lineId).forEach(dn=>{ const da=tms(dn.start), db=tms(dn.end), nx=[];
+    res.forEach(([a,b,s0])=>{ if(db<=a||da>=b){ nx.push([a,b,s0]); return; } if(da>a) nx.push([a,da,s0]); if(db<b) nx.push([db,b,-1]); }); res=nx; });
+  return res.filter(([a,b])=>b>from&&a<to);
+}
+// Позиция плана: первичная наладка → работа (кол-во / скорость). Никаких автоматических добавок:
+// паузы (обед, уборка, пересменка, подсчёт…) технолог добавляет сам в деталях позиции.
+//   • с временем (12:00) — в это время; «каждую смену» — каждый день в это время
+//   • без времени, «каждую смену» — в начале каждой смены, в которую идёт работа
+//   • без времени, разово — в конце позиции
 function sched(it,ctx){
-  const key=(ctx?.id||'live')+'|'+it.id+'|'+it.start+'|'+it.qty+'|'+it.lineId+'|'+it.projectId+'|'+(it.noSetup?1:0);
+  const ex=A(it.extras);
+  const key=(ctx?.id||'live')+'|'+it.id+'|'+it.start+'|'+it.qty+'|'+it.lineId+'|'+it.projectId+'|'+(it.noSetup?1:0)+'|'+it.speedPlan+'|'+it.setupPlan+'|'+JSON.stringify(ex);
   if(_sch.has(key)) return _sch.get(key);
-  const p=byId(DB.projects,it.projectId), start=tms(it.start), res={start,end:start,segs:[],setup:0,restarts:0,run:0,hours:0,ok:true};
+  const p=byId(DB.projects,it.projectId), start=tms(it.start), res={start,end:start,segs:[],setup:0,run:0,pause:0,restarts:0,hours:0,ok:true};
   if(p&&+it.qty>0&&isFinite(start)){
-    const restart=(p.restartMin!==''&&p.restartMin!=null&&isFinite(+p.restartMin))?+p.restartMin:lineCfg(it.lineId,ctx).restart;
-    let setupNeed=it.noSetup?0:(+p.setupMin||0), runLeft=(+it.qty)/Math.max(1,+p.speed||1), last=null, t=start, from=start;
-    for(let chunk=0; chunk<16&&runLeft>1e-6; chunk++, from+=14*864e5){
-      for(const [wa,wb] of lineWindows(it.lineId,from,from+14*864e5,ctx)){
-        if(wb<=t) continue; let a=Math.max(wa,t);
-        if(last!=null&&a>last+60e3&&setupNeed<=1e-6&&restart>0){ setupNeed=restart; res.restarts++; }
-        if(setupNeed>1e-6){ const s=Math.min(setupNeed,(wb-a)/60e3); res.segs.push([a,a+s*60e3,'s']); res.setup+=s; setupNeed-=s; a+=s*60e3; last=t=a; if(setupNeed>1e-6) continue; }
-        const r=Math.min(runLeft,(wb-a)/60e3); if(r>0){ res.segs.push([a,a+r*60e3,'r']); res.run+=r; runLeft-=r; a+=r*60e3; last=t=a; }
-        if(runLeft<=1e-6) break;
+    const need=[], su=itemSetup(it); if(!it.noSetup&&su>0) need.push({k:'s',m:su,l:'Наладка'});
+    need.push({k:'r',m:(+it.qty)/Math.max(0.01,itemSpeed(it)),l:''});
+    ex.filter(e=>!e.time&&!e.every&&+e.min>0).forEach(e=>need.push({k:'p',m:+e.min,l:e.kind||'Пауза'}));
+    const perShift=ex.filter(e=>!e.time&&e.every&&+e.min>0), timed=ex.filter(e=>e.time&&+e.min>0), done=new Set();
+    let t=start, from=start;
+    const put=(a,b,k,l)=>{ if(b-a<1000) return; const last=res.segs[res.segs.length-1]; if(last&&last[2]===k&&last[3]===l&&Math.abs(last[1]-a)<1000) last[1]=b; else res.segs.push([a,b,k,l]); const m=(b-a)/60e3; if(k==='s') res.setup+=m; else if(k==='r') res.run+=m; else res.pause+=m; };
+    for(let chunk=0; chunk<16&&need.length; chunk++, from+=14*864e5){
+      for(const [wa,wb,s0] of shiftWins(it.lineId,from,from+14*864e5,ctx)){
+        if(wb<=t||!need.length) continue; let a=Math.max(wa,t); const q=[];
+        if(a===wa&&s0===wa) perShift.forEach(e=>q.push({m:+e.min,l:e.kind||'Пауза'}));
+        const occ=[]; const dd=new Date(a-864e5); dd.setHours(0,0,0,0); for(let d=dd; d.getTime()<wb; d.setDate(d.getDate()+1)){ const d0=new Date(d);
+          timed.forEach((e,ix)=>{ const at=d0.getTime()+hm(e.time)*60e3; if(at>=a&&at<wb&&(e.every||!done.has(ix))) occ.push({at,m:+e.min,l:e.kind||'Пауза',ix,every:e.every}); }); }
+        occ.sort((x,y)=>x.at-y.at);
+        while(a<wb-1000&&need.length){
+          if(q.length){ const x=q[0], d=Math.min(x.m,(wb-a)/60e3); put(a,a+d*60e3,'p',x.l); a+=d*60e3; x.m-=d; if(x.m<=1e-6) q.shift(); continue; }
+          if(occ.length&&occ[0].at<=a+1000){ const o=occ.shift(); if(!o.every) done.add(o.ix); q.push({m:o.m,l:o.l}); continue; }
+          const lim=Math.min(wb,occ.length?occ[0].at:wb), cur=need[0], d=Math.min(cur.m,(lim-a)/60e3);
+          if(d<=0){ if(occ.length) continue; break; }
+          put(a,a+d*60e3,cur.k,cur.k==='r'?'':cur.l); a+=d*60e3; cur.m-=d; if(cur.m<=1e-6) need.shift();
+        }
+        t=a;
       }
     }
-    res.ok=runLeft<=1e-6;
+    res.ok=!need.length;
     if(res.segs.length){ res.start=res.segs[0][0]; res.end=res.segs[res.segs.length-1][1]; }
     res.hours=(res.end-res.start)/H;
   }
   _sch.set(key,res); return res;
 }
-const itemSegs = (it,ctx) => it.fixed ? A(it.segs).map(s=>[+s.a,+s.b,s.k]) : sched(it,ctx).segs;
+const itemSegs = (it,ctx) => it.fixed ? A(it.segs).map(s=>[+s.a,+s.b,s.k,s.l||'']) : sched(it,ctx).segs;
 const itemStart = (it,ctx) => it.fixed ? (+it.startMs||tms(it.start)) : sched(it,ctx).start;
 const endMs = (it,ctx) => it.fixed ? (+it.end||tms(it.start)+(+it.hours||0)*H) : sched(it,ctx).end;
 const itemHours = (it,ctx) => (endMs(it,ctx)-itemStart(it,ctx))/H;
-function snapItem(it,ctx){ const s=sched(it,ctx); const o=clone(it); delete o.fixed; return {...o,fixed:true,startMs:s.start,end:s.end,hours:Math.round(s.hours*100)/100,setupMin:Math.round(s.setup),restarts:s.restarts,segs:s.segs.map(([a,b,k])=>({a,b,k}))}; }
+function snapItem(it,ctx){ const s=sched(it,ctx); const o=clone(it); delete o.fixed; return {...o,fixed:true,startMs:s.start,end:s.end,hours:Math.round(s.hours*100)/100,setupMin:Math.round(s.setup),pauseMin:Math.round(s.pause),restarts:0,segs:s.segs.map(([a,b,k,l])=>({a,b,k,l:l||''}))}; }
+// очередь линии: каждый следующий проект стартует, когда закончился предыдущий (или не раньше заданного времени)
+const seqOf = it => it.seq!=null&&it.seq!==''?+it.seq:1e9+(tms(it.start)||0)/1e6;
+function relineChain(items,lineId,ctx){
+  const now=Date.now(), li=items.filter(i=>i.lineId===lineId).sort((a,b)=>seqOf(a)-seqOf(b)||(tms(a.start)-tms(b.start))), ch=new Set(); let prevEnd=null;
+  li.forEach((it,k)=>{
+    if(+it.seq!==k){ it.seq=k; ch.add(it); }
+    const st=tms(it.start), started=isFinite(st)&&st<=now&&sched(it,ctx).start<=now;
+    if(!started){ const nb=it.notBefore?tms(it.notBefore):0; let want=prevEnd!=null?Math.max(prevEnd,nb):Math.max(isFinite(st)?st:now,nb); want=Math.max(want,prevEnd??0);
+      const w=toDT(want); if(it.start!==w){ it.start=w; ch.add(it); } }
+    const e=sched(it,ctx).end; prevEnd=prevEnd==null?e:Math.max(prevEnd,e);
+  });
+  return [...ch];
+}
 function monthGeo(){ const [y,m]=state.planMonth.split('-').map(Number), days=new Date(y,m,0).getDate(), t0=new Date(y,m-1,1).getTime(), t1=new Date(y,m,1).getTime(), HW=2, DW=48; return {y,m,days,t0,t1,HW,DW,W:days*DW}; }
 function monthItems(items,mk,ctx){ const [y,m]=mk.split('-').map(Number), t0=new Date(y,m-1,1).getTime(), t1=new Date(y,m,1).getTime(); return items.filter(it=>itemStart(it,ctx)<t1&&endMs(it,ctx)>t0); }
 // сдвигает позиции линии вперёд, если они налезают друг на друга
@@ -655,12 +723,12 @@ function compactLine(items,lineId,ctx){
   });
   return changed;
 }
-function overlapsCount(items,ctx){ let n=0; DB.lines.forEach(l=>{ let pe=0; items.filter(i=>i.lineId===l.id).sort((a,b)=>itemStart(a,ctx)-itemStart(b,ctx)).forEach(it=>{ if(pe&&itemStart(it,ctx)<pe-60e3) n++; pe=Math.max(pe,endMs(it,ctx)); }); }); return n; }
+function overlapsCount(items,ctx){ let n=0; DB.lines.forEach(l=>{ let pe=0; items.filter(i=>i.lineId===l.id).sort((a,b)=>itemStart(a,ctx)-itemStart(b,ctx)).forEach(it=>{ if(pe&&itemStart(it,ctx)<pe-60e3&&endMs(it,ctx)>Date.now()) n++; pe=Math.max(pe,endMs(it,ctx)); }); }); return n; }
 function lineEnd(lineId,exceptId,ctx){ const its=ctxItems(ctx).filter(i=>i.lineId===lineId&&i.id!==exceptId); return its.length?Math.max(...its.map(i=>endMs(i,ctx))):null; }
 function orderFinish(o,ctx){ const its=ctxItems(ctx).filter(i=>i.orderId===o.id); return its.length?Math.max(...its.map(i=>endMs(i,ctx))):null; }
 function itemFact(it){
-  const rs=DB.output.filter(r=>r.planItemId===it.id), st=rs.map(r=>tms(r.startAt)).filter(isFinite), en=rs.map(r=>tms(r.endAt)).filter(isFinite);
-  return {good:rs.reduce((a,r)=>a+(+r.good||0),0),defect:rs.reduce((a,r)=>a+(+r.defect||0),0),start:st.length?Math.min(...st):null,end:en.length?Math.max(...en):null,recs:rs};
+  const all=DB.output.filter(r=>r.planItemId===it.id), rs=all.filter(r=>r.approved!==false), st=rs.map(r=>tms(r.startAt)).filter(isFinite), en=rs.map(r=>tms(r.endAt)).filter(isFinite);
+  return {good:rs.reduce((a,r)=>a+(+r.good||0),0),defect:rs.reduce((a,r)=>a+(+r.defect||0),0),pending:all.filter(r=>r.approved===false).reduce((a,r)=>a+(+r.good||0),0),start:st.length?Math.min(...st):null,end:en.length?Math.max(...en):null,recs:rs};
 }
 const runFor = it => DB.runs.find(r=>r.planItemId===it.id);
 function itemStatus(it,ctx,chk){
@@ -988,10 +1056,10 @@ async function odSave(){
       planItemId:isMain&&od.taskId?od.taskId:(task?.it.id||''),orderId:isMain?od.orderId:(task?.it.orderId||''),
       startAt:toDT(isMain?c.rows[0]?.a??od.win[0]:bp.a),endAt:toDT(isMain?c.end:bp.b),good:+od.outs[pid].good||0,defect:+od.outs[pid].defect||0,reason:od.outs[pid].reason||'',
       workMin:Math.round(bp.work),setup:Math.round(bp.setup),downtime:Math.round(bp.down),breakMin:Math.round(bp.break),downBy:Object.fromEntries(Object.entries(bp.downBy).map(([k,v])=>[k,Math.round(v)])),timeline:isMain?timeline:[],
-      operator:od.operator,ts:Date.now(),by:state.me.id}});
+      operator:od.operator,ts:Date.now(),by:state.me.id,approved:canApprove(),approvedBy:canApprove()?state.me.name:'',approvedAt:canApprove()?Date.now():0}});
   });
   oldRecs.filter(r=>!projs.includes(r.projectId)).forEach(r=>list.push({col:'output',id:r.id,del:true}));
-  await Store.batch(list); toast('Отчёт за смену сохранён');
+  await Store.batch(list); toast(canApprove()?'Отчёт за смену сохранён и подтверждён':'Отчёт за смену сохранён — ждёт проверки технолога');
 }
 async function odDelete(){ if(!confirm('Удалить отчёт за смену?')) return; const list=state.od.recs.map(id=>({col:'output',id,del:true})); closeModal(); await Store.batch(list); toast('Удалено'); }
 function miniTL(r){
@@ -1007,10 +1075,11 @@ function renderOutput(){
   <div class="toolbar">${lineFilter()}<span class="muted" style="font-weight:600">${recs.length} записей · ${N(m.good)} годных · брак ${P(m.defPct)}</span><div class="sp"></div>
     ${can('output')?`<button class="btn btn-p" onclick="openOutputModal()">+ Выпуск за смену</button>`:''}</div>
   <div class="card">${shown.length?`<div class="tw flush"><table>
-    <tr><th>Дата</th><th>Смена</th><th>Линия</th><th>Проект</th><th>Хронометраж</th><th class="num">Годные</th><th class="num">Брак</th><th class="num">Работа</th><th class="num">Наладка</th><th class="num">Простои</th><th>Оператор</th><th></th></tr>
+    <tr><th>Дата</th><th>Смена</th><th>Линия</th><th>Проект</th><th>Хронометраж</th><th class="num">Годные</th><th class="num">Брак</th><th class="num">Работа</th><th class="num">Наладка</th><th class="num">Простои</th><th>Оператор</th><th>Проверка</th><th></th></tr>
     ${shown.map(r=>`<tr class="${can('output')?'click':''}" ${can('output')?`onclick="if(!event.target.closest('button'))openOutputModal('${r.id}')"`:''}><td>${fdate(r.date)}</td><td>${esc(shiftName(r.lineId,r.shift))}</td><td>${esc(lineName(r.lineId))}</td><td>${esc(projName(r.projectId))}${r.planItemId?'':' <span class="tag t-gray" data-tip="Не по сменному заданию">вне плана</span>'}</td>
       <td>${miniTL(r)}</td><td class="num"><b>${N(r.good)}</b></td><td class="num">${N(r.defect)}</td><td class="num">${r.workMin!=null?minTxt(r.workMin):'—'}</td><td class="num">${r.setup?minTxt(r.setup):'—'}</td>
       <td class="num">${r.downtime?`<span data-tip="${Object.entries(r.downBy||{}).map(([k,v])=>esc(downName(k))+': '+minTxt(v)).join('<br>')||'без детализации'}">${minTxt(r.downtime)}</span>`:'—'}</td><td>${esc(r.operator||'')}</td>
+      <td>${r.approved===false?`<span class="tag t-amber">на проверке</span>${canApprove()?` <button class="btn btn-g btn-sm" onclick="approveOutput('${r.reportId||r.id}')">✔</button>`:''}`:`<span class="tag t-green" data-tip="${esc(r.approvedBy?'Подтвердил: '+r.approvedBy+(r.approvedAt?' · '+fts(r.approvedAt):''):'Подтверждён')}">✔ факт</span>`}</td>
       <td>${can('edit')?`<button class="btn btn-d btn-sm" onclick="delItem('output','${r.id}')">✕</button>`:''}</td></tr>`).join('')}
   </table></div>${recs.length>300?`<div class="muted" style="padding:14px 0 0;font-size:12px">Показаны последние 300 записей.</div>`:''}`:'<div class="empty">Нет записей за выбранный период</div>'}</div>`;
 }
@@ -1252,12 +1321,11 @@ function renderProjectEdit(){
       <div class="fg"><label class="fl">Цвет в плане</label><input class="fi" type="color" style="height:42px;padding:4px" value="${d.color||pColor(d)}" ${ro?'disabled':''} onchange="D('color',this.value)"></div></div>
       <div class="frow3"><div class="fg"><label class="fl">План: скорость, шт/мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="1" value="${d.speed}" ${ro?'disabled':''} onchange="D('speed',+this.value);renderProjectEdit()"></div>
       <div class="fg"><label class="fl">План: наладка, мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" value="${d.setupMin}" ${ro?'disabled':''} onchange="D('setupMin',+this.value);renderProjectEdit()"></div>
-      <div class="fg"><label class="fl">Наладка при перезапуске, мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" value="${d.restartMin??''}" placeholder="как у линии: ${N(line?.restartMin)}" ${ro?'disabled':''} onchange="D('restartMin',this.value===''?'':+this.value)"></div></div>
+      <div class="fg"><div class="hint" style="margin-top:22px">Обед, уборку, пересменку технолог добавляет в самом плане — у каждого проекта отдельно</div></div></div>
     </div>
     <div class="card"><div class="card-h"><div class="card-t">Расчёт</div></div>
       <div class="stat"><span>Выработка в час / смену</span><b>${N(d.speed*60)} / ${N(d.speed*60*sh)} шт</b></div>
       <div class="stat"><span>100 000 шт: чистое время + наладка</span><b>${Q(planHours(d,100000),1)} ч</b></div>
-      <div class="stat"><span>Перезапуск после остановки линии</span><b>${N(d.restartMin!==''&&d.restartMin!=null?d.restartMin:line?.restartMin)} мин</b></div>
       <div class="stat"><span>Материалы на 1000 шт</span><b>${Q(kg,3)} кг</b></div>
       <div class="stat"><span>Себестоимость покрытия / 1000 шт</span><b>${money(cost)}</b></div>
       <div class="stat"><span>Станций задействовано</span><b>${d.stations.filter(s=>s.semiId).length}${line?.stations?' из '+line.stations:''}</b></div>
@@ -1609,13 +1677,13 @@ function printRun(id){
 // ═════════════════════════════════════════════
 const DAYN=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
 function renderLines(){
-  $('#content').innerHTML=`<div class="toolbar"><span class="muted" style="font-weight:600">Сменность, рабочие дни и наладка при перезапуске используются планом для расчёта окончания позиций</span><div class="sp"></div>${can('edit')?`<button class="btn btn-p" onclick="openLineModal()">+ Линия</button>`:''}</div>
+  $('#content').innerHTML=`<div class="toolbar"><span class="muted" style="font-weight:600">Схема смен, работающие смены и рабочие дни используются планом для расчёта окончания проектов</span><div class="sp"></div>${can('edit')?`<button class="btn btn-p" onclick="openLineModal()">+ Линия</button>`:''}</div>
   <div class="grid g3">${DB.lines.map(l=>{ const ps=DB.projects.filter(p=>p.lineId===l.id&&p.status!=='Архив'), c=lineCfg(l.id); return `<div class="card"><div class="card-h"><div><div class="card-t">${esc(l.name)}</div><div class="card-s">${esc(l.type||'')}</div></div><div class="sp"></div>${can('edit')?`<button class="btn btn-s btn-sm" onclick="openLineModal('${l.id}')">✎</button>`:''}</div>
-    <div class="shifts"><div class="sh"><div class="n">Станций</div><div class="v">${l.stations||'—'}</div><div class="d">пистолетов/голов</div></div><div class="sh"><div class="n">Работает</div><div class="v" style="font-size:15px">${esc(shiftLabel(l.id))}</div><div class="d">${[1,2,3,4,5,6,0].filter(x=>c.days.includes(x)).map(x=>DAYN[x]).join(' ')}</div></div><div class="sh"><div class="n">Перезапуск</div><div class="v">${N(c.restart)}</div><div class="d">мин наладки после остановки</div></div></div>
+    <div class="shifts"><div class="sh"><div class="n">Станций</div><div class="v">${l.stations||'—'}</div><div class="d">пистолетов/голов</div></div><div class="sh"><div class="n">Работает</div><div class="v" style="font-size:15px">${esc(shiftLabel(l.id))}</div><div class="d">${[1,2,3,4,5,6,0].filter(x=>c.days.includes(x)).map(x=>DAYN[x]).join(' ')}</div></div><div class="sh"><div class="n">В очереди</div><div class="v">${DB.plan.filter(i=>i.lineId===l.id&&endMs(i,LIVE)>Date.now()).length}</div><div class="d">проектов в плане</div></div></div>
     <div class="hint" style="margin-top:12px">Мощность для плана по умолчанию: ${short(l.cap)} шт/смену · Проекты: ${ps.length?ps.map(p=>esc(p.name)).join(', '):'—'}</div></div>`; }).join('')||'<div class="card"><div class="empty">Линий пока нет</div></div>'}</div>`;
 }
 function openLineModal(id){
-  const l=id?byId(DB.lines,id):{name:'',type:'',stations:7,cap:30000,workDays:[1,2,3,4,5,6,0],restartMin:30};
+  const l=id?byId(DB.lines,id):{name:'',type:'',stations:7,cap:30000,workDays:[1,2,3,4,5,6,0]};
   const scId=id?lineScheme(id).id:shiftSchemes()[0].id, ws=id?lineCfg(id).shifts:null, wd=A(l.workDays).length?A(l.workDays).map(Number):[0,1,2,3,4,5,6];
   modal(id?'Линия':'Новая линия',`<div class="fg"><label class="fl">Название</label><input class="fi" name="name" value="${esc(l.name)}" autofocus></div>
     <div class="frow"><div class="fg"><label class="fl">Технология</label><input class="fi" name="type" value="${esc(l.type||'')}" placeholder="Пистолетная покраска, печь, УФ…"></div>
@@ -1623,12 +1691,11 @@ function openLineModal(id){
     <div class="frow"><div class="fg"><label class="fl">Схема смен <button type="button" class="link" onclick="closeModal();go('settings')">(конструктор)</button></label><select class="fi" name="scheme" onchange="document.getElementById('lnSh').innerHTML=lineShiftChips(this.value)">${shiftSchemes().map(s=>`<option value="${esc(s.id)}" ${s.id===scId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
     <div class="fg"><label class="fl">Работающие смены</label><div id="lnSh" style="display:flex;gap:6px;flex-wrap:wrap">${lineShiftChips(scId,ws)}</div></div></div>
     <div class="fg"><label class="fl">Рабочие дни</label><div style="display:flex;gap:6px;flex-wrap:wrap">${[1,2,3,4,5,6,0].map(x=>`<label class="chip ${wd.includes(x)?'on':''}" style="cursor:pointer"><input type="checkbox" name="d_${x}" style="display:none" ${wd.includes(x)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${DAYN[x]}</label>`).join('')}</div></div>
-    <div class="frow"><div class="fg"><label class="fl">Наладка при перезапуске, мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" name="restartMin" value="${l.restartMin??30}"><div class="hint" style="margin-top:4px">Добавляется каждый раз, когда линия возобновляет работу после нерабочей смены или простоя. В проекте можно задать своё значение.</div></div>
-    <div class="fg"><label class="fl">Мощность, шт/смену</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="cap" value="${l.cap}"><div class="hint" style="margin-top:4px">Для плана по умолчанию, пока месяц не утверждён.</div></div></div>`,
+    <div class="fg"><label class="fl">Мощность, шт/смену</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="cap" value="${l.cap}"><div class="hint" style="margin-top:4px">Для плана по умолчанию, пока месяц не утверждён.</div></div>`,
   async f=>{ if(!f.name.trim()) return false;
     const sc=shiftSchemes().find(x=>x.id===f.scheme)||shiftSchemes()[0], workShifts=A(sc.shifts).map((_,i)=>i+1).filter(n=>f['sh_'+n]), workDays=[0,1,2,3,4,5,6].filter(x=>f['d_'+x]);
     if(!workShifts.length||!workDays.length){ toast('Выберите хотя бы одну смену и один день'); return false; }
-    await Store.put('lines',{...(id?l:{}),id:id||uid(),name:f.name.trim(),type:f.type,stations:+f.stations||1,cap:+f.cap||0,shifts:workShifts.length,scheme:sc.id,workShifts,workDays,restartMin:+f.restartMin||0}); });
+    await Store.put('lines',{...(id?l:{}),id:id||uid(),name:f.name.trim(),type:f.type,stations:+f.stations||1,cap:+f.cap||0,shifts:workShifts.length,scheme:sc.id,workShifts,workDays}); });
 }
 function lineShiftChips(schemeId,active){ const sc=shiftSchemes().find(x=>x.id===schemeId)||shiftSchemes()[0];
   return A(sc.shifts).map((s,i)=>{ const n=i+1, on=!active||active.includes(n); return `<label class="chip ${on?'on':''}" style="cursor:pointer"><input type="checkbox" name="sh_${n}" style="display:none" ${on?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${n}-я · ${s.from}–${s.to}</label>`; }).join('');
@@ -1642,31 +1709,313 @@ function monthNav(){ return `<button class="btn btn-s btn-sm" onclick="shiftMont
 function viewSeg(){ return `<div class="seg">${[['rows','По проектам (строки)'],['lines','По линиям']].map(([k,l])=>`<button class="${state.planView===k?'on':''}" onclick="state.planView='${k}';render()">${l}</button>`).join('')}</div>`; }
 function renderPlan(){
   if(!state.planMonth) state.planMonth=monthKey(new Date());
-  const mk=state.planMonth, tab=state.planTab, ap=DB.approved?.[mk], cur=monthItems(DB.plan,mk,LIVE).sort((a,b)=>itemStart(a)-itemStart(b));
-  const lastLog=DB.planLog.slice().sort((a,b)=>b.ts-a.ts)[0], ov=overlapsCount(DB.plan,LIVE), ce=can('edit');
-  const head=`<div class="toolbar">${monthNav()}
-    <div class="seg" style="margin-left:8px">${[['live','Действующий'],['approved','Утверждённый'],['compare','План / факт']].map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="state.planTab='${k}';render()">${l}</button>`).join('')}</div>
-    ${tab!=='compare'?viewSeg():''}<div class="sp"></div>
-    ${tab==='live'&&ce?`<button class="btn btn-s" onclick="openDown()">⛔ Простой</button><button class="btn btn-s" onclick="openMeeting()">📝 Оперативка</button><button class="btn btn-p" onclick="openPlanItem()">+ Позиция</button>`:''}
-    ${tab!=='compare'&&can('admin')?`<button class="btn btn-s" onclick="approveMonth()">✔ Утвердить ${ap?'заново':'месяц'}</button>`:''}</div>
-  <div class="toolbar" style="margin-top:-4px">${ap?`<span class="pill">✔ Утверждён ${fts(ap.at)} · ${esc(ap.by||'')}</span>`:'<span class="pill" style="color:var(--amber)">План месяца не утверждён</span>'}
-    ${lastLog?`<span class="pill">🕘 Изменён ${fts(lastLog.ts)} · ${esc(lastLog.by||'')}</span>`:''}
-    ${tab==='live'&&ov?`<span class="pill" style="color:var(--red)">⚠ Наложений: ${ov}${ce?` <button class="btn btn-s btn-sm" onclick="fixOverlaps()">Сдвинуть</button>`:''}</span>`:''}</div>`;
-  let body='';
+  if(!state.planTab) state.planTab='live';
+  const mk=state.planMonth, tab=state.planTab, ap=DB.approved?.[mk], ce=can('edit');
+  const lastLog=DB.planLog.slice().sort((a,b)=>b.ts-a.ts)[0];
+  const tabs=`<div class="seg">${[['live','Действующий план'],['approved','Утверждённый'],['compare','План / факт']].map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="state.planTab='${k}';render()">${l}</button>`).join('')}</div>`;
   if(tab==='live'){
-    const chk=planMaterialCheck(LIVE), opt={ctx:LIVE,ghost:A(ap?.items),editable:ce,chk};
-    body=`<div class="card row-gap"><div class="card-h"><div class="card-t">Действующий план</div><div class="card-s">корректируется после оперативки · виден всем</div><div class="sp"></div>${planLegend()}</div>
-      ${state.planView==='rows'?scheduleRows(cur,opt):gantt(cur,opt)}</div>
-    <div class="card row-gap"><div class="card-h"><div class="card-t">Позиции плана</div><div class="card-s">${cur.length} шт${ce?' · нажмите строку, чтобы изменить':''}</div></div>${planTable(cur,chk,ce,LIVE)}</div>
+    plRange(); const days=plDays(), chk=planMaterialCheck(LIVE), ov=overlapsCount(DB.plan,LIVE);
+    $('#content').innerHTML=`<div class="toolbar">${tabs}
+      <div style="display:flex;align-items:center;gap:6px;margin-left:6px;flex-wrap:nowrap"><span class="fl" style="margin:0;white-space:nowrap">Период с</span><input class="fi" type="date" value="${state.plFrom}" style="width:155px" onchange="state.plFrom=this.value||state.plFrom;render()"><span class="fl" style="margin:0">по</span><input class="fi" type="date" value="${state.plTo}" style="width:155px" onchange="state.plTo=this.value||state.plTo;render()"></div>
+      <div class="sp"></div>
+      ${ce?`<button class="btn btn-s" onclick="openDown()">⛔ Простой</button><button class="btn btn-s" onclick="openMeeting()">📝 Оперативка</button><button class="btn btn-p" onclick="openQAdd()">+ Проект в план</button>`:''}</div>
+    <div class="toolbar" style="margin-top:-4px">${lastLog?`<span class="pill">🕘 Изменён ${fts(lastLog.ts)} · ${esc(lastLog.by||'')}</span>`:''}
+      ${ov?`<span class="pill" style="color:var(--red)">⚠ Наложений: ${ov}${ce?` <button class="btn btn-s btn-sm" onclick="qRelineAll()">Выстроить очередь</button>`:''}</span>`:''}
+      ${DB.output.some(r=>r.approved===false)?`<span class="pill" style="color:var(--amber)">⏳ Отчётов смен на проверке: ${new Set(DB.output.filter(r=>r.approved===false).map(r=>r.reportId||r.id)).size}</span>`:''}</div>
+    <div class="card row-gap"><div class="card-h"><div class="card-t">Очередь проектов по линиям</div><div class="card-s">${ce?'стрелками меняется порядок · нажмите строку — детали, паузы, обед, уборка':'порядок наработки на каждой линии'}</div></div>${planQueue(chk)}</div>
+    <div class="card row-gap"><div class="card-h"><div class="card-t">План и факт по сменам</div><div class="card-s">факт появляется после проверки отчёта смены технологом</div></div>${planGrid(days)}</div>
+    <div class="card row-gap"><div class="card-h"><div class="card-t">График по дням</div><div class="card-s">сутки ${dayStartLabel()} → ${dayStartLabel()} · верхняя полоса — план, нижняя — факт из хронометража смен</div><div class="sp"></div>${dcLegend()}</div>${planDayChart(days)}</div>
     <div class="card"><div class="card-h"><div class="card-t">Журнал изменений и оперативок</div></div><div class="log">${planLogHtml()}</div></div>`;
-  } else if(tab==='approved'){
+    return;
+  }
+  const cur=monthItems(DB.plan,mk,LIVE).sort((a,b)=>itemStart(a)-itemStart(b));
+  const head=`<div class="toolbar">${tabs}<div style="display:flex;gap:6px;align-items:center;margin-left:8px">${monthNav()}</div>
+    ${tab!=='compare'?viewSeg():''}<div class="sp"></div>
+    ${tab!=='compare'&&can('admin')?`<button class="btn btn-s" onclick="approveMonth()">✔ Утвердить ${ap?'заново':'месяц'}</button>`:''}</div>
+  <div class="toolbar" style="margin-top:-4px">${ap?`<span class="pill">✔ Утверждён ${fts(ap.at)} · ${esc(ap.by||'')}</span>`:'<span class="pill" style="color:var(--amber)">План месяца не утверждён</span>'}</div>`;
+  let body='';
+  if(tab==='approved'){
     const items=A(ap?.items);
     body=ap?`<div class="card row-gap"><div class="card-h"><div class="card-t">Утверждённый план — статичный</div><div class="card-s">плановая цифра месяца для дашборда и отчётов</div></div>${state.planView==='rows'?scheduleRows(items,{}):gantt(items,{})}</div>
       <div class="card"><div class="card-h"><div class="card-t">Позиции утверждённого плана</div><div class="card-s">${items.length} шт · ${N(items.reduce((a,i)=>a+(+i.qty||0),0))} изделий</div></div>${planTable(items,null,false)}</div>`
-      :`<div class="card"><div class="empty">План на ${monthLabel(mk)} ещё не утверждён.<br>${can('admin')?'Сформируйте действующий план и нажмите «Утвердить месяц» — он станет статичной плановой цифрой.':'Его утверждает администратор.'}</div></div>`;
+      :`<div class="card"><div class="empty">План на ${monthLabel(mk)} ещё не утверждён.<br>${can('admin')?'Нажмите «Утвердить месяц» — действующий план на этот месяц станет статичной плановой цифрой.':'Его утверждает администратор.'}</div></div>`;
   } else body=planCompare(mk,ap,cur);
   $('#content').innerHTML=head+body;
 }
+
+// ─── общие помощники живого плана
+const canApprove = () => ['admin','technologist'].includes(state.me.role);
+const outOk = r => r.approved!==false;
+const nv = v => { const x=+String(v??'').replace(/\s/g,'').replace(',','.'); return isFinite(x)?x:0; };
+function plRange(){ const t=new Date(); if(!state.plFrom) state.plFrom=iso(addD(t,-1)); if(!state.plTo) state.plTo=iso(addD(t,10)); if(state.plTo<state.plFrom) state.plTo=state.plFrom; return {a:pd(state.plFrom).getTime(), b:pd(state.plTo).getTime()+864e5}; }
+function plDays(){ const r=[]; for(let d=pd(state.plFrom); iso(d)<=state.plTo&&r.length<62; d=addD(d,1)) r.push(iso(d)); return r; }
+const dayStartMin = () => hm(A(shiftSchemes()[0].shifts)[0]?.from||'07:00');
+const dayStartLabel = () => { const m=dayStartMin(); return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
+const lineQueue = lineId => DB.plan.filter(i=>i.lineId===lineId).sort((x,y)=>seqOf(x)-seqOf(y)||itemStart(x,LIVE)-itemStart(y,LIVE));
+function itemRisk(it,chk){
+  const o=byId(DB.orders,it.orderId), a=itemStart(it,LIVE), e=endMs(it,LIVE), x=itemStatus(it,LIVE,chk), s=sched(it,LIVE), out=[];
+  if(!s.ok) out.push(['Не помещается','t-red','не хватает рабочего времени линии в ближайшие недели']);
+  if(o&&e>pd(o.due).getTime()+864e5) out.push(['Не успеваем к отгрузке','t-red',`окончание ${fdt(e)}<br>срок отгрузки ${fdate(o.due)}`]);
+  if(chk&&chk.lacks.length&&(!chk.ready||pd(chk.ready).getTime()>a)) out.push([chk.ready?'Сырьё позже старта':'Нет сырья',chk.ready?'t-amber':'t-red',chk.ready?`старт ${fdt(a)}, сырьё будет ${fdate(chk.ready)}`:'поставка не запланирована']);
+  if(/Отстаём|Не добрали/.test(x.st[0])) out.push([x.st[0],'t-red','по подтверждённому факту']);
+  return out;
+}
+// сохранить изменения очереди: пересчитать цепочку на линиях и записать только изменившиеся позиции
+async function qCommit(work,lineIds,extra=[],log){
+  const wctx={id:'tmp'+uid(),items:work}; [...new Set(lineIds)].forEach(l=>relineChain(work,l,wctx));
+  const ch=work.filter(w=>{ const o=byId(DB.plan,w.id); return !o||JSON.stringify(o)!==JSON.stringify(w); });
+  const txt=typeof log==='function'?log(work,wctx):log;
+  await Store.batch([...ch.map(x=>({col:'plan',obj:x})),...extra,...(txt?[logEntry(txt)]:[])]);
+  return ch;
+}
+async function qRelineAll(){ const work=DB.plan.map(clone), ch=await qCommit(work,DB.lines.map(l=>l.id),[],'Очередь выстроена заново на всех линиях'); toast('Готово'+(ch.length?` · обновлено позиций ${ch.length}`:'')); }
+
+// ─── 1. очередь по линиям
+function planQueue(chk){
+  const {a:from}=plRange(), now=Date.now(), ce=can('edit');
+  const rows=DB.lines.map(l=>{
+    const all=lineQueue(l.id), li=all.filter(i=>endMs(i,LIVE)>=from);
+    const last=all[all.length-1];
+    const head=`<tr class="q-line"><td colspan="10"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:14px">${esc(l.name)}</b><span class="muted">${esc(shiftLabel(l.id,LIVE))}</span><span class="muted">· в очереди ${li.filter(i=>endMs(i,LIVE)>now).length}${last?` · линия занята до ${fdt(endMs(last,LIVE))}`:''}</span><div style="flex:1"></div>${ce?`<button class="btn btn-s btn-sm" onclick="openQAdd('${l.id}')">+ Проект</button>`:''}</div></td></tr>`;
+    const body=li.map(it=>{
+      const k=all.indexOf(it), prev=all[k-1], next=all[k+1], p=byId(DB.projects,it.projectId), o=byId(DB.orders,it.orderId), a=itemStart(it,LIVE), e=endMs(it,LIVE), started=a<=now;
+      const canUp=ce&&!started&&prev&&itemStart(prev,LIVE)>now, canDn=ce&&!started&&next;
+      const f=itemFact(it), q=+it.qty||0, risk=itemRisk(it,chk[it.id]), s=sched(it,LIVE);
+      return `<tr class="${ce?'click':''} ${started&&e>now?'q-run':''} ${e<=now?'q-done':''}" onclick="if(!event.target.closest('button'))openQItem('${it.id}')">
+        <td class="q-arr">${ce?`<button class="btn btn-s btn-sm" ${canUp?'':'disabled'} onclick="qMove('${it.id}',-1)" title="Выше в очереди">↑</button><button class="btn btn-s btn-sm" ${canDn?'':'disabled'} onclick="qMove('${it.id}',1)" title="Ниже в очереди">↓</button>`:''}</td>
+        <td><div style="display:flex;gap:8px;align-items:center"><span class="sw" style="background:${pColor(p)};flex-shrink:0"></span><div><b>${esc(p?.name||'—')}</b><small class="muted" style="display:block">${esc(p?.client||'')}${s.pause?` · паузы ${minTxt(s.pause)}`:''}${started&&e>now?' · <b style="color:var(--blue)">в работе</b>':''}</small></div></div></td>
+        <td>${o?esc(o.no):'<span class="muted">—</span>'}</td>
+        <td class="num"><b>${N(q)}</b><small class="muted" style="display:block">факт ${N(f.good)}${q?' · '+P(f.good/q*100,0):''}${f.pending?` · ⏳ ${N(f.pending)}`:''}</small></td>
+        <td>${fdt(a)}</td>
+        <td>${fdt(e)}<small class="muted" style="display:block">${Q((e-a)/H,1)} ч · наладка ${minTxt(s.setup)}</small></td>
+        <td>${o?fdate(o.due):'<span class="muted">—</span>'}</td>
+        <td>${matTag(chk[it.id])}</td>
+        <td>${risk.length?risk.map(r=>`<span class="tag ${r[1]}" data-tip="${r[2]}">${r[0]}</span>`).join(' '):(e<=now?'<span class="tag t-gray">завершён</span>':'<span class="tag t-green">в срок</span>')}</td>
+        <td>${ce&&!started?`<button class="btn btn-d btn-sm" onclick="delPlanItem('${it.id}')" title="Удалить из плана">🗑</button>`:''}</td></tr>`;
+    }).join('')||`<tr><td colspan="10" class="muted" style="padding:10px 14px">Очередь пуста</td></tr>`;
+    return head+body;
+  }).join('');
+  return `<div class="tw flush"><table class="qt"><tr><th style="width:74px"></th><th>Проект</th><th>Заказ</th><th class="num">Кол-во</th><th>Начало</th><th>Конец</th><th>Срок отгрузки</th><th>Сырьё</th><th>Риск</th><th style="width:44px"></th></tr>${rows}</table></div>`;
+}
+async function qMove(id,dir){
+  const it=byId(DB.plan,id); if(!it) return;
+  const work=DB.plan.map(clone), li=work.filter(i=>i.lineId===it.lineId).sort((a,b)=>seqOf(a)-seqOf(b)||tms(a.start)-tms(b.start));
+  li.forEach((x,k)=>x.seq=k); const i=li.findIndex(x=>x.id===id), j=i+dir; if(j<0||j>=li.length) return;
+  const now=Date.now(); if(itemStart(byId(DB.plan,li[i].id),LIVE)<=now||itemStart(byId(DB.plan,li[j].id),LIVE)<=now) return toast('Проект уже в работе — его место в очереди не меняется');
+  const A1=li[i], B1=li[j]; [A1.seq,B1.seq]=[B1.seq,A1.seq]; const first=dir<0?A1:B1, second=dir<0?B1:A1; first.start=[A1.start,B1.start].sort()[0];
+  await qCommit(work,[it.lineId],[],`Очередь ${lineName(it.lineId)}: «${projName(first.projectId)}» поставлен перед «${projName(second.projectId)}»`);
+}
+
+// ─── добавление проекта в очередь
+function openQAdd(lineId){
+  if(!can('edit')) return;
+  lineId=lineId||DB.lines[0]?.id;
+  const ps=DB.projects.filter(p=>p.status!=='Архив'), p0=ps.find(p=>p.lineId===lineId&&p.status==='Активный')||ps.find(p=>p.lineId===lineId)||ps[0];
+  modal('Добавить проект в план',`
+    <div class="frow"><div class="fg"><label class="fl">Линия</label><select class="fi" name="lineId" ${arguments.length&&arguments[0]?'data-touched="1"':''} onchange="this.dataset.touched=1;qaCalc()">${opts(DB.lines,lineId)}</select></div>
+    <div class="fg"><label class="fl">Проект</label><select class="fi" name="projectId" onchange="qaProj()">${opts(ps,p0?.id,p=>p.name+(p.client?' · '+p.client:''))}</select></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Заказ</label><select class="fi" name="orderId" onchange="qaOrder()"></select></div>
+    <div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="qty" oninput="qaCalc()"></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Скорость наработки, шт/мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="speed" oninput="qaCalc()"></div>
+    <div class="fg"><label class="fl">Первичная наладка, мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="setup" oninput="qaCalc()"></div></div>
+    <div class="fg"><label class="fl">Не раньше (необязательно)</label><input class="fi" type="datetime-local" name="notBefore" onchange="qaCalc()"></div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:12px"><input type="checkbox" name="saveProj"> Записать скорость и наладку в карточку проекта</label>
+    <div class="note" id="qaHint" style="margin-bottom:10px;background:var(--blueBg)"></div>
+    <div class="hint">Проект встанет в конец очереди линии. Обед, уборку, пересменку, подсчёт материалов добавьте потом — нажмите на строку проекта в плане.</div>`,
+  async f=>{
+    const r=qaRec(); if(!r){ toast('Укажите проект, количество и скорость'); return false; } r.id=uid();
+    const p=byId(DB.projects,r.projectId), work=DB.plan.map(clone).concat([r]);
+    const extra=f.saveProj&&(+p.speed!==r.speedPlan||+p.setupMin!==r.setupPlan)?[{col:'projects',obj:{...clone(p),speed:r.speedPlan,setupMin:r.setupPlan}}]:[];
+    await qCommit(work,[r.lineId],extra,(w,c)=>{ const x=w.find(i=>i.id===r.id), s=sched(x,c); return `Добавил «${p.name}» в очередь ${lineName(r.lineId)}: ${N(r.qty)} шт, ${fdt(s.start)} → ${fdt(s.end)}`; });
+    toast('Проект добавлен в план');
+  },'Добавить в план');
+  qaProj();
+}
+function qaProj(){
+  const F=$('#mForm').elements, p=byId(DB.projects,F.projectId.value); if(!p) return;
+  const os=DB.orders.filter(o=>o.projectId===p.id&&orderStatus(o)!=='shipped'&&orderStatus(o)!=='done');
+  F.orderId.innerHTML=opts(os,os[0]?.id||'',o=>o.no+' · '+N(o.qty)+' шт · срок '+fdate(o.due),'— без заказа —');
+  F.speed.value=p.speed||''; F.setup.value=p.setupMin??'';
+  if(p.lineId&&byId(DB.lines,p.lineId)&&!F.lineId.dataset.touched) F.lineId.value=p.lineId;
+  qaOrder();
+}
+function qaOrder(){ const F=$('#mForm').elements, o=byId(DB.orders,F.orderId.value); if(o){ const inPlan=DB.plan.filter(i=>i.orderId===o.id).reduce((a,i)=>a+(+i.qty||0),0); F.qty.value=Math.max(0,o.qty-inPlan)||o.qty; } qaCalc(); }
+function qaRec(){
+  const F=$('#mForm').elements, p=byId(DB.projects,F.projectId.value), qty=nv(F.qty.value), sp=nv(F.speed.value); if(!p||!(qty>0)||!(sp>0)) return null;
+  const li=DB.plan.filter(i=>i.lineId===F.lineId.value), mx=li.length?Math.max(...li.map(seqOf)):-1, le=lineEnd(F.lineId.value,null,LIVE);
+  return {id:'__new',projectId:p.id,lineId:F.lineId.value,orderId:F.orderId.value||'',qty,speedPlan:sp,setupPlan:nv(F.setup.value),notBefore:F.notBefore.value||'',extras:[],note:'',seq:mx+1,start:toDT(Math.max(le||0,Math.ceil(Date.now()/H)*H))};
+}
+function qaCalc(){
+  const h=$('#qaHint'); if(!h) return; const r=qaRec(); if(!r){ h.innerHTML='Выберите проект, укажите количество и скорость'; return; }
+  const work=DB.plan.map(clone).concat([r]), c={id:'tmp'+uid(),items:work}; relineChain(work,r.lineId,c);
+  const x=work.find(i=>i.id===r.id), s=sched(x,c), prev=work.filter(i=>i.lineId===r.lineId&&i.id!==r.id).sort((a,b)=>seqOf(a)-seqOf(b)).pop();
+  h.innerHTML=`<b>${fdt(s.start)} → ${fdt(s.end)}</b> · всего ${Q(s.hours,1)} ч${prev?`<br>после «${esc(projName(prev.projectId))}»`:''}<br>Наладка ${minTxt(s.setup)} · работа ${Q(s.run/60,1)} ч (${N(r.speedPlan)} шт/мин)${s.ok?'':'<br>⚠ не помещается в рабочее время линии'}`;
+}
+
+// ─── детали позиции: паузы (обед, уборка, пересменка, подсчёт…)
+const exRow = e => `<div class="ex-row"><input class="fi ex-k" list="pauseKinds" value="${esc(e.kind||'')}" placeholder="Обед, уборка…" oninput="qiCalc()">
+  <input class="fi ex-m" type="text" inputmode="decimal" data-num="1" value="${e.min??''}" placeholder="мин" oninput="qiCalc()">
+  <input class="fi ex-t" type="time" value="${e.time||''}" onchange="qiCalc()" title="Время начала паузы (необязательно)">
+  <label class="ex-e-l"><input type="checkbox" class="ex-e" ${e.every?'checked':''} onchange="qiCalc()"> каждую смену</label>
+  <button type="button" class="btn btn-s btn-sm" onclick="this.parentNode.remove();qiCalc()">✕</button></div>`;
+function openQItem(id){
+  const it=byId(DB.plan,id); if(!it) return; const ce=can('edit'), p=byId(DB.projects,it.projectId), now=Date.now(), started=itemStart(it,LIVE)<=now;
+  const f=itemFact(it), s=sched(it,LIVE);
+  state._qi=id;
+  const ro=ce?'':'disabled';
+  modal('Проект в плане',`
+    <div style="display:flex;gap:10px;align-items:center;margin:-6px 0 14px"><span class="sw" style="background:${pColor(p)};width:14px;height:14px"></span><div><b style="font-size:15px">${esc(p?.name||'—')}</b><div class="muted" style="font-size:12px">${esc(p?.client||'')} · факт ${N(f.good)} из ${N(it.qty)}${f.pending?` · на проверке ${N(f.pending)}`:''}</div></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Линия</label><select class="fi" name="lineId" ${started||!ce?'disabled':''} onchange="qiCalc()">${opts(DB.lines,it.lineId)}</select></div>
+    <div class="fg"><label class="fl">Заказ</label><select class="fi" name="orderId" ${ro}>${opts(DB.orders.filter(o=>o.projectId===it.projectId||o.id===it.orderId),it.orderId,o=>o.no+' · '+N(o.qty)+' шт · срок '+fdate(o.due),'— без заказа —')}</select></div></div>
+    <div class="frow3"><div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="qty" value="${it.qty}" ${ro} oninput="qiCalc()"></div>
+    <div class="fg"><label class="fl">Скорость, шт/мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="speed" value="${itemSpeed(it)}" ${ro} oninput="qiCalc()"></div>
+    <div class="fg"><label class="fl">Первичная наладка, мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="setup" value="${itemSetup(it)}" ${ro} oninput="qiCalc()"></div></div>
+    <div class="frow"><div class="fg"><label class="fl">${started?'Начало (уже в работе)':'Не раньше (необязательно)'}</label>${started?`<input class="fi" type="datetime-local" name="start" value="${esc(it.start)}" ${ro} onchange="qiCalc()">`:`<input class="fi" type="datetime-local" name="notBefore" value="${esc(it.notBefore||'')}" ${ro} onchange="qiCalc()">`}</div>
+    <div class="fg" style="align-self:end"><label style="display:flex;gap:8px;align-items:center;font-size:13px;padding-bottom:10px"><input type="checkbox" name="noSetup" ${it.noSetup?'checked':''} ${ro} onchange="qiCalc()"> Без наладки (продолжение того же проекта)</label></div></div>
+    <div style="display:flex;align-items:center;margin:4px 0 8px"><b style="font-size:14px">Паузы и детали</b><span class="muted" style="font-size:12px;margin-left:8px">обед, уборка, пересменка, подсчёт материалов…</span></div>
+    <div class="ex-head"><span>Что</span><span>Минут</span><span>Во сколько</span><span></span><span></span></div>
+    <div id="exRows">${A(it.extras).map(exRow).join('')}</div>
+    <datalist id="pauseKinds">${PAUSE_KINDS.map(k=>`<option value="${esc(k)}">`).join('')}</datalist>
+    ${ce?`<button type="button" class="btn btn-s btn-sm" onclick="document.getElementById('exRows').insertAdjacentHTML('beforeend',exRow({}));qiCalc()">+ Пауза</button>`:''}
+    <div class="hint" style="margin:8px 0 12px">Указано время (12:00) — пауза встанет в это время, с «каждую смену» — каждый день в это время. Без времени и «каждую смену» — в начале каждой смены. Без времени и без галочки — один раз, в конце проекта.</div>
+    <div class="note" id="qiHint" style="margin-bottom:12px;background:var(--blueBg)"></div>
+    <div class="fg"><label class="fl">Комментарий</label><input class="fi" name="note" value="${esc(it.note||'')}" ${ro} placeholder="Особенности, причина изменений…"></div>`,
+  async ()=>{
+    if(!ce) return;
+    const r=qiRead(it); if(!(r.qty>0)||!(r.speedPlan>0)){ toast('Укажите количество и скорость'); return false; }
+    const work=DB.plan.map(clone).map(x=>x.id===r.id?r:x);
+    if(r.lineId!==it.lineId){ const li=work.filter(i=>i.lineId===r.lineId&&i.id!==r.id); r.seq=li.length?Math.max(...li.map(seqOf))+1:0; }
+    const old=sched(it,LIVE);
+    await qCommit(work,[it.lineId,r.lineId],[],(w,c)=>{ const x=w.find(i=>i.id===r.id), s=sched(x,c); return qiDiff(it,x)+` · окончание ${fdt(old.end)} → ${fdt(s.end)}`; });
+    toast('План обновлён');
+  },ce?'Сохранить':'Закрыть',ce&&!started?`<button class="btn btn-d" type="button" onclick="delPlanItem('${id}')">🗑 Удалить из плана</button>`:'');
+  $('#modalC').classList.add('wide');
+  setTimeout(qiCalc,0);
+}
+const itemSpeed = it => +it.speedPlan||+byId(DB.projects,it.projectId)?.speed||1;
+const itemSetup = it => it.setupPlan!=null&&it.setupPlan!==''?+it.setupPlan:(+byId(DB.projects,it.projectId)?.setupMin||0);
+function qiRead(it){
+  const F=$('#mForm').elements;
+  const ex=[...document.querySelectorAll('#exRows .ex-row')].map(r=>({kind:r.querySelector('.ex-k').value.trim()||'Пауза',min:nv(r.querySelector('.ex-m').value),time:r.querySelector('.ex-t').value||'',every:r.querySelector('.ex-e').checked})).filter(e=>e.min>0);
+  const r={...clone(it),lineId:F.lineId.value,orderId:F.orderId.value||'',qty:nv(F.qty.value),speedPlan:nv(F.speed.value),setupPlan:nv(F.setup.value),noSetup:F.noSetup.checked,extras:ex,note:F.note.value};
+  if(F.start&&F.start.value) r.start=F.start.value; if(F.notBefore) r.notBefore=F.notBefore.value||'';
+  return r;
+}
+function qiCalc(){
+  const h=$('#qiHint'), it=byId(DB.plan,state._qi); if(!h||!it) return;
+  const r=qiRead(it); if(!(r.qty>0)||!(r.speedPlan>0)){ h.innerHTML='Укажите количество и скорость'; return; }
+  const work=DB.plan.map(clone).map(x=>x.id===r.id?r:x);
+  if(r.lineId!==it.lineId){ const li=work.filter(i=>i.lineId===r.lineId&&i.id!==r.id); r.seq=li.length?Math.max(...li.map(seqOf))+1:0; }
+  const c={id:'tmp'+uid(),items:work}; relineChain(work,it.lineId,c); if(r.lineId!==it.lineId) relineChain(work,r.lineId,c);
+  const s=sched(r,c), old=sched(it,LIVE), pz={};
+  s.segs.filter(x=>x[2]==='p').forEach(([a,b,,l])=>{ const k=l||'Пауза'; pz[k]=pz[k]||{n:0,m:0}; pz[k].n++; pz[k].m+=(b-a)/60e3; });
+  const moved=work.filter(w=>w.id!==r.id&&w.lineId===r.lineId&&byId(DB.plan,w.id)?.start!==w.start).length, d=(s.end-old.end)/H;
+  h.innerHTML=`<b>${fdt(s.start)} → ${fdt(s.end)}</b> · всего ${Q(s.hours,1)} ч${Math.abs(d)>=0.02?` <span style="color:${d>0?'var(--red)':'var(--green)'}">(${d>0?'+':''}${Q(d,1)} ч к текущему плану)</span>`:''}<br>Наладка ${minTxt(s.setup)} · работа ${Q(s.run/60,1)} ч (${N(r.speedPlan)} шт/мин)${s.pause?` · паузы ${minTxt(s.pause)}`:''}${Object.keys(pz).length?'<br>'+Object.entries(pz).map(([k,v])=>`${esc(k)}: ${v.n>1?v.n+' × ':''}${minTxt(v.m/v.n)}`).join(' · '):''}${moved?`<br>Следующие проекты на линии сдвинутся: ${moved}`:''}${s.ok?'':'<br>⚠ не помещается в рабочее время линии'}`;
+}
+function qiDiff(o,n){
+  const ch=[], p=projName(n.projectId);
+  if(o.lineId!==n.lineId) ch.push(`линия ${lineName(o.lineId)} → ${lineName(n.lineId)}`);
+  if(+o.qty!==+n.qty) ch.push(`кол-во ${N(o.qty)} → ${N(n.qty)}`);
+  if(itemSpeed(o)!==itemSpeed(n)) ch.push(`скорость ${N(itemSpeed(o))} → ${N(itemSpeed(n))} шт/мин`);
+  if(itemSetup(o)!==itemSetup(n)) ch.push(`наладка ${N(itemSetup(o))} → ${N(itemSetup(n))} мин`);
+  if(!!o.noSetup!==!!n.noSetup) ch.push(n.noSetup?'без наладки':'с наладкой');
+  if((o.notBefore||'')!==(n.notBefore||'')) ch.push(n.notBefore?`не раньше ${fdt(tms(n.notBefore))}`:'снято «не раньше»');
+  if(o.start!==n.start&&n.start&&tms(n.start)<=Date.now()) ch.push(`начало ${fdt(tms(o.start))} → ${fdt(tms(n.start))}`);
+  const ex=x=>A(x.extras).map(e=>`${e.kind} ${e.min} мин${e.time?' в '+e.time:''}${e.every?' каждую смену':''}`).join(', ');
+  if(ex(o)!==ex(n)) ch.push(`паузы: ${ex(n)||'нет'}`);
+  if((o.orderId||'')!==(n.orderId||'')) ch.push(`заказ ${byId(DB.orders,n.orderId)?.no||'—'}`);
+  return `«${p}»: ${ch.join('; ')||'комментарий'}${n.note&&n.note!==o.note?' — '+n.note:''}`;
+}
+
+// ─── 2. план / факт по сменам
+function shiftPlan(lineId,a,b){
+  const res=[];
+  DB.plan.filter(i=>i.lineId===lineId).forEach(it=>{ let run=0,setup=0,pause=0,x=Infinity,y=0;
+    itemSegs(it,LIVE).forEach(([sa,sb,k])=>{ const u=Math.max(sa,a), v=Math.min(sb,b); if(v<=u) return; const m=(v-u)/60e3; if(k==='r') run+=m; else if(k==='s') setup+=m; else pause+=m; x=Math.min(x,u); y=Math.max(y,v); });
+    if(run+setup+pause>0) res.push({it,run,setup,pause,x,y,qty:Math.round(run*itemSpeed(it))}); });
+  return res.sort((p,q)=>p.x-q.x);
+}
+function planGrid(days){
+  if(!DB.lines.length) return '<div class="empty">Нет линий</div>';
+  const nSh=Math.max(...DB.lines.map(l=>lineShiftDefs(l.id).length)), sc0=lineScheme(DB.lines[0].id), now=Date.now(), td=iso(new Date()), ca=canApprove();
+  const heads=Array.from({length:nSh},(_,i)=>{ const s=A(sc0.shifts)[i]; return `<th colspan="2" class="c">Смена ${i+1}${s?` · ${s.from}–${s.to}`:''}</th>`; }).join('');
+  const body=days.map(d=>{ const dt=pd(d), dow=dt.getDay();
+    return DB.lines.map((l,li)=>{
+      const cfg=lineCfg(l.id,LIVE), defs=lineShiftDefs(l.id);
+      const cells=Array.from({length:nSh},(_,i)=>{ const s=defs[i]; if(!s) return '<td colspan="2" class="sg-na"></td>';
+        const [a,b]=shiftWindow(d,s.n,l.id), works=cfg.days.includes(dow)&&cfg.shifts.includes(+s.n);
+        const outs=DB.output.filter(r=>r.lineId===l.id&&r.date===d&&+r.shift===+s.n);
+        const lbl=sc0.id!==lineScheme(l.id).id?`<div class="muted" style="font-size:10.5px">${s.from}–${s.to}</div>`:'';
+        if(!works&&!outs.length) return `<td colspan="2" class="sg-off">${lbl}не работает</td>`;
+        const pl=shiftPlan(l.id,a,b), tot=pl.reduce((x,p)=>x+p.qty,0);
+        const dn=DB.downs.filter(x=>x.lineId===l.id&&tms(x.start)<b&&tms(x.end)>a).map(x=>`<div class="sg-dn" ${can('edit')?`onclick="openDown('${x.id}')"`:''}>⛔ ${esc(x.reason)} ${hhmm(Math.max(a,tms(x.start)))}–${hhmm(Math.min(b,tms(x.end)))}</div>`).join('');
+        const plan=lbl+pl.map(x=>{ const p=byId(DB.projects,x.it.projectId); return `<div class="sg-p" onclick="openQItem('${x.it.id}')"><span class="sw" style="background:${pColor(p)}"></span><span class="sg-n">${esc(p?.name||'—')}</span><b>${x.qty?N(x.qty):''}</b><small>${hhmm(x.x)}–${hhmm(x.y)}${x.setup?` · наладка ${minTxt(x.setup)}`:''}${x.pause?` · паузы ${minTxt(x.pause)}`:''}</small></div>`; }).join('')+dn;
+        const reps={}; outs.forEach(r=>(reps[r.reportId||r.id]=reps[r.reportId||r.id]||[]).push(r));
+        const okGood=outs.filter(outOk).reduce((x,r)=>x+(+r.good||0),0);
+        let fact=Object.entries(reps).map(([rid,rs])=>{ const ok=rs.every(outOk);
+          return `<div class="sg-f ${ok?'':'pend'}">${rs.map(r=>`<div class="sg-fr" onclick="openOutputModal('${r.id}')"><span class="sw" style="background:${pColor(byId(DB.projects,r.projectId))}"></span><span class="sg-n">${esc(projName(r.projectId))}</span><b>${N(r.good)}</b>${+r.downtime?`<small style="color:var(--red)">простой ${minTxt(r.downtime)}</small>`:''}</div>`).join('')}
+            ${ok?'':`<div class="sg-pl">⏳ на проверке${ca?` <button class="btn btn-g btn-sm" onclick="approveOutput('${rid}')">✔ Подтвердить</button>`:''}</div>`}</div>`; }).join('');
+        if(!outs.length) fact=b<=now&&tot?'<span class="sg-miss">нет отчёта</span>':a<now&&tot?'<span class="muted">идёт смена</span>':'';
+        else if(tot&&okGood) fact+=`<div class="sg-pct ${okGood>=tot*.95?'ok':okGood>=tot*.8?'mid':'bad'}">${P(okGood/tot*100,0)} от плана</div>`;
+        return `<td class="sg-pc">${plan||'<span class="muted">—</span>'}</td><td class="sg-fc">${fact}</td>`; }).join('');
+      return `<tr class="${d===td?'sg-today':''} ${li===DB.lines.length-1?'sg-last':''}">${li===0?`<td rowspan="${DB.lines.length}" class="sg-date">${WD[(dow+6)%7]}<br>${fdate(d)}</td>`:''}<td class="sg-line">${esc(l.name)}</td>${cells}</tr>`;
+    }).join(''); }).join('');
+  return `<div class="tw flush"><table class="sg"><tr><th rowspan="2">Дата</th><th rowspan="2">Линия</th>${heads}</tr><tr>${Array.from({length:nSh},()=>'<th>План</th><th>Факт</th>').join('')}</tr>${body}</table></div>`;
+}
+async function approveOutput(rid){
+  if(!canApprove()) return toast('Подтверждает технолог');
+  const rs=DB.output.filter(r=>(r.reportId||r.id)===rid); if(!rs.length) return;
+  await Store.batch(rs.map(r=>({col:'output',obj:{...clone(r),approved:true,approvedBy:state.me.name,approvedAt:Date.now()}})));
+  toast('Отчёт смены подтверждён — факт в плане');
+}
+
+// ─── 3. график по дням: сутки 07 → 07, по каждой линии полоса плана и равноценная полоса факта
+const DOWN_PAL=['#e5484d','#f59e0b','#8b5cf6','#db2777','#b45309','#0ea5e9','#64748b'];
+function actColor(id,projectColor){ const a=actById(id); if(a.cat==='work') return projectColor; if(a.cat==='setup') return projectColor; if(a.cat==='break') return '#98a1b1'; const dl=acts().filter(x=>x.cat==='down'); return DOWN_PAL[Math.max(0,dl.findIndex(x=>x.id===a.id))%DOWN_PAL.length]; }
+function dcLegend(){ const dl=acts().filter(x=>x.cat==='down');
+  return `<div class="legend"><span><i style="background:var(--text3)"></i>работа (цвет проекта)</span><span><i style="background:repeating-linear-gradient(45deg,var(--text3) 0 3px,var(--card2) 3px 6px)"></i>наладка</span><span><i style="background:#98a1b1"></i>пауза / перерыв</span>${dl.map(a=>`<span><i style="background:${actColor(a.id)}"></i>${esc(a.name)}</span>`).join('')}<span><i style="background:repeating-linear-gradient(135deg,rgba(120,130,150,.35) 0 3px,transparent 3px 6px)"></i>не работает</span></div>`; }
+function factSegs(lineId,a,b){
+  // сегменты факта из хронометража отчётов смен
+  const out=[], seen=new Set();
+  DB.output.filter(r=>r.lineId===lineId&&tms(r.endAt)>a-864e5&&tms(r.startAt)<b+864e5).forEach(r=>{
+    const rid=r.reportId||r.id; if(seen.has(rid)) return;
+    const rs=DB.output.filter(x=>(x.reportId||x.id)===rid), main=rs.find(x=>A(x.timeline).length)||rs[0], ok=rs.every(outOk);
+    if(A(main.timeline).length){ seen.add(rid);
+      const od={win:shiftWindow(main.date,main.shift,main.lineId)};
+      main.timeline.forEach(t=>{ const x=tlAbs(od,t.from); let y=tlAbs(od,t.to); if(y<=x) y+=864e5; const pid=t.projectId||main.projectId, rec=rs.find(q=>q.projectId===pid)||main;
+        if(y>a&&x<b) out.push({x,y,act:t.act,pid,rec,ok,rid,note:t.note||''}); });
+    } else { const x=tms(r.startAt), y=tms(r.endAt); if(isFinite(x)&&isFinite(y)&&y>a&&x<b) out.push({x,y,act:'work',pid:r.projectId,rec:r,ok:outOk(r),rid,note:''}); }
+  });
+  return out;
+}
+function planDayChart(days){
+  const D0=dayStartMin(), now=Date.now(), W=864e5, pct=(t,a)=>((t-a)/W*100).toFixed(3)+'%';
+  const ticks=Array.from({length:13},(_,i)=>{ const m=(D0+i*120)%1440; return `<span style="left:${i/12*100}%">${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}</span>`; }).join('');
+  const grid=`background-image:linear-gradient(to right,var(--line) 1px,transparent 1px);background-size:${100/12}% 100%`;
+  return days.map(d=>{ const a=pd(d).getTime()+D0*60e3, b=a+W, dt=pd(d), isT=d===iso(new Date());
+    const rows=DB.lines.map(l=>{
+      const pure=lineWindows(l.id,a,b,{id:'pure',downs:[]}); let prev=a, off='';
+      pure.forEach(([x,y])=>{ if(x>prev) off+=`<div class="dc-off" style="left:${pct(prev,a)};width:${pct(Math.min(x,b),prev)}"></div>`; prev=Math.max(prev,y); }); if(prev<b) off+=`<div class="dc-off" style="left:${pct(prev,a)};width:${pct(b,prev)}"></div>`;
+      const downs=DB.downs.filter(x=>x.lineId===l.id&&tms(x.end)>a&&tms(x.start)<b).map(x=>{ const u=Math.max(a,tms(x.start)), v=Math.min(b,tms(x.end));
+        return `<div class="dc-down" style="left:${pct(u,a)};width:${pct(v,u)}" data-tip="<b>Простой: ${esc(x.reason)}</b><br>${fdt(tms(x.start))} → ${fdt(tms(x.end))}${x.note?'<br>'+esc(x.note):''}">${(v-u)/H>=2?esc(x.reason):''}</div>`; }).join('');
+      const plan=DB.plan.filter(i=>i.lineId===l.id).map(it=>{ const p=byId(DB.projects,it.projectId), col=pColor(p), s=sched(it,LIVE);
+        return itemSegs(it,LIVE).filter(([x,y])=>y>a&&x<b).map(([x,y,k,lb])=>{ const u=Math.max(a,x), v=Math.min(b,y), wd=(v-u)/W*100, q=k==='r'?Math.round((v-u)/60e3*itemSpeed(it)):0;
+          const nm=k==='r'?`${esc(p?.name||'—')} · ${N(q)} шт`:k==='s'?'Наладка':esc(lb||'Пауза');
+          const tip=`<b>${esc(p?.name||'—')}</b><br>${k==='r'?'Работа · '+N(q)+' шт':k==='s'?'Наладка':'Пауза: '+esc(lb||'')}<br>${fdt(u)} → ${fdt(v)} (${minTxt((v-u)/60e3)})<br>Весь проект: ${N(it.qty)} шт, ${fdt(s.start)} → ${fdt(s.end)}`;
+          return `<div class="dc-seg ${k}" style="left:${pct(u,a)};width:${wd.toFixed(3)}%;${k==='p'?'':`background-color:${col}`}" data-tip="${tip.replace(/"/g,'&quot;')}" onclick="openQItem('${it.id}')">${wd>(k==='r'?4:1.6)?nm:''}</div>`; }).join(''); }).join('');
+      const fs=factSegs(l.id,a,b);
+      const fact=fs.map(f=>{ const u=Math.max(a,f.x), v=Math.min(b,f.y), wd=(v-u)/W*100, p=byId(DB.projects,f.pid), ac=actById(f.act), col=actColor(f.act,pColor(p));
+        const lab=ac.cat==='work'?`${esc(p?.name||'—')}${f.rec&&f.rec.projectId===f.pid?' · '+N(f.rec.good)+' шт':''}`:esc(ac.name);
+        const o=byId(DB.orders,f.rec?.orderId), done=o?orderDone(o):0;
+        const tip=`<b>${esc(ac.name)}</b>${f.note?' — '+esc(f.note):''}<br>${esc(p?.name||'')}<br>${fdt(u)} → ${fdt(v)} (${minTxt((v-u)/60e3)})${f.rec?`<br>Смена: годных ${N(f.rec.good)}, брак ${N(f.rec.defect)}`:''}${o?`<br>Заказ ${esc(o.no)}: выполнено ${N(done)} из ${N(o.qty)} (${P(o.qty?done/o.qty*100:0,0)})`:''}${f.ok?'':'<br>⏳ отчёт на проверке'}`;
+        return `<div class="dc-seg f ${ac.cat==='setup'?'s':''} ${f.ok?'':'pend'}" style="left:${pct(u,a)};width:${wd.toFixed(3)}%;background-color:${col}" data-tip="${tip.replace(/"/g,'&quot;')}" onclick="openOutputModal('${f.rec?.id}')">${wd>(ac.cat==='work'?4:1.6)?lab:''}</div>`; }).join('');
+      const nowX=now>a&&now<b?`<div class="dc-now" style="left:${pct(now,a)}"></div>`:'';
+      return `<div class="dc-line"><div class="dc-lab"><div><span>${esc(l.name)}</span><i>план</i></div><div><i>факт</i></div></div><div class="dc-tracks"><div class="dc-tr" style="${grid}">${off}${downs}${plan}${nowX}</div><div class="dc-tr" style="${grid}">${off}${fact}${nowX}</div></div></div>`;
+    }).join('');
+    return `<div class="dc-day ${isT?'today':''}"><div class="dc-dh"><b>${WD[(dt.getDay()+6)%7]}, ${fdate(d)}</b>${isT?' <span class="tag t-blue">сегодня</span>':''}</div><div class="dc-ticks">${ticks}</div>${rows}</div>`;
+  }).join('');
+}
+
 function planLegend(){ return `<div class="legend"><span><i style="background:var(--text3)"></i>работа</span><span><i style="background:repeating-linear-gradient(45deg,var(--text3) 0 3px,var(--card2) 3px 6px)"></i>наладка</span><span><i style="background:repeating-linear-gradient(135deg,rgba(120,130,150,.35) 0 3px,transparent 3px 6px)"></i>линия не работает</span><span><i style="background:rgba(229,72,77,.35)"></i>простой</span><span><i style="background:var(--green)"></i>факт</span><span><i style="background:none;border:1.5px dashed var(--text3)"></i>утверждённый</span></div>`; }
 function timeHead(g,lw,labHtml=''){
   const td=iso(new Date());
@@ -1688,10 +2037,10 @@ function itemBar(it,g,opt,top=8,hgt=38){
   const ctx=opt.ctx, a=itemStart(it,ctx), b=endMs(it,ctx); if(b<=g.t0||a>=g.t1) return '';
   const L=Math.max(a,g.t0), R=Math.min(b,g.t1), p=byId(DB.projects,it.projectId), col=pColor(p), s=it.fixed?null:sched(it,ctx);
   const o=byId(DB.orders,it.orderId), late=o&&b>pd(o.due).getTime()+864e5, ck=opt.chk?.[it.id];
-  const segs=itemSegs(it,ctx).filter(x=>x[1]>g.t0&&x[0]<g.t1).map(([sa,sb,k])=>{ const x=Math.max(sa,g.t0), y=Math.min(sb,g.t1); return `<div class="g-seg ${k==='s'?'s':''}" style="left:${(x-L)/H*g.HW}px;width:${Math.max(1,(y-x)/H*g.HW)}px;background-color:${col}"></div>`; }).join('');
+  const segs=itemSegs(it,ctx).filter(x=>x[1]>g.t0&&x[0]<g.t1).map(([sa,sb,k])=>{ const x=Math.max(sa,g.t0), y=Math.min(sb,g.t1); return `<div class="g-seg ${k==='s'?'s':''}" style="left:${(x-L)/H*g.HW}px;width:${Math.max(1,(y-x)/H*g.HW)}px;background-color:${k==='p'?'#98a1b1':col}"></div>`; }).join('');
   const setupMin=s?s.setup:+it.setupMin||0, restarts=s?s.restarts:+it.restarts||0;
-  const tip=`<b>${esc(p?.name||'—')}</b><br>${esc(lineName(it.lineId))} · ${N(it.qty)} шт<br>${fdt(a)} → ${fdt(b)} (${Q((b-a)/H,1)} ч)<br>наладка ${N(setupMin)} мин${restarts?` · перезапусков ${restarts}`:''}${o?`<br>Заказ ${esc(o.no)} · срок ${fdate(o.due)}${late?' — НЕ УСПЕВАЕМ':''}`:''}${ck&&ck.lacks.length?'<br>⚠ дефицит сырья':''}${it.note?'<br>'+esc(it.note):''}`;
-  return `<div class="g-item ${opt.conf?.has(it.id)?'conf':''} ${late?'late':''} ${b<Date.now()?'done':''}" style="left:${(L-g.t0)/H*g.HW}px;width:${Math.max(3,(R-L)/H*g.HW)}px;top:${top}px;height:${hgt}px;background:${col}26" data-tip="${tip.replace(/"/g,'&quot;')}" ${opt.editable?`onclick="openPlanItem('${it.id}'${opt.scn?`,'${opt.scn}'`:''})"`:''}>${segs}${hgt>=30?`<div class="g-lbl">${ck&&ck.lacks.length?'⚠ ':''}${esc(p?.name||'—')}<small>${N(it.qty)} шт${restarts?` · ↻${restarts}`:''}</small></div>`:''}</div>`;
+  const tip=`<b>${esc(p?.name||'—')}</b><br>${esc(lineName(it.lineId))} · ${N(it.qty)} шт<br>${fdt(a)} → ${fdt(b)} (${Q((b-a)/H,1)} ч)<br>наладка ${N(setupMin)} мин${s&&s.pause?` · паузы ${minTxt(s.pause)}`:''}${o?`<br>Заказ ${esc(o.no)} · срок ${fdate(o.due)}${late?' — НЕ УСПЕВАЕМ':''}`:''}${ck&&ck.lacks.length?'<br>⚠ дефицит сырья':''}${it.note?'<br>'+esc(it.note):''}`;
+  return `<div class="g-item ${opt.conf?.has(it.id)?'conf':''} ${late?'late':''} ${b<Date.now()?'done':''}" style="left:${(L-g.t0)/H*g.HW}px;width:${Math.max(3,(R-L)/H*g.HW)}px;top:${top}px;height:${hgt}px;background:${col}26" data-tip="${tip.replace(/"/g,'&quot;')}" ${opt.editable?`onclick="openPlanItem('${it.id}'${opt.scn?`,'${opt.scn}'`:''})"`:''}>${segs}${hgt>=30?`<div class="g-lbl">${ck&&ck.lacks.length?'⚠ ':''}${esc(p?.name||'—')}<small>${N(it.qty)} шт</small></div>`:''}</div>`;
 }
 function conflictsOf(items,ctx){ const c=new Set(); DB.lines.forEach(l=>{ let pe=0, prev=null; items.filter(i=>i.lineId===l.id).sort((a,b)=>itemStart(a,ctx)-itemStart(b,ctx)).forEach(it=>{ if(pe&&itemStart(it,ctx)<pe-60e3){ c.add(it.id); if(prev) c.add(prev.id); } if(endMs(it,ctx)>pe){ pe=endMs(it,ctx); prev=it; } }); }); return c; }
 function gantt(items,opt={}){
@@ -1713,7 +2062,7 @@ function scheduleRows(items,opt={}){
   const body=DB.lines.map(l=>{
     const li=items.filter(i=>i.lineId===l.id).sort((a,b)=>itemStart(a,ctx)-itemStart(b,ctx)); if(!li.length&&!opt.showEmpty) return '';
     const hrs=li.reduce((s,it)=>s+Math.max(0,Math.min(endMs(it,ctx),g.t1)-Math.max(itemStart(it,ctx),g.t0))/H,0);
-    const lineRow=`<div class="g-row r-lrow"><div class="g-lab" style="width:${LW}px"><b>${esc(l.name)}</b> <span class="muted">· ${esc(shiftLabel(l.id,ctx))} · перезапуск ${N(lineCfg(l.id,ctx).restart)} мин · загрузка ${Q(hrs,0)} ч</span></div><div class="g-days" style="width:${g.W}px">${lineBackdrop(l,g,ctx,opt)}</div></div>`;
+    const lineRow=`<div class="g-row r-lrow"><div class="g-lab" style="width:${LW}px"><b>${esc(l.name)}</b> <span class="muted">· ${esc(shiftLabel(l.id,ctx))} · загрузка ${Q(hrs,0)} ч</span></div><div class="g-days" style="width:${g.W}px">${lineBackdrop(l,g,ctx,opt)}</div></div>`;
     const rows=li.map(it=>{
       const p=byId(DB.projects,it.projectId), s=it.fixed?null:sched(it,ctx), a=itemStart(it,ctx), b=endMs(it,ctx), x=it.fixed?null:itemStatus(it,ctx,opt.chk?.[it.id]);
       const f=x?x.f:{good:0,start:null,end:null,recs:[]}, q=+it.qty||0;
@@ -1724,7 +2073,7 @@ function scheduleRows(items,opt={}){
         <div class="g-lab r-grid" style="width:${LW}px">
           <div><span class="sw" style="background:${pColor(p)}"></span><b>${esc(p?.name||'—')}</b><small>${esc(p?.client||'')}${o?` · ${esc(o.no)} до ${fdate(o.due)}`:''}</small></div>
           <div><b>${N(q)}</b><small>${x?`факт ${N(f.good)} · ${P(q?f.good/q*100:0,0)}`:'утверждено'}</small></div>
-          <div>${fdt(a)} → ${fdt(b)}<small>${s?`наладка ${N(s.setup)} мин${s.restarts?` · перезапусков ${s.restarts}`:''}`:`${Q((b-a)/H,0)} ч`}</small></div>
+          <div>${fdt(a)} → ${fdt(b)}<small>${s?`наладка ${N(s.setup)} мин${s.pause?` · паузы ${minTxt(s.pause)}`:''}`:`${Q((b-a)/H,0)} ч`}</small></div>
           <div style="display:flex;flex-wrap:wrap;gap:3px">${x?`<span class="tag ${x.st[1]}">${x.st[0]}</span>`:''}${late?`<span class="tag t-red">не успеваем к сроку</span>`:''}${opt.chk&&opt.chk[it.id]&&opt.chk[it.id].lacks.length?matTag(opt.chk[it.id]):''}</div>
         </div>
         <div class="g-days" style="width:${g.W}px;background-image:linear-gradient(to right,var(--line) 1px,transparent 1px);background-size:${g.DW}px 100%">${itemBar(it,g,o2,7,22)}${facts}</div></div>`;
@@ -1739,7 +2088,7 @@ function planTable(items,chk,editable,ctx,scn){
   return `<div class="tw"><table><tr><th>Старт</th><th>Окончание</th><th>Линия</th><th>Проект</th><th class="num">План</th><th class="num">Факт</th><th class="num">Наладка</th><th>Заказ</th><th>Статус</th>${chk?'<th>Сырьё</th>':''}</tr>
   ${items.map(it=>{ const o=byId(DB.orders,it.orderId), a=itemStart(it,ctx), e=endMs(it,ctx), late=o&&e>pd(o.due).getTime()+864e5, p=byId(DB.projects,it.projectId), s=it.fixed?null:sched(it,ctx), x=it.fixed?null:itemStatus(it,ctx,chk?.[it.id]);
     return `<tr class="${editable?'click':''}" ${editable?`onclick="openPlanItem('${it.id}'${scn?`,'${scn}'`:''})"`:''}><td>${fdt(a)}</td><td>${fdt(e)}</td><td>${esc(lineName(it.lineId))}</td><td><span class="sw" style="background:${pColor(p)}"></span>${esc(p?.name||'—')}</td><td class="num">${N(it.qty)}</td><td class="num">${x?N(x.f.good):'—'}</td>
-    <td class="num">${N(s?s.setup:it.setupMin)} мин${(s?s.restarts:it.restarts)?` <span class="muted">↻${s?s.restarts:it.restarts}</span>`:''}</td>
+    <td class="num">${N(s?s.setup:it.setupMin)} мин</td>
     <td>${o?`${esc(o.no)} <span class="tag ${late?'t-red':'t-gray'}">${late?'не успеваем к ':'срок '}${fdate(o.due)}</span>`:'<span class="muted">—</span>'}</td><td>${x?`<span class="tag ${x.st[1]}">${x.st[0]}</span>`:''}</td>${chk?`<td>${matTag(chk[it.id])}</td>`:''}</tr>`; }).join('')}</table></div>`;
 }
 function planLogHtml(){
@@ -1749,6 +2098,7 @@ function planLogHtml(){
 const logEntry = (text,kind) => ({col:'planLog',obj:{id:uid(),ts:Date.now(),by:state.me.name,text,...(kind?{kind}:{})}});
 function scnCtx(scn){ return {id:'scn:'+scn.id, items:A(scn.items), downs:[...DB.downs,...A(scn.downs)], lineShifts:scn.lineShifts||{}}; }
 function openPlanItem(id,scnId){
+  if(!scnId) return id?openQItem(id):openQAdd();
   if(!can('edit')) return;
   const scn=scnId?byId(DB.scenarios,scnId):null, ctx=scn?scnCtx(scn):LIVE, items=ctxItems(ctx);
   const it=id?items.find(x=>x.id===id):null, p0=DB.projects.find(p=>p.status==='Активный')||DB.projects[0];
@@ -1781,7 +2131,7 @@ function planCalc(projChanged){
   const F0=$('#mForm'); if(!F0||!F0.elements.projectId) return; const F=F0.elements, p=byId(DB.projects,F.projectId.value);
   if(projChanged&&p){ F.lineId.value=p.lineId; F.orderId.innerHTML=opts(DB.orders.filter(o=>o.projectId===p.id),'',o=>o.no+' · срок '+fdate(o.due),'— без заказа —'); }
   const ctx=state._planCtx||LIVE, s=sched({id:'__calc'+Math.random(),projectId:F.projectId.value,lineId:F.lineId.value,qty:+F.qty.value,start:F.start.value,noSetup:F.noSetup.checked},ctx);
-  $('#planHint').innerHTML=p&&s.segs.length?`<b>Окончание: ${fdt(s.end)}</b> · всего ${Q(s.hours,1)} ч<br>Чистая работа ${Q(s.run/60,1)} ч (${N(p.speed)} шт/мин) · наладка ${N(s.setup)} мин${s.restarts?` · перезапусков ${s.restarts} (линия: ${esc(shiftLabel(F.lineId.value,ctx))})`:''}${s.ok?'':'<br>⚠ не помещается в 8 недель рабочего времени'}`:'Выберите проект и количество';
+  $('#planHint').innerHTML=p&&s.segs.length?`<b>Окончание: ${fdt(s.end)}</b> · всего ${Q(s.hours,1)} ч<br>Чистая работа ${Q(s.run/60,1)} ч (${N(p.speed)} шт/мин) · наладка ${N(s.setup)} мин${s.pause?` · паузы ${minTxt(s.pause)}`:''}${s.ok?'':'<br>⚠ не помещается в 8 недель рабочего времени'}`:'Выберите проект и количество';
 }
 function planAfterPrev(id,scnId){ const scn=scnId?byId(DB.scenarios,scnId):null, F=$('#mForm').elements, e=lineEnd(F.lineId.value,id,scn?scnCtx(scn):LIVE); if(!e) return toast('На этой линии ещё нет позиций'); F.start.value=toDT(e); planCalc(); }
 function planDiff(o,n){
@@ -1797,8 +2147,8 @@ function planDiff(o,n){
 async function delPlanItem(id,scnId){
   if(!confirm('Удалить позицию из плана?')) return; closeModal();
   if(scnId){ const scn=byId(DB.scenarios,scnId); await Store.put('scenarios',{...scn,items:A(scn.items).filter(x=>x.id!==id)}); return; }
-  const it=byId(DB.plan,id);
-  await Store.batch([{col:'plan',id,del:true},logEntry(`Удалил «${projName(it.projectId)}» (${lineName(it.lineId)}, ${fdt(itemStart(it))}, ${N(it.qty)} шт)`)]);
+  const it=byId(DB.plan,id); if(!it) return;
+  await qCommit(DB.plan.filter(x=>x.id!==id).map(clone),[it.lineId],[{col:'plan',id,del:true}],`Удалил «${projName(it.projectId)}» из очереди ${lineName(it.lineId)} (${fdt(itemStart(it))}, ${N(it.qty)} шт) — следующие проекты подтянулись`);
   toast('Позиция удалена');
 }
 async function fixOverlaps(){
@@ -1812,19 +2162,19 @@ function openDown(id,scnId){
   const scn=scnId?byId(DB.scenarios,scnId):null, list=scn?A(scn.downs):DB.downs, dn=id?list.find(x=>x.id===id):null;
   const tm=addD(new Date(),1), [a,b]=shiftWindow(iso(tm),1,DB.lines[0]?.id);
   const r=dn||{lineId:DB.lines[0]?.id,start:toDT(a),end:toDT(b),reason:(DB.settings.downReasons||DEFAULT_SETTINGS.downReasons)[0],note:''};
-  modal((id?'Простой':'Новый простой')+(scn?' · сценарий':''),`<div class="hint" style="margin-bottom:12px">Линия в это время не работает. Позиции плана автоматически растянутся, а после простоя добавится наладка при перезапуске.</div>
+  modal((id?'Простой':'Новый простой')+(scn?' · сценарий':''),`<div class="hint" style="margin-bottom:12px">Линия в это время не работает. Проекты на линии растянутся на время простоя, следующие в очереди сдвинутся.</div>
     <div class="frow"><div class="fg"><label class="fl">Линия</label><select class="fi" name="lineId">${opts(DB.lines,r.lineId)}</select></div>
     <div class="fg"><label class="fl">Причина</label><select class="fi" name="reason">${(DB.settings.downReasons||DEFAULT_SETTINGS.downReasons).map(x=>`<option ${x===r.reason?'selected':''}>${esc(x)}</option>`).join('')}</select></div></div>
     <div class="frow"><div class="fg"><label class="fl">С</label><input class="fi" type="datetime-local" name="start" value="${r.start}"></div><div class="fg"><label class="fl">По</label><input class="fi" type="datetime-local" name="end" value="${r.end}"></div></div>
     <div class="fg"><label class="fl">Комментарий</label><input class="fi" name="note" value="${esc(r.note||'')}" placeholder="Например: 2 оператора на больничном"></div>
-    <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" name="push" checked> Сдвинуть следующие позиции линии, если появится наложение</label>`,
+    <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" name="push" checked> Сдвинуть следующие проекты в очереди линии</label>`,
   async f=>{
     if(!f.start||!f.end||tms(f.end)<=tms(f.start)){ toast('Окончание должно быть позже начала'); return false; }
     const rec={...(dn||{}),id:id||uid(),lineId:f.lineId,start:f.start,end:f.end,reason:f.reason,note:f.note,by:state.me.name};
     const ctx=scn?scnCtx(scn):LIVE, work=ctxItems(ctx).map(clone);
     const downs=(scn?A(scn.downs):DB.downs).filter(x=>x.id!==rec.id).concat([rec]);
     const wctx={...ctx,id:'tmp'+uid(),items:work,downs:scn?[...DB.downs,...downs]:downs};
-    const pushed=f.push?pushOverlaps(work,rec.lineId,wctx):[];
+    const pushed=scn?(f.push?pushOverlaps(work,rec.lineId,wctx):[]):(f.push?relineChain(work,rec.lineId,wctx).filter(x=>{ const o=byId(DB.plan,x.id); return o&&o.start!==x.start; }):[]);
     if(scn){ await Store.put('scenarios',{...scn,downs,items:work}); toast('Сценарий обновлён'); return; }
     await Store.batch([{col:'downs',obj:rec},...pushed.map(x=>({col:'plan',obj:x})),logEntry(`${id?'Изменил':'Добавил'} простой ${lineName(rec.lineId)}: ${fdt(tms(rec.start))} → ${fdt(tms(rec.end))}, ${rec.reason}${rec.note?' ('+rec.note+')':''}${pushed.length?`; сдвинуто позиций: ${pushed.length}`:''}`)]);
     toast('Простой сохранён'+(pushed.length?` · сдвинуто ${pushed.length}`:''));
@@ -1893,12 +2243,12 @@ function renderModel(){
   const onTime=(e,o)=>!e?'<span class="muted">не в плане</span>':e>pd(o.due).getTime()+864e5?`<span class="tag t-red">${fdt(e)}</span>`:`<span class="tag t-green">${fdt(e)}</span>`;
   $('#content').innerHTML=top+`
   <div class="toolbar" style="margin-top:-4px"><span class="pill">🧪 ${esc(scn.name)} · создан ${fts(scn.created)} · ${esc(scn.by||'')}</span><span class="pill">Изменения здесь не влияют на действующий план</span></div>
-  <div class="grid kpis">${cmp('Выпуск в месяце, шт',A1.out,B.out,N)}${cmp('Наладка, ч',A1.setup/60,B.setup/60,v=>Q(v,1),true)}${cmp('Перезапусков линий',A1.restarts,B.restarts,N,true)}${cmp('Заказов с опозданием',A1.late.length,B.late.length,N,true)}${cmp('Позиций с дефицитом сырья',A1.deficit,B.deficit,N,true)}${cmp('Наложений',A1.overlaps,B.overlaps,N,true)}</div>
+  <div class="grid kpis">${cmp('Выпуск в месяце, шт',A1.out,B.out,N)}${cmp('Наладка, ч',A1.setup/60,B.setup/60,v=>Q(v,1),true)}${cmp('Заказов с опозданием',A1.late.length,B.late.length,N,true)}${cmp('Позиций с дефицитом сырья',A1.deficit,B.deficit,N,true)}${cmp('Наложений',A1.overlaps,B.overlaps,N,true)}</div>
   <div class="grid g2 row-gap">
     <div class="card"><div class="card-h"><div class="card-t">План сценария</div><div class="sp"></div>${viewSeg()}</div>
       <div class="toolbar">${ce?`<button class="btn btn-p btn-sm" onclick="openPlanItem(null,'${scn.id}')">+ Позиция</button><button class="btn btn-s btn-sm" onclick="openDown(null,'${scn.id}')">⛔ Простой</button><button class="btn btn-s btn-sm" onclick="scnReflow('${scn.id}','push')">Устранить наложения</button><button class="btn btn-s btn-sm" onclick="scnReflow('${scn.id}','compact')" data-tip="Убрать паузы между будущими позициями на каждой линии">Выстроить вплотную</button>`:''}</div>
       ${state.planView==='rows'?scheduleRows(cur,{ctx,editable:ce,scn:scn.id,chk,downIds:A(scn.downs).map(d=>d.id)}):gantt(cur,{ctx,editable:ce,scn:scn.id,chk,ghost:monthItems(DB.plan,mk,LIVE).map(it=>snapItem(it,LIVE)),downIds:A(scn.downs).map(d=>d.id)})}</div>
-    <div class="card"><div class="card-h"><div class="card-t">Сменность линий в сценарии</div></div>${shiftsCard}<div class="hint" style="margin-top:10px">Когда линия работает не все смены, на каждый новый день добавляется наладка при перезапуске (задаётся в линии или в проекте).</div></div>
+    <div class="card"><div class="card-h"><div class="card-t">Сменность линий в сценарии</div></div>${shiftsCard}<div class="hint" style="margin-top:10px">Нерабочие смены линия просто пропускает — проект продолжается в следующую рабочую смену. Обед, уборку, пересменку добавляйте вручную в деталях проекта.</div></div>
   </div>
   <div class="grid g11">
     <div class="card"><div class="card-h"><div class="card-t">Влияние на отгрузки</div><div class="card-s">заказы, у которых меняется срок или есть опоздание</div></div>
@@ -1961,7 +2311,7 @@ function renderDemand(){
       <td>${short&&can('edit')?`<button class="btn btn-s btn-sm" onclick="openSupply(null,'${x.r.id}',${u==='шт'?Math.ceil(lack):Math.ceil(lack*10)/10},'${iso(ob&&!urgent?ob:addD(today,+x.r.leadDays||0))}')">Заказать ${QU(lack,u)}</button>`:''}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Нет потребности: в плане нет позиций без тех. отчёта или у проектов не заданы рецептуры</div>'}</div>
   <div class="grid g11">
     <div class="card"><div class="card-h"><div class="card-t">Позиции плана и сырьё</div><div class="card-s">когда реально можно начинать</div></div>
-      ${active.length?`<div class="tw"><table><tr><th>Старт по плану</th><th>Проект</th><th class="num">Осталось сделать</th><th>Сырьё</th></tr>${active.map(({it,p,overdue,rest})=>`<tr class="${can('edit')?'click':''}" ${can('edit')?`onclick="openPlanItem('${it.id}')"`:''}><td>${fdt(itemStart(it))}${overdue?' <span class="tag t-red">просрочена</span>':''}</td><td><span class="sw" style="background:${pColor(p)}"></span>${esc(p.name)}</td><td class="num">${N(rest)}${rest<(+it.qty||0)?`<div class="muted" style="font-size:11px">из ${N(it.qty)}</div>`:''}</td><td>${matTag(chk[it.id])}</td></tr>`).join('')}</table></div>`:'<div class="empty">Позиций нет</div>'}</div>
+      ${active.length?`<div class="tw"><table><tr><th>Старт по плану</th><th>Проект</th><th class="num">Осталось сделать</th><th>Сырьё</th></tr>${active.map(({it,p,overdue,rest})=>`<tr class="${can('edit')?'click':''}" ${can('edit')?`onclick="openQItem('${it.id}')"`:''}><td>${fdt(itemStart(it))}${overdue?' <span class="tag t-red">просрочена</span>':''}</td><td><span class="sw" style="background:${pColor(p)}"></span>${esc(p.name)}</td><td class="num">${N(rest)}${rest<(+it.qty||0)?`<div class="muted" style="font-size:11px">из ${N(it.qty)}</div>`:''}</td><td>${matTag(chk[it.id])}</td></tr>`).join('')}</table></div>`:'<div class="empty">Позиций нет</div>'}</div>
     <div class="card"><div class="card-h"><div class="card-t">Поставки сырья</div><div class="sp"></div>${can('edit')?`<button class="btn btn-p btn-sm" onclick="openSupply()">+ Поставка</button>`:''}</div>
       ${sup.length?`<div class="tw"><table><tr><th>Дата</th><th>Сырьё</th><th class="num">Кол-во</th><th>Поставщик</th><th>Статус</th><th></th></tr>
       ${sup.map(s=>{ const r=byId(DB.raw,s.rawId), late=s.status!=='received'&&s.date<iso(today); return `<tr><td>${fdate(s.date)}</td><td>${esc(r?.name||'—')}</td><td class="num">${QU(s.qty,r?.unit)} ${esc(r?.unit||'')}</td><td class="muted">${esc(s.supplier||'')}</td>
@@ -1987,7 +2337,7 @@ async function receiveSupply(id){
     toast('Поставка принята на склад'); },'Принять на склад');
 }
 function openFeasibility(){
-  modal('Когда сможем выполнить проект?',`<div class="hint" style="margin-bottom:12px">Учитываются остатки, резерв действующего плана, ожидаемые поставки и календарь линии (смены, простои, перезапуски).</div>
+  modal('Когда сможем выполнить проект?',`<div class="hint" style="margin-bottom:12px">Учитываются остатки, резерв действующего плана, ожидаемые поставки и календарь линии (смены, простои).</div>
     <div class="fg"><label class="fl">Проект</label><select class="fi" name="projectId">${opts(DB.projects.filter(p=>p.status!=='Архив'),'',p=>p.name)}</select></div>
     <div class="frow"><div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="qty" value="200000"></div><div class="fg"><label class="fl">Срок отгрузки</label><input class="fi" type="date" name="due" value="${iso(addD(new Date(),21))}"></div></div>
     <div id="feasOut"></div>`,
@@ -2007,7 +2357,7 @@ function feasCalc(f){
   $('#feasOut').innerHTML=`<div class="card" style="padding:14px;margin-top:6px;box-shadow:none">
     <div class="stat"><span>Сырьё будет готово</span><b>${fdate(ready)}${impossible?' <span class="tag t-red">нужен дозаказ</span>':''}</b></div>
     <div class="stat"><span>${esc(lineName(p.lineId))} свободна с</span><b>${lineFree?fdt(lineFree):'сейчас'} · ${esc(shiftLabel(p.lineId))}</b></div>
-    <div class="stat"><span>Работа / наладка</span><b>${Q(s.run/60,1)} ч / ${N(s.setup)} мин${s.restarts?` (перезапусков ${s.restarts})`:''}</b></div>
+    <div class="stat"><span>Работа / наладка</span><b>${Q(s.run/60,1)} ч / ${N(s.setup)} мин</b></div>
     <div class="stat"><span>Старт → окончание по календарю линии</span><b>${fdt(s.start)} → ${fdt(s.end)}</b></div>
     <div class="stat"><span>Срок ${fdate(f.due)}</span><b>${ok?'<span class="tag t-green">успеваем</span>':'<span class="tag t-red">не успеваем</span>'}</b></div>
     <div class="tw" style="margin:10px -14px -14px"><table><tr><th>Сырьё</th><th class="num">Нужно</th><th class="num">Свободно с учётом плана</th><th>Статус</th></tr>${lines.join('')}</table></div></div>`;
@@ -2363,7 +2713,7 @@ function render(){
   _sch.clear(); _res=null; _wo=null;
   let s=SECTIONS.find(x=>x.id===state.sec);
   if(!s||(s.admin&&!can('admin'))){ s=SECTIONS[1]; state.sec=s.id; }
-  $('#pageTitle').textContent=s.t; buildNav();
+  $('#pageTitle').textContent=s.t; buildNav(); $('#app').classList.toggle('full',s.id==='plan');
   $('#quickAdd').style.display=can('output')?'':'none';
   s.r();
 }
@@ -2428,7 +2778,7 @@ const Store = {
 //  DEMO DATA — завод декорирования стеклянной тары
 // ═════════════════════════════════════════════
 const DEFAULT_SETTINGS = {orgName:'Моё производство', currency:'€', planFactor:.85, shiftHours:8, setupTarget:5, defectTarget:2, workDays:[1,2,3,4,5,6,0],
-  shiftSchemes:[{id:'s8',name:'8 часов',shifts:[{from:'07:00',to:'15:00'},{from:'15:00',to:'23:00'},{from:'23:00',to:'07:00'}]},{id:'s12',name:'12 часов',shifts:[{from:'07:00',to:'19:00'},{from:'19:00',to:'07:00'}]}],
+  shiftSchemes:[{id:'s12',name:'12 часов',shifts:[{from:'07:00',to:'19:00'},{from:'19:00',to:'07:00'}]},{id:'s8',name:'8 часов',shifts:[{from:'07:00',to:'15:00'},{from:'15:00',to:'23:00'},{from:'23:00',to:'07:00'}]}],
   activities:[{id:'work',name:'Работа (наработка)',cat:'work'},{id:'setup',name:'Наладка',cat:'setup'},{id:'change',name:'Переналадка / смена цвета',cat:'setup'},{id:'wash',name:'Мойка / чистка',cat:'setup'},
     {id:'brk',name:'Поломка / ремонт',cat:'down'},{id:'staff',name:'Нет персонала',cat:'down'},{id:'mat',name:'Нет сырья / тары',cat:'down'},{id:'wait',name:'Ожидание (ОТК, согласование)',cat:'down'},{id:'lunch',name:'Перерыв / обед',cat:'break'},{id:'other',name:'Прочее',cat:'down'}],
   rawCats:['Основы и лаки','Пигменты','Эффектные пигменты','Добавки','Растворители','Тара','Упаковка','Прочее'],
@@ -2439,9 +2789,11 @@ function genDemo(){
   let seed=11; const rnd=()=>(seed=seed*16807%2147483647)/2147483647, pick=a=>a[Math.floor(rnd()*a.length)];
   const now=new Date(), NOW=now.getTime(), T=iso(now), R3=v=>Math.round(v*1000)/1000;
   const lines=[
-    {id:'L1',name:'Линия 1 · Покраска',type:'Пистолетная покраска + УФ-сушка',stations:7,cap:36000,shifts:3,scheme:'s8',workShifts:[1,2,3],workDays:[0,1,2,3,4,5,6],restartMin:40},
-    {id:'L2',name:'Линия 2 · Покраска',type:'Пистолетная покраска + печь',stations:9,cap:50000,shifts:2,scheme:'s12',workShifts:[1,2],workDays:[1,2,3,4,5,6],restartMin:35},
-    {id:'L3',name:'Линия 3 · Шелкография',type:'Трафаретная печать',stations:4,cap:26000,shifts:1,scheme:'s8',workShifts:[1],workDays:[1,2,3,4,5],restartMin:25}];
+    {id:'L1',name:'Линия 1 (coat)',type:'Пистолетная покраска + УФ-сушка',stations:7,cap:60000,shifts:2,scheme:'s12',workShifts:[1,2],workDays:[0,1,2,3,4,5,6]},
+    {id:'L2',name:'Линия 2 (coat)',type:'Пистолетная покраска + печь',stations:9,cap:70000,shifts:2,scheme:'s12',workShifts:[1,2],workDays:[1,2,3,4,5,6]},
+    {id:'L3',name:'Линия 1 принтинг',type:'Трафаретная печать',stations:4,cap:40000,shifts:1,scheme:'s12',workShifts:[1],workDays:[1,2,3,4,5]},
+    {id:'L4',name:'Линия 2 принтинг',type:'Трафаретная печать',stations:4,cap:42000,shifts:1,scheme:'s12',workShifts:[1],workDays:[1,2,3,4,5]},
+    {id:'L5',name:'Хот стемпинг',type:'Горячее тиснение фольгой',stations:2,cap:30000,shifts:1,scheme:'s12',workShifts:[1],workDays:[1,2,3,4,5]}];
   const raw=[
     ['R1','Лак-связующее УФ, прозрачный','Основы и лаки','кг',8.4,900,300,'ChemCoat',10],
     ['R2','Паста пигментная белая TiO2','Пигменты','кг',12.5,160,80,'PigmentPro',14],
@@ -2490,8 +2842,10 @@ function genDemo(){
     {id:'P5',name:'Коньяк «Резерв» 0,5 — золотая шелкография',client:'Spirits Co',tareId:'R14',lineId:'L3',speed:60,setupMin:70,restartMin:'',color:'#8a6d1f',status:'Активный',
       stations:[st('S2',12,'—','—','сетка 120','подложка под логотип'),st('S6',8,'—','—','сетка 100','логотип'),st('S3',6,'—','—','сетка 140','мелкий текст')],
       quality:'Совмещение цветов ±0,2 мм — проверять лупой каждые 500 шт.\nЗолото — только свежий замес, срок жизни 6 ч.'},
-    {id:'P6',name:'Вино «Розе» 0,7 — красный и серебро',client:'Vinoteka',tareId:'R15',lineId:'L3',speed:65,setupMin:80,restartMin:'',color:'#b0303a',status:'Разработка',
+    {id:'P6',name:'Вино «Розе» 0,7 — красный и серебро',client:'Vinoteka',tareId:'R15',lineId:'L4',speed:65,setupMin:80,restartMin:'',color:'#b0303a',status:'Активный',
       stations:[st('S4',10,'—','—','сетка 120'),st('S7',7,'—','—','сетка 100'),st('S2',6,'—','—','сетка 140')],quality:'Новый проект: первая наработка — пробная партия 5 000 шт, согласование образца с клиентом.'},
+    {id:'P7',name:'Бренди «Гранд» 0,7 — золотое тиснение',client:'Spirits Co',tareId:'R15',lineId:'L5',speed:45,setupMin:60,restartMin:'',color:'#c28a14',status:'Активный',
+      stations:[st('S6',4,'—','—','штамп 170 °C','фольга «золото», логотип')],quality:'Температура штампа 165–175 °C, давление по эталону.\nПроверять адгезию фольги скотч-тестом каждый час.'},
   ];
   const settings={...DEFAULT_SETTINGS}, m0=new Date(now.getFullYear(),now.getMonth(),1), mEnd=new Date(now.getFullYear(),now.getMonth()+1,1), mk=monthKey(now);
   const orders=[]; let on=101;
@@ -2500,18 +2854,19 @@ function genDemo(){
   const at=(ds,h)=>ds+'T'+String(h).padStart(2,'0')+':00';
   const dn1=nextWork('L1',addD(m0,6)), dn2=nextWork('L2',addD(now,1)), dn3=nextWork('L3',addD(now,4));
   const downs=[
-    {id:'DN1',lineId:'L1',start:at(dn1,7),end:at(dn1,15),reason:'Нет персонала',note:'Два оператора на больничном',by:'Ольга Петренко'},
+    {id:'DN1',lineId:'L1',start:at(dn1,7),end:at(dn1,19),reason:'Нет персонала',note:'Два оператора на больничном',by:'Ольга Петренко'},
     {id:'DN2',lineId:'L2',start:at(dn2,19),end:at(iso(addD(pd(dn2),1)),7),reason:'Нет персонала',note:'Ночная смена не укомплектована',by:'Ольга Петренко'},
-    {id:'DN3',lineId:'L3',start:at(dn3,7),end:at(dn3,15),reason:'Плановый ремонт (ППР)',note:'Замена ракельного узла',by:'Марина Коваль'}];
+    {id:'DN3',lineId:'L3',start:at(dn3,7),end:at(dn3,19),reason:'Плановый ремонт (ППР)',note:'Замена ракельного узла',by:'Марина Коваль'}];
   const keep=DB; DB=normalize({...emptyDB(),lines,projects,raw,semis,settings,downs,orders}); _sch.clear();
   // план: позиции подряд по календарю каждой линии
   const plan=[]; let pn=0;
   lines.forEach(l=>{
     const ps=projects.filter(p=>p.lineId===l.id); let t=m0.getTime(), k=0;
     while(t<mEnd.getTime()+10*864e5){
-      const p=ps[k%ps.length], hrs=l.id==='L3'?14+rnd()*14:26+rnd()*40, qty=Math.round(p.speed*60*hrs/1000)*1000;
+      const p=ps[k%ps.length], hrs=['L1','L2'].includes(l.id)?26+rnd()*40:12+rnd()*16, qty=Math.round(p.speed*60*hrs/1000)*1000;
       const o=orders.filter(o=>o.projectId===p.id).find(o=>!plan.some(a=>a.orderId===o.id));
-      const item={id:'PL'+(pn++),projectId:p.id,lineId:l.id,orderId:o?.id||'',qty,start:toDT(t),note:''};
+      const two=l.workShifts.length>1, item={id:'PL'+(pn++),projectId:p.id,lineId:l.id,orderId:o?.id||'',qty,start:toDT(t),note:'',seq:k,
+        extras:[{kind:'Обед',min:30,time:'12:00',every:true},...(two?[{kind:'Обед',min:30,time:'00:00',every:true}]:[]),...(k%3===1?[{kind:'Подсчёт материалов',min:20,time:'',every:false}]:[]),...(l.id==='L2'?[{kind:'Уборка',min:15,time:'',every:true}]:[])]};
       const s=sched(item,{id:'appr',downs:[]}); plan.push(item); t=s.end+(rnd()<.25?Math.round(1+rnd()*3)*H:0); k++;
     }
   });
@@ -2524,10 +2879,10 @@ function genDemo(){
     logAt(d,9,'Ольга Петренко','Оперативка: Линия 1 — замена форсунки ст.5 и чистка камеры, сдвиг на 14 ч. Заказчик предупреждён.','meeting');
     logAt(d,9,'Ольга Петренко',`«${projects.find(p=>p.id===x.projectId).name}» и далее на Линии 1: сдвиг +14 ч`); }
   const l2=byLine('L2'); if(l2.length>2){ const x=l2[1], old=x.qty; x.qty=Math.round(old*1.2/1000)*1000; logAt(pd(x.start.slice(0,10)),9,'Марина Коваль',`«${projects.find(p=>p.id===x.projectId).name}»: кол-во ${N(old)} → ${N(x.qty)} (клиент увеличил заказ)`); }
-  logAt(pd(dn1),8,'Ольга Петренко',`Добавил простой Линия 1 · Покраска: ${fdate(dn1)} 07:00–15:00, Нет персонала (два оператора на больничном)`);
-  _sch.clear(); lines.forEach(l=>pushOverlaps(plan,l.id,LIVE));
+  logAt(pd(dn1),8,'Ольга Петренко',`Добавил простой ${lines[0].name}: ${fdate(dn1)} 07:00–19:00, Нет персонала (два оператора на больничном)`);
+  _sch.clear(); lines.forEach(l=>pushOverlaps(plan,l.id,LIVE)); lines.forEach(l=>relineChain(plan,l.id,LIVE)); _sch.clear();
   logAt(now,9,'Ольга Петренко',`Оперативка: ${fdate(dn2)} на Линии 2 не будет ночной смены — нет людей, поставили простой, план сдвинулся. Золото Au-7 заканчивается — снабжению ускорить поставку.`,'meeting');
-  logAt(now,9,'Ольга Петренко',`Добавил простой Линия 2 · Покраска: ${fdate(dn2)} 19:00 → 07:00, Нет персонала`);
+  logAt(now,9,'Ольга Петренко',`Добавил простой ${lines[1].name}: ${fdate(dn2)} 19:00 → 07:00, Нет персонала`);
   plan.filter(x=>!x.orderId&&sched(x,LIVE).end>NOW).forEach(x=>{ const o={id:'O'+on,no:'З-'+(on++),projectId:x.projectId,qty:0,due:iso(addD(new Date(sched(x,LIVE).end),2+Math.floor(rnd()*5))),note:''}; orders.push(o); x.orderId=o.id; });
   { const S2={id:'s2',lineShifts:{L3:[1,2]}}; const cand=plan.filter(x=>x.lineId==='L3'&&sched(x,LIVE).start>NOW).find(x=>iso(new Date(sched(x,LIVE).end))>iso(addD(new Date(sched(x,S2).end),1)));
     if(cand){ const o=orders.find(o=>o.id===cand.orderId); o.due=iso(new Date(sched(cand,S2).end)); o.note='Клиент просит раньше'; } }
@@ -2557,11 +2912,11 @@ function genDemo(){
         const dn=downs.find(x=>x.lineId===l.id&&tms(x.start)<b&&tms(x.end)>a);
         if(dn&&tms(dn.start)<=a&&tms(dn.end)>=b){ lastEnd[l.id]=null; return; }
         let segs=[];
-        if(inMonth){ plan.filter(x=>x.lineId===l.id).forEach(x=>sched(x,LIVE).segs.forEach(([sa,sb,k])=>{ const u=Math.max(sa,a), v=Math.min(sb,b); if(v>u) segs.push({a:u,b:v,act:k==='s'?'setup':'work',pid:x.projectId,pi:x.id,o:x.orderId}); }));
+        if(inMonth){ plan.filter(x=>x.lineId===l.id).forEach(x=>sched(x,LIVE).segs.forEach(([sa,sb,k])=>{ const u=Math.max(sa,a), v=Math.min(sb,b); if(v>u) segs.push({a:u,b:v,act:k==='s'?'setup':k==='p'?'lunch':'work',pid:x.projectId,pi:x.id,o:x.orderId}); }));
           if(dn) segs.push({a:Math.max(tms(dn.start),a),b:Math.min(tms(dn.end),b),act:'staff'}); }
         else {
           const ps=projects.filter(q=>q.lineId===l.id&&q.status==='Активный'), p=(!cur[l.id]||rnd()<.22)?pick(ps):projects.find(q=>q.id===cur[l.id]); let setup=0;
-          if(cur[l.id]!==p.id){ setup=Math.round(p.setupMin*(.85+rnd()*(.4+age/180*.9))); cur[l.id]=p.id; } else if(lastEnd[l.id]!==a){ setup=Math.round((+p.restartMin||l.restartMin)*(.9+rnd()*.5)); }
+          if(cur[l.id]!==p.id){ setup=Math.round(p.setupMin*(.85+rnd()*(.4+age/180*.9))); cur[l.id]=p.id; } else if(lastEnd[l.id]!==a){ setup=Math.round(30*(.9+rnd()*.5)); }
           setup=Math.min(setup,Math.round((b-a)/60e3*.8)); lastEnd[l.id]=b0; const se=r5(a+setup*60e3);
           if(setup>0) segs.push({a,b:se,act:'setup',pid:p.id}); segs.push({a:se,b,act:'work',pid:p.id});
         }
@@ -2569,6 +2924,8 @@ function genDemo(){
       });
     });
   }
+  // последние отчёты смен ещё не проверены технологом — факт в плане появится после подтверждения
+  lines.forEach(l=>{ const rs=output.filter(r=>r.lineId===l.id).sort((a,b)=>b.ts-a.ts), rid=rs[0]?.reportId; if(rid&&l.id!=='L4') output.filter(r=>r.reportId===rid).forEach(r=>r.approved=false); });
   orders.forEach(o=>{ const inPlan=plan.filter(x=>x.orderId===o.id).reduce((a,x)=>a+x.qty,0); o.qty=Math.max(20000,Math.round((inPlan||60000)*(.95+rnd()*.1)/1000)*1000); });
   // тех. отчёты: прошлые наработки и завершённые позиции текущего месяца (сырьё списано)
   const runs=[], moves=[];
@@ -2605,7 +2962,7 @@ function genDemo(){
   moves.push({id:'MV3',date:iso(addD(now,-5)),type:'inv',rawId:'R10',qty:-6,note:'было 266, стало 260',by:'Ольга Петренко',ts:3});
   orders.filter(o=>o.due<T).forEach((o,i)=>{ const made=output.filter(r=>r.orderId===o.id).reduce((a,r)=>a+r.good,0); if(made>0) moves.push({id:'MV'+(10+i),date:o.due,type:'ship',projectId:o.projectId,orderId:o.id,qty:Math.min(o.qty,made),doc:'ТТН-'+(500+i),by:'Администратор',ts:10+i}); });
   const members=[{id:'admin',login:'admin',name:'Администратор',password:'1234',role:'admin'},{id:'olga',login:'olga',name:'Ольга Петренко',password:'1234',role:'master'},{id:'andriy',login:'andriy',name:'Андрей Иванов',password:'1234',role:'operator'},{id:'marina',login:'marina',name:'Марина Коваль',password:'1234',role:'technologist'}];
-  const scenarios=[{id:'SC1',name:'Линия 3 во 2 смены',created:NOW-3*H,by:'Администратор',items:plan.map(clone),downs:[],lineShifts:{L3:[1,2]},note:'Что если набрать людей на 2-ю смену шелкографии?'}];
+  const scenarios=[{id:'SC1',name:'Линия 1 принтинг во 2 смены',created:NOW-3*H,by:'Администратор',items:plan.map(clone),downs:[],lineShifts:{L3:[1,2]},note:'Что если набрать людей на 2-ю смену шелкографии?'}];
   const db={lines,projects,raw,semis,orders,output,runs,plan,planLog,supplies,moves,downs,scenarios,members,approved:{[mk]:{at:addD(m0,-2).getTime()+15*H,by:'Администратор',items:approvedItems}},settings};
   DB=keep; _sch.clear();
   return db;
