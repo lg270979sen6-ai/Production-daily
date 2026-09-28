@@ -215,6 +215,9 @@ tfoot td{font-weight:800;background:var(--card2)}
 .toast.show{transform:translate(-50%,0)}
 .tip{position:fixed;pointer-events:none;background:var(--text);color:var(--card);font-size:12px;font-weight:600;padding:8px 10px;border-radius:9px;z-index:98;display:none;line-height:1.5;white-space:nowrap}
 .scrim{display:none}
+.tip-pin{position:fixed;display:none;z-index:97;background:var(--card);color:var(--text);border:1px solid var(--line2);border-radius:12px;box-shadow:0 12px 36px rgba(0,0,0,.2);padding:10px 14px 12px;max-width:min(640px,94vw);max-height:60vh;overflow:auto;font-size:12.5px;line-height:1.6;user-select:text}
+.tip-pin-h{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:800;font-size:12px;color:var(--text3)}.tip-pin-h span{flex:1}
+[data-tip]{cursor:help}
 
 @media (max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:980px){.g2,.g3,.g11{grid-template-columns:1fr}.k4{grid-template-columns:repeat(2,1fr)}}
@@ -307,6 +310,7 @@ b.click{cursor:pointer;text-decoration:underline dotted}
 </div>
 <div class="toast" id="toast"></div>
 <div class="tip" id="tip"></div>
+<div class="tip-pin" id="tipPin"><div class="tip-pin-h"><span>Расшифровка</span><button class="btn btn-s btn-sm" onclick="copyTip()">Копировать</button><button class="icon-btn" style="width:28px;height:28px" onclick="$('#tipPin').style.display='none'">✕</button></div><div id="tipPinBody"></div></div>
 
 <script>
 // ═════════════════════════════════════════════
@@ -429,6 +433,7 @@ const planHours = (p,qty) => p ? (+p.setupMin||0)/60 + (+qty||0)/Math.max(1,(+p.
 const monthKey = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
 const monthLabel = k => { const [y,m]=k.split('-'); return MONTHS[+m-1]+' '+y; };
 
+function copyTip(){ const t=$('#tipPinBody').innerText; (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Скопировано'),()=>{ const r=document.createRange(); r.selectNodeContents($('#tipPinBody')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast('Текст выделен — нажмите Ctrl+C'); }); }
 function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2800); }
 function toggleSide(o){ $('#side').classList.toggle('open',o); $('#scrim').classList.toggle('open',o); }
 // ── Ввод с клавиатуры: изменения в полях даты/времени применяются, когда ввод закончен (Tab, Enter, клик в другое место)
@@ -451,7 +456,24 @@ function toggleSide(o){ $('#side').classList.toggle('open',o); $('#scrim').class
     let v=t.value.replace(/[\s ]/g,'').replace(/,/g,'.').replace(/[^0-9.\-]/g,''); const i=v.indexOf('.'); if(i>=0) v=v.slice(0,i+1)+v.slice(i+1).replace(/\./g,''); v=v.replace(/(?!^)-/g,'');
     if(v!==t.value){ const pos=t.selectionStart-(t.value.length-v.length); t.value=v; try{ t.setSelectionRange(Math.max(0,pos),Math.max(0,pos)); }catch(_){} } },true);
 })();
+document.addEventListener('click',e=>{
+  // закрыть открытые выпадающие списки при клике вне них
+  document.querySelectorAll('details.dd[open]').forEach(d=>{ if(!d.contains(e.target)){ d.open=false; if(d.closest('#content')) state.mvOpen=false; } });
+  const pin=$('#tipPin');
+  if(pin.contains(e.target)) return;
+  const el=e.target.closest?.('[data-tip]');
+  if(el&&!el.closest('.click')&&!el.matches('.click,[onclick],button,a')&&el.dataset.tip.includes('<br>')){ // подсказки-расшифровки: по клику закрепляются
+    e.stopPropagation(); $('#tip').style.display='none';
+    $('#tipPinBody').innerHTML=el.dataset.tip; pin.style.display='block';
+    const r=el.getBoundingClientRect(), w=pin.offsetWidth, h=pin.offsetHeight;
+    pin.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px'; pin.style.top=(r.bottom+8+h>innerHeight?Math.max(8,r.top-h-8):r.bottom+8)+'px';
+    return;
+  }
+  pin.style.display='none';
+},true);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ $('#tipPin').style.display='none'; document.querySelectorAll('details.dd[open]').forEach(d=>d.open=false); state.mvOpen=false; } });
 document.addEventListener('mousemove',e=>{
+  if($('#tipPin').style.display==='block'){ $('#tip').style.display='none'; return; }
   const el=e.target.closest?.('[data-tip]'), tip=$('#tip');
   if(!el){ tip.style.display='none'; return; }
   tip.innerHTML=el.dataset.tip; tip.style.display='block';
@@ -1263,7 +1285,7 @@ async function saveProject(){
 //  RUNS — тех. отчёт наработки: три раздела с отдельным сохранением, история, списание
 // ═════════════════════════════════════════════
 const RSEC={prod:'Наработка',settings:'Настройки машины и станций',materials:'Материалы и списание'};
-function runOutputs(r){ const ids=A(r.outputIds); return ids.length?DB.output.filter(o=>ids.includes(o.id)):DB.output.filter(o=>o.runId&&o.runId===r.id); }
+function runOutputs(r){ const linked=DB.output.filter(o=>o.runId&&o.runId===r.id); if(linked.length||r.cancelled) return linked; const ids=A(r.outputIds); return DB.output.filter(o=>ids.includes(o.id)&&!liveRun(o.runId)); }
 function runPlanRaw(r){ // плановый расход сырья по нормам: станции + тара
   const q=(+r.qtyGood||0)+(+r.qtyDefect||0), acc={};
   A(r.stations).forEach(st=>{ const kg=stationKg(st.norm,q); Object.entries(st.rawPerKg||{}).forEach(([rid,per])=>acc[rid]=(acc[rid]||0)+per*kg); });
@@ -1277,11 +1299,12 @@ function runTotals(r){
   return {q,plan:kgP,fact:filled?kgF:0,costPlan:cp,costFact:cf,filled};
 }
 // выпуск, по которому сырьё ещё зарезервировано (нет тех. отчёта с сохранёнными материалами)
-function outputOpen(o){ if(o.resClosed) return false; const r=o.runId?byId(DB.runs,o.runId):null; return !(r&&r.writtenOff); }
+const liveRun = id => { const r=id?byId(DB.runs,id):null; return r&&!r.cancelled?r:null; };
+function outputOpen(o){ if(o.resClosed) return false; const r=liveRun(o.runId); return !(r&&r.writtenOff); }
 function outputReserve(o){ const p=byId(DB.projects,o.projectId); return p?projectReq(p,(+o.good||0)+(+o.defect||0)):{}; }
 function reservedByRaw(){ const acc={}; DB.output.filter(outputOpen).forEach(o=>Object.entries(outputReserve(o)).forEach(([rid,q])=>acc[rid]=(acc[rid]||0)+q)); return acc; }
 function runCandidates(d){ // отчёты за смены, которые можно включить в этот тех. отчёт
-  return DB.output.filter(o=>o.projectId===d.projectId&&!o.resClosed&&(!o.runId||o.runId===d.id||!byId(DB.runs,o.runId))).sort((a,b)=>(a.startAt||a.date).localeCompare(b.startAt||b.date));
+  return DB.output.filter(o=>o.projectId===d.projectId&&!o.resClosed&&(!o.runId||o.runId===d.id||!liveRun(o.runId))).sort((a,b)=>(a.startAt||a.date).localeCompare(b.startAt||b.date));
 }
 function runRecalc(d){
   const sel=DB.output.filter(o=>A(d.outputIds).includes(o.id)); if(!sel.length) return;
@@ -1324,10 +1347,10 @@ function runFactFromStations(){
   Object.entries(acc).forEach(([rid,v])=>d.rawFact[rid]=Math.round(v*1000)/1000); dirty('materials'); renderRunEdit(); toast('Факт по сырью пересчитан из станций через рецептуры');
 }
 const secBadge = (d,s) => d.sec?.[s]?`<span class="tag t-green" data-tip="${esc(d.sec[s].by||'')} · ${fts(d.sec[s].ts)}">✓ ${esc(d.sec[s].by||'')} · ${fts(d.sec[s].ts)}</span>`:'<span class="tag t-gray">не заполнен</span>';
-const saveBtn = (s,label) => can('edit')?`<button class="btn ${state.runDirty[s]?'btn-p':'btn-s'}" id="rsave_${s}" data-l="${label}" onclick="saveRunSection('${s}')">${state.runDirty[s]?label:'✓ Сохранено'}</button>`:'';
+const saveBtn = (s,label) => can('edit')&&!state.draft?.cancelled?`<button class="btn ${state.runDirty[s]?'btn-p':'btn-s'}" id="rsave_${s}" data-l="${label}" onclick="saveRunSection('${s}')">${state.runDirty[s]?label:'✓ Сохранено'}</button>`:'';
 function renderRunEdit(){
   const d=state.draft; if(!d) return go('runs');
-  const p=byId(DB.projects,d.projectId), ro=!can('edit'), q=(+d.qtyGood||0)+(+d.qtyDefect||0), plan=runPlanRaw(d), tot=runTotals(d);
+  const p=byId(DB.projects,d.projectId), ro=!can('edit')||!!d.cancelled, q=(+d.qtyGood||0)+(+d.qtyDefect||0), plan=runPlanRaw(d), tot=runTotals(d);
   const cand=runCandidates(d), sel=new Set(A(d.outputIds));
   const outRows=cand.map(o=>`<tr><td><input type="checkbox" ${sel.has(o.id)?'checked':''} ${ro?'disabled':''} onchange="runToggleOut('${o.id}',this.checked)" style="width:18px;height:18px;accent-color:var(--brand)"></td>
     <td>${fdate(o.date)}</td><td>${esc(shiftName(o.lineId,o.shift))}</td><td>${esc(lineName(o.lineId))}</td><td>${miniTL(o)}</td><td class="num"><b>${N(o.good)}</b></td><td class="num">${N(o.defect)}</td><td class="num">${o.workMin!=null?minTxt(o.workMin):'—'}</td><td class="num">${o.setup?minTxt(o.setup):'—'}</td><td class="muted">${esc(o.operator||'')}</td></tr>`).join('');
@@ -1349,8 +1372,9 @@ function renderRunEdit(){
   const items=DB.plan.filter(i=>i.projectId===d.projectId).sort((a,b)=>itemStart(b)-itemStart(a));
   const log=A(d.log).slice().sort((a,b)=>b.ts-a.ts);
   $('#content').innerHTML=`<div class="toolbar"><button class="btn btn-s" onclick="state.draft=null;go('runs')">← Журнал тех. отчётов</button><button class="btn btn-s" onclick="openProject('${d.projectId}')">Проект: ${esc(p?.name||'—')}</button><div class="sp"></div>
-    ${d.writtenOff?'<span class="tag t-green">сырьё списано</span>':'<span class="tag t-amber">сырьё в резерве, не списано</span>'}
-    ${d.id?`<button class="btn btn-s" onclick="printRun('${d.id}')">🖨 Печать</button>`:''}</div>
+    ${d.cancelled?'<span class="tag t-red">отменён</span>':d.writtenOff?'<span class="tag t-green">сырьё списано</span>':'<span class="tag t-amber">сырьё в резерве, не списано</span>'}
+    ${d.id?`<button class="btn btn-s" onclick="printRun('${d.id}')">🖨 Печать</button>`:''}${d.id&&!d.cancelled&&can('edit')?`<button class="btn btn-d" onclick="cancelRun('${d.id}')">Отменить тех. отчёт</button>`:''}</div>
+  ${d.cancelled?`<div class="msg err row-gap" style="display:block"><b>Отчёт отменён</b> ${fts(d.cancelledAt)} · ${esc(d.cancelledBy||'')} · ${esc(d.cancelReason||'')}. Его списание помечено «отменено» и не учитывается в остатках.</div>`:runDupes().has(d.id)?`<div class="msg err row-gap" style="display:block">⚠ Похоже на дубль: по этому проекту есть другой тех. отчёт с таким же расходом за те же сутки. Если это лишний отчёт — нажмите «Отменить тех. отчёт».</div>`:''}
   ${d.id&&state.runAuto?`<div class="msg err row-gap" style="display:block">В отчёте не были отмечены смены — поэтому резерв по ним не снимался. Программа отметила свободные смены этого проекта: проверьте список в разделе «Наработка» и нажмите <b>«Сохранить раздел»</b>. Уже проведённое списание при этом не повторится.</div>`:''}
   ${d.id&&!state.runAuto&&!A(d.outputIds).length&&!(+d.qtyGood)?`<div class="msg err row-gap" style="display:block">К отчёту не привязаны смены. Отметьте их в разделе «Наработка» и сохраните раздел — иначе резерв сырья не снимется.</div>`:''}
   ${!d.id?`<div class="note row-gap" style="background:var(--blueBg)">Новый тех. отчёт. Разделы сохраняются <b>по отдельности</b> — их могут заполнять разные сотрудники в разное время. Отчёт появится в журнале после первого сохранения любого раздела.</div>`:''}
@@ -1429,16 +1453,20 @@ async function saveRunSection(sec){
     const prev=base.writtenMap||{}, next={}, date=(rec.endAt||iso(new Date())).slice(0,10);
     Object.entries(d.rawFact||{}).forEach(([rid,v])=>{ if(v!==''&&v!=null&&isFinite(+v)) next[rid]=+v; });
     if(!Object.keys(next).length) return toast('Внесите фактический расход хотя бы по одному компоненту');
-    const corr=!!base.writtenOff;
-    [...new Set([...Object.keys(prev),...Object.keys(next)])].forEach(rid=>{
-      const delta=Math.round(((next[rid]||0)-(prev[rid]||0))*1000)/1000, r=byId(DB.raw,rid); if(!delta||!r) return;
-      list.push({col:'raw',obj:{...r,qty:Math.round(((+r.qty||0)-delta)*1000)/1000}});
-      list.push({col:'moves',obj:{id:uid(),date,type:delta>0?'out':'in',rawId:rid,qty:Math.abs(delta),projectId:rec.projectId,runId:id,note:corr?(delta>0?'Корректировка тех. отчёта: доп. списание':'Корректировка тех. отчёта: возврат на склад'):'Списание по тех. отчёту',by:state.me.name,ts:Date.now()}});
-      moveNotes.push(`${r.name}: ${delta>0?'списано':'возвращено'} ${QU(Math.abs(delta),r.unit)} ${r.unit}`);
-    });
+    const corr=!!base.writtenOff, same=JSON.stringify(Object.entries(prev).sort())===JSON.stringify(Object.entries(next).sort());
+    if(!same){
+      const qty={}; DB.raw.forEach(r=>qty[r.id]=+r.qty||0), now=Date.now();
+      // прошлые списания этого отчёта — «отменено» (остаются в истории, в остатках не считаются)
+      DB.moves.filter(m=>m.runId===id&&!m.cancelled).forEach(m=>{ if(qty[m.rawId]!=null) qty[m.rawId]-=moveDelta(m); list.push({col:'moves',obj:{...m,cancelled:true,cancelledAt:now,cancelledBy:state.me.name,cancelReason:'перезапись тех. отчёта'}}); });
+      Object.entries(next).forEach(([rid,v])=>{ const r=byId(DB.raw,rid); if(!r||!v) return; qty[rid]-=v;
+        list.push({col:'moves',obj:{id:uid(),date,type:'out',rawId:rid,qty:v,projectId:rec.projectId,runId:id,note:corr?'Списание по тех. отчёту (перезапись)':'Списание по тех. отчёту',by:state.me.name,ts:now}});
+        const was=prev[rid]; moveNotes.push(`${r.name}: ${QU(v,r.unit)} ${r.unit}${corr&&was!=null&&Math.abs(was-v)>1e-9?` (было ${QU(was,r.unit)})`:''}`); });
+      Object.keys(prev).filter(rid=>next[rid]==null).forEach(rid=>{ const r=byId(DB.raw,rid); if(r) moveNotes.push(`${r.name}: убрано (было ${QU(prev[rid],r.unit)})`); });
+      DB.raw.forEach(r=>{ const nq=Math.round(qty[r.id]*1000)/1000; if(Math.abs(nq-(+r.qty||0))>1e-9) list.push({col:'raw',obj:{...r,qty:nq}}); });
+    }
     rec.rawFact=next; rec.writtenMap=next; rec.writtenOff=true;
   }
-  const ch=sec==='materials'?(moveNotes.length?[(base.writtenOff?'Корректировка списания:\n':'Списание со склада, резерв снят:\n')+moveNotes.join('\n')]:['Сохранено без изменений по складу']):runDiff(sec,old,rec);
+  const ch=sec==='materials'?(moveNotes.length?[(base.writtenOff?'Перезапись списания — прошлое списание отменено, списано заново:\n':'Списание со склада, резерв снят:\n')+moveNotes.join('\n')]:['Сохранено без изменений по складу']):runDiff(sec,old,rec);
   rec.sec={...base.sec,[sec]:{by:state.me.name,ts:Date.now()}};
   rec.log=[...base.log,{ts:Date.now(),by:state.me.name,sec,text:(isNew?'Отчёт создан. ':'')+(ch.length?ch.join('; '):'сохранено без изменений')}].slice(-100);
   rec.by=state.me.name; rec.ts=Date.now();
@@ -1452,7 +1480,28 @@ async function saveRunSection(sec){
   const keep=state.runDirty, nd=clone(rec); nd.stations=A(nd.stations); nd.settings=A(nd.settings); nd.log=A(nd.log); nd.rawFact=nd.rawFact||{}; nd.writtenMap=nd.writtenMap||{};
   Object.keys(keep).filter(s=>s!==sec&&keep[s]).forEach(s=>{ SEC_FIELDS[s].forEach(k=>nd[k]=clone(d[k])); if(s==='settings'||s==='materials') nd.stations=nd.stations.map((x,i)=>({...x,...(s==='settings'?{visc:d.stations[i]?.visc,press:d.stations[i]?.press,nozzle:d.stations[i]?.nozzle}:{factKg:d.stations[i]?.factKg})})); });
   delete keep[sec]; if(sec==='prod') state.runAuto=false; state.draft=nd; render();
-  toast(sec==='materials'?(moveNotes.length?`Проведено по складу: ${moveNotes.length} поз.`:'Сохранено'):`Раздел «${RSEC[sec]}» сохранён`);
+  toast(sec==='materials'?(moveNotes.length?`Списание проведено: ${moveNotes.length} поз.`:'Изменений по складу нет'):`Раздел «${RSEC[sec]}» сохранён`);
+}
+async function cancelRun(id){
+  const r=byId(DB.runs,id); if(!r||r.cancelled) return;
+  const mv=DB.moves.filter(m=>m.runId===id&&!m.cancelled);
+  if(!confirm(`Отменить тех. отчёт по «${projName(r.projectId)}»?\n\n• списание сырья (${mv.length} поз.) будет помечено «отменено» и вернётся на склад\n• смены из отчёта снова попадут в резерв\n• отчёт останется в журнале с пометкой «отменён»`)) return;
+  const why=prompt('Причина отмены (например: дубль, ошибка ввода)','дубль'); if(why===null) return;
+  const now=Date.now(), qty={}, list=[]; DB.raw.forEach(x=>qty[x.id]=+x.qty||0);
+  mv.forEach(m=>{ if(qty[m.rawId]!=null) qty[m.rawId]-=moveDelta(m); list.push({col:'moves',obj:{...m,cancelled:true,cancelledAt:now,cancelledBy:state.me.name,cancelReason:'отмена тех. отчёта: '+why}}); });
+  DB.raw.forEach(x=>{ const nq=Math.round(qty[x.id]*1000)/1000; if(Math.abs(nq-(+x.qty||0))>1e-9) list.push({col:'raw',obj:{...x,qty:nq}}); });
+  // смены отменённого дубля передаём живому отчёту того же проекта, у которого смен нет
+  const outs=DB.output.filter(o=>o.runId===id), heir=DB.runs.find(x=>x.id!==id&&!x.cancelled&&x.projectId===r.projectId&&x.writtenOff&&!runOutputs(x).length);
+  outs.forEach(o=>list.push({col:'output',obj:{...o,runId:heir?heir.id:''}}));
+  if(heir&&outs.length) list.push({col:'runs',obj:{...heir,outputIds:outs.map(o=>o.id),log:[...A(heir.log),{ts:Date.now(),by:state.me.name,sec:'prod',text:`Смены (${outs.length}) переданы из отменённого дубля`}]}});
+  list.push({col:'runs',obj:{...r,cancelled:true,cancelledAt:now,cancelledBy:state.me.name,cancelReason:why,writtenOff:false,writtenMap:{},outputIds:[],log:[...A(r.log),{ts:now,by:state.me.name,sec:'materials',text:`Отчёт отменён (${why}). Списание отменено и возвращено на склад: `+mv.map(m=>`${rawName(m.rawId)} ${QU(m.qty,byId(DB.raw,m.rawId)?.unit)}`).join(', ')}]}});
+  await Store.batch(list); toast('Тех. отчёт отменён, сырьё возвращено на склад'); state.draft=null; go('runs');
+}
+function runDupes(){ // похожие отчёты: тот же проект, одинаковый расход, списаны в пределах суток
+  const live=DB.runs.filter(r=>r.writtenOff&&!r.cancelled), d=new Set();
+  live.forEach((a,i)=>live.slice(i+1).forEach(b=>{ if(a.projectId!==b.projectId) return; const ka=JSON.stringify(Object.entries(a.writtenMap||{}).sort()), kb=JSON.stringify(Object.entries(b.writtenMap||{}).sort()); const ta=a.sec?.materials?.ts||0, tb=b.sec?.materials?.ts||0;
+    if(ka===kb&&Math.abs(ta-tb)<864e5){ d.add(a.id); d.add(b.id); } }));
+  return d;
 }
 function renderRuns(){
   const q=state.q.toLowerCase();
@@ -1466,11 +1515,12 @@ function renderRuns(){
       return `<tr><td><b>${esc(projName(pid))}</b></td><td class="num">${os.length}</td><td>${fdate(ds[0])}${ds.length>1?' — '+fdate(ds[ds.length-1]):''}</td><td class="num">${N(os.reduce((a,o)=>a+(+o.good||0),0))}</td><td class="num">${money(val)}</td>
       <td>${can('edit')?(()=>{ const rids=[...new Set(os.map(o=>o.runId).filter(r=>r&&byId(DB.runs,r)))], free=os.filter(o=>!o.runId||!byId(DB.runs,o.runId));
         return rids.map(r=>`<button class="btn btn-s btn-sm" onclick="openRun('${pid}','${r}')">Открыть тех. отчёт (материалы не сохранены)</button> `).join('')+(free.length?`<button class="btn btn-p btn-sm" onclick="openRun('${pid}',null,null,${esc(JSON.stringify(free.map(o=>o.id)))})">Создать тех. отчёт</button>`:''); })():''}</td></tr>`; }).join('')}
-    ${DB.runs.filter(r=>r.writtenOff&&!runOutputs(r).length&&DB.output.some(o=>o.projectId===r.projectId&&outputOpen(o))).map(r=>`<div class="msg err" style="display:block;margin:12px 0 0">Тех. отчёт по «${esc(projName(r.projectId))}» списал сырьё, но к нему не привязаны смены — резерв по этим сменам висит повторно. <button class="btn btn-s btn-sm" onclick="openRun('${r.projectId}','${r.id}')">Открыть и привязать смены</button></div>`).join('')}</table></div></div>`:''}
+    </table></div>${DB.runs.filter(r=>r.writtenOff&&!r.cancelled&&!runOutputs(r).length&&DB.output.some(o=>o.projectId===r.projectId&&outputOpen(o))).map(r=>`<div class="msg err" style="display:block;margin:12px 0 0">Тех. отчёт по «${esc(projName(r.projectId))}» списал сырьё, но к нему не привязаны смены — резерв по этим сменам висит повторно. <button class="btn btn-s btn-sm" onclick="openRun('${r.projectId}','${r.id}')">Открыть и привязать смены</button></div>`).join('')}</div>`:''}
+  ${(()=>{ const dd=runDupes(); return dd.size?`<div class="msg err row-gap" style="display:block">⚠ Возможные дубли тех. отчётов: ${dd.size} шт. с одинаковым расходом по одному проекту в течение суток — сырьё могло списаться несколько раз. Откройте лишний отчёт и нажмите «Отменить тех. отчёт». Дубли отмечены в списке ниже.</div>`:''; })()}
   ${periodBar()}<div class="toolbar">${searchBox('Проект или линия')}<span class="muted" style="font-weight:600">${runs.length} отчётов</span></div>
   <div class="card">${runs.length?`<div class="tw flush"><table><tr><th>Наработка</th><th>Проект</th><th>Линия</th><th class="num">Смен</th><th class="num">Годные</th><th class="num">Материалы факт / план</th><th>1 · Наработка</th><th>2 · Настройки</th><th>3 · Материалы</th><th>Последнее изменение</th></tr>
     ${runs.map(r=>{ const t=runTotals(r), last=A(r.log).slice().sort((a,b)=>b.ts-a.ts)[0], corr=A(r.log).filter(x=>x.sec==='materials').length>1;
-      return `<tr class="click" onclick="openRun('${r.projectId}','${r.id}')"><td><b>${r.startAt?fdt(tms(r.startAt)):fdate(r.dateFrom||'')}</b><div class="muted" style="font-size:12px">→ ${r.endAt?fdt(tms(r.endAt)):fdate(r.dateTo||r.dateFrom||'')}</div></td>
+      return `<tr class="click" ${r.cancelled?'style="opacity:.55"':''} onclick="openRun('${r.projectId}','${r.id}')"><td>${r.cancelled?`<span class="tag t-red" data-tip="${esc(r.cancelledBy||'')} · ${fts(r.cancelledAt)}<br>${esc(r.cancelReason||'')}">отменён</span> `:runDupes().has(r.id)?'<span class="tag t-red">дубль?</span> ':''}<b>${r.startAt?fdt(tms(r.startAt)):fdate(r.dateFrom||'')}</b><div class="muted" style="font-size:12px">→ ${r.endAt?fdt(tms(r.endAt)):fdate(r.dateTo||r.dateFrom||'')}</div></td>
       <td>${esc(projName(r.projectId))}</td><td>${esc(lineName(r.lineId))}</td><td class="num">${runOutputs(r).length||'—'}</td><td class="num">${N(r.qtyGood)}</td>
       <td class="num">${t.filled?`${money(t.costFact)} / ${money(t.costPlan)}`:'—'}</td><td>${secCell(r,'prod')}</td><td>${secCell(r,'settings')}</td><td>${secCell(r,'materials')}${corr?' <span class="tag t-amber" data-tip="Списание корректировалось">испр.</span>':''}</td>
       <td class="muted" style="font-size:12px">${last?`${fts(last.ts)} · ${esc(last.by)}<br>${esc(RSEC[last.sec]||'')}`:esc(r.by||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Тех. отчётов за период нет</div>'}</div>`;
@@ -1958,18 +2008,18 @@ const outTime = o => { let t=tms(o.endAt); if(!isFinite(t)) t=pd(o.date).getTime
 let _wo=null;
 function runWoAt(){ // когда тех. отчёт впервые списал сырьё
   if(_wo) return _wo; _wo={};
-  DB.moves.forEach(m=>{ if(m.runId){ const t=moveTime(m); if(!_wo[m.runId]||t<_wo[m.runId]) _wo[m.runId]=t; } });
-  DB.runs.forEach(r=>{ if(r.writtenOff&&!_wo[r.id]) _wo[r.id]=r.sec?.materials?.ts||tms(r.endAt)||0; });
+  DB.moves.forEach(m=>{ if(m.runId&&!m.cancelled){ const t=moveTime(m); if(!_wo[m.runId]||t<_wo[m.runId]) _wo[m.runId]=t; } });
+  DB.runs.forEach(r=>{ if(r.writtenOff&&!r.cancelled&&!_wo[r.id]) _wo[r.id]=r.sec?.materials?.ts||tms(r.endAt)||0; });
   return _wo;
 }
 function stockAt(T){ // остаток по учёту на момент T
   const acc={}; DB.raw.forEach(r=>acc[r.id]=+r.qty||0);
-  DB.moves.forEach(m=>{ if(m.rawId&&acc[m.rawId]!=null&&moveTime(m)>T) acc[m.rawId]-=moveDelta(m); });
+  DB.moves.forEach(m=>{ if(m.rawId&&!m.cancelled&&acc[m.rawId]!=null&&moveTime(m)>T) acc[m.rawId]-=moveDelta(m); });
   return acc;
 }
 function reserveAt(T,detail){ // выпущено до T, но на момент T ещё не списано тех. отчётом
   const wo=runWoAt(), acc={}, list=[];
-  DB.output.forEach(o=>{ if(o.resClosed||outTime(o)>T) return; const w=o.runId?wo[o.runId]:null; if(w&&w<=T) return;
+  DB.output.forEach(o=>{ if(o.resClosed||outTime(o)>T) return; const w=liveRun(o.runId)?wo[o.runId]:null; if(w&&w<=T) return;
     const req=outputReserve(o); Object.entries(req).forEach(([rid,q])=>acc[rid]=(acc[rid]||0)+q); if(detail) list.push({o,req}); });
   return detail?{acc,list}:acc;
 }
@@ -2036,28 +2086,28 @@ function renderMovesTab(){
   let T0=tms(state.mvFrom), T1=tms(state.mvTo); if(T1<T0) [T0,T1]=[T1,T0];
   const sel=mvPick(), ids=sel.length?sel:DB.raw.map(r=>r.id);
   const s0=stockAt(T0-1), s1=stockAt(Math.min(T1,Date.now())), resEnd=reserveAt(Math.min(T1,Date.now()),true);
-  const inP=DB.moves.filter(m=>m.rawId&&ids.includes(m.rawId)&&moveTime(m)>=T0&&moveTime(m)<=T1).sort((a,b)=>moveTime(a)-moveTime(b));
+  const allP=DB.moves.filter(m=>m.rawId&&ids.includes(m.rawId)&&moveTime(m)>=T0&&moveTime(m)<=T1).sort((a,b)=>moveTime(a)-moveTime(b)), inP=allP.filter(m=>!m.cancelled), cnP=allP.filter(m=>m.cancelled);
   const tipRows=(arr,fn)=>arr.slice(0,25).map(fn).join('<br>')+(arr.length>25?`<br>… ещё ${arr.length-25}`:'');
   const src=m=>m.runId?(m.type==='in'?'возврат по тех. отчёту':'тех. отчёт')+' · '+projName(m.projectId):m.type==='inv'?'инвентаризация':m.note&&m.note.startsWith('Приёмка')?'поставка':m.type==='out'?'ручной расход'+(m.projectId?' · '+projName(m.projectId):''):'ручной приход';
-  const rows=ids.map(id=>{ const r=byId(DB.raw,id); if(!r) return null; const u=r.unit, ms=inP.filter(m=>m.rawId===id);
+  const rows=ids.map(id=>{ const r=byId(DB.raw,id); if(!r) return null; const u=r.unit, ms=inP.filter(m=>m.rawId===id), cn=cnP.filter(m=>m.rawId===id);
     const ins=ms.filter(m=>moveDelta(m)>0), outs=ms.filter(m=>moveDelta(m)<0), inSum=ins.reduce((a,m)=>a+moveDelta(m),0), outSum=-outs.reduce((a,m)=>a+moveDelta(m),0);
     const resList=resEnd.list.filter(x=>x.req[id]), res=resEnd.acc[id]||0, end=s1[id]||0;
-    return {r,u,start:s0[id]||0,ins,outs,inSum,outSum,resList,res,end,avail:end-res};
-  }).filter(Boolean).filter(x=>sel.length||x.inSum||x.outSum||x.res||x.start||x.end);
+    return {r,u,start:s0[id]||0,ins,outs,inSum,outSum,resList,res,end,avail:end-res,cn};
+  }).filter(Boolean).filter(x=>sel.length||x.inSum||x.outSum||x.res||x.start||x.end||x.cn.length);
   const fmtIn=m=>`${fdt(moveTime(m))} · +${QU(moveDelta(m),byId(DB.raw,m.rawId)?.unit)} · ${esc(m.doc?'накл. '+m.doc:'')}${m.doc?' · ':''}${esc(src(m))}`;
   const fmtOut=m=>`${fdt(moveTime(m))} · −${QU(-moveDelta(m),byId(DB.raw,m.rawId)?.unit)} · ${esc(src(m))}${m.doc?' · '+esc(m.doc):''}`;
   const table=rows.length?`<div class="tw flush"><table><tr><th>Сырьё</th><th class="num">Остаток на ${fdt(T0)}</th><th class="num">Приход</th><th class="num">Расход</th><th class="num">Остаток на ${T1>Date.now()?'сейчас':fdt(T1)}</th><th class="num">Резерв (выпущено, не списано)</th><th class="num">Доступно на конец</th><th class="num">Сумма на конец</th></tr>
     ${rows.map(x=>`<tr><td><b class="click" onclick="openRawChart('${x.r.id}')">${esc(x.r.name)}</b><div class="muted" style="font-size:11px">${esc(x.r.cat||'')}</div></td><td class="num">${QU(x.start,x.u)} ${esc(x.u)}</td>
       <td class="num">${x.inSum?`<span class="tag t-green" data-tip="<b>Приход: ${x.ins.length} опер.</b><br>${tipRows(x.ins,fmtIn)}">+${QU(x.inSum,x.u)}</span>`:'—'}</td>
-      <td class="num">${x.outSum?`<span class="tag t-amber" data-tip="<b>Расход: ${x.outs.length} опер.</b><br>${tipRows(x.outs,fmtOut)}">−${QU(x.outSum,x.u)}</span>`:'—'}</td>
+      <td class="num">${x.outSum?`<span class="tag t-amber" data-tip="<b>Расход: ${x.outs.length} опер.</b><br>${tipRows(x.outs,fmtOut)}${x.cn.length?`<br><br><b>Отменено (не учитывается): ${x.cn.length}</b><br>${tipRows(x.cn,m=>`<s>${fmtOut(m)}</s> · отменено ${fts(m.cancelledAt)}, ${esc(m.cancelReason||'')}`)}`:''}">−${QU(x.outSum,x.u)}</span>`:'—'}${x.cn.length?` <span class="tag t-red" data-tip="<b>Отменённые списания — в остатках не учитываются</b><br>${tipRows(x.cn,m=>`<s>${fmtOut(m)}</s><br>&nbsp;&nbsp;отменено ${fts(m.cancelledAt)} · ${esc(m.cancelledBy||'')} · ${esc(m.cancelReason||'')}`)}">отм. ${x.cn.length}</span>`:''}</td>
       <td class="num"><b>${QU(x.end,x.u)}</b></td>
       <td class="num">${x.res>1e-9?`<span class="tag t-amber" data-tip="<b>Выпущено, не списано: ${x.resList.length} смен</b><br>${tipRows(x.resList,y=>`${fdate(y.o.date)} · ${esc(shiftName(y.o.lineId,y.o.shift))} · ${esc(projName(y.o.projectId))} · ${QU(y.req[x.r.id],x.u)}`)}">${QU(x.res,x.u)}</span>`:'—'}</td>
       <td class="num"><b style="color:${x.avail<0?'var(--red)':'inherit'}">${QU(x.avail,x.u)}</b></td><td class="num">${money(x.end*(+x.r.cost||0))}</td></tr>`).join('')}
     <tfoot><tr><td>Итого в деньгах</td><td class="num">${money(rows.reduce((a,x)=>a+x.start*(+x.r.cost||0),0))}</td><td class="num">+${money(rows.reduce((a,x)=>a+x.inSum*(+x.r.cost||0),0))}</td><td class="num">−${money(rows.reduce((a,x)=>a+x.outSum*(+x.r.cost||0),0))}</td><td class="num">${money(rows.reduce((a,x)=>a+x.end*(+x.r.cost||0),0))}</td><td class="num">${money(rows.reduce((a,x)=>a+x.res*(+x.r.cost||0),0))}</td><td class="num">${money(rows.reduce((a,x)=>a+x.avail*(+x.r.cost||0),0))}</td><td></td></tr></tfoot></table></div>`:'<div class="empty">Нет движений и остатков по выбранному сырью</div>';
-  const det=state.mvDetail?`<div class="card" style="margin-top:14px"><div class="card-h"><div class="card-t">Все операции за период</div><div class="card-s">${inP.length}</div></div>${inP.length?`<div class="tw"><table><tr><th>Дата и время</th><th>Операция</th><th>Сырьё</th><th class="num">Кол-во</th><th>Основание</th><th>Кто</th></tr>
-    ${inP.slice().reverse().slice(0,500).map(m=>{ const r=byId(DB.raw,m.rawId), d=moveDelta(m); return `<tr${m.runId?` class="click" onclick="const r=byId(DB.runs,'${m.runId}');if(r)openRun(r.projectId,r.id)"`:''}><td>${fdt(moveTime(m))}</td><td><span class="tag ${MTYPE[m.type]?.[1]}">${MTYPE[m.type]?.[0]}</span></td><td>${esc(r?.name||'—')}</td><td class="num">${d>0?'+':'−'}${QU(Math.abs(d),r?.unit)} ${esc(r?.unit||'')}</td><td class="muted wrap">${esc([m.doc,m.note,m.projectId?projName(m.projectId):''].filter(Boolean).join(' · '))}</td><td class="muted">${esc(m.by||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Операций нет</div>'}</div>`:'';
+  const det=state.mvDetail?`<div class="card" style="margin-top:14px"><div class="card-h"><div class="card-t">Все операции за период</div><div class="card-s">${allP.length}${cnP.length?' · отменённых '+cnP.length:''}</div></div>${allP.length?`<div class="tw"><table><tr><th>Дата и время</th><th>Операция</th><th>Сырьё</th><th class="num">Кол-во</th><th>Основание</th><th>Кто</th></tr>
+    ${allP.slice().reverse().slice(0,500).map(m=>{ const r=byId(DB.raw,m.rawId), d=moveDelta(m), c=m.cancelled; return `<tr${m.runId?` class="click" onclick="const r=byId(DB.runs,'${m.runId}');if(r)openRun(r.projectId,r.id)"`:''}${c?' style="opacity:.6"':''}><td>${fdt(moveTime(m))}</td><td><span class="tag ${MTYPE[m.type]?.[1]}">${MTYPE[m.type]?.[0]}</span>${c?' <span class="tag t-red">отменено</span>':''}</td><td>${esc(r?.name||'—')}</td><td class="num">${c?'<s>':''}${d>0?'+':'−'}${QU(Math.abs(d),r?.unit)} ${esc(r?.unit||'')}${c?'</s>':''}</td><td class="muted wrap">${esc([m.doc,m.note,m.projectId?projName(m.projectId):''].filter(Boolean).join(' · '))}${c?`<br><span style="color:var(--red)">отменено ${fts(m.cancelledAt)} · ${esc(m.cancelledBy||'')} · ${esc(m.cancelReason||'')}</span>`:''}</td><td class="muted">${esc(m.by||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Операций нет</div>'}</div>`:'';
   return `<div class="period"><span class="fl" style="margin:0 6px 0 0">Период с</span><input class="fi" type="datetime-local" value="${state.mvFrom}" style="max-width:230px" onchange="state.mvFrom=this.value||state.mvFrom;render()"><span class="fl" style="margin:0 6px">по</span><input class="fi" type="datetime-local" value="${state.mvTo}" style="max-width:230px" onchange="state.mvTo=this.value||state.mvTo;render()"></div><div class="toolbar">${rawPicker()}<label class="chip ${state.mvDetail?'on':''}" style="cursor:pointer"><input type="checkbox" style="display:none" ${state.mvDetail?'checked':''} onchange="state.mvDetail=this.checked;render()">Показать все операции</label>
-    <span class="muted" style="font-size:12px">Наведите на приход, расход или резерв — появится расшифровка</span></div><div class="card">${table}</div>${det}`;
+    <span class="muted" style="font-size:12px">Наведите на приход, расход или резерв — появится расшифровка; нажмите — она закрепится, и её можно скопировать</span></div><div class="card">${table}</div>${det}`;
 }
 // ── график остатка по сырью
 function openRawChart(id){
@@ -2089,7 +2139,7 @@ function openRawChart(id){
   el.innerHTML=`<div class="legend" style="margin-bottom:6px"><span><i style="background:var(--blue)"></i>Остаток по учёту${' (в прогнозе — с поставками)'}</span><span><i style="background:var(--brand)"></i>Доступно (за вычетом резервов)</span><span><i style="background:var(--amber)"></i>Минимум</span></div>`+s+'</svg>';
   // события
   const T0=pd(cf).getTime(), T1=pd(ct).getTime()+864e5, ev=[];
-  DB.moves.filter(m=>m.rawId===id&&moveTime(m)>=T0&&moveTime(m)<=T1).forEach(m=>ev.push({t:moveTime(m),kind:MTYPE[m.type]?.[0]||m.type,cls:MTYPE[m.type]?.[1],q:moveDelta(m),txt:[m.doc,m.note,m.projectId?projName(m.projectId):''].filter(Boolean).join(' · ')}));
+  DB.moves.filter(m=>m.rawId===id&&moveTime(m)>=T0&&moveTime(m)<=T1).forEach(m=>ev.push({t:moveTime(m),kind:(MTYPE[m.type]?.[0]||m.type)+(m.cancelled?' · отменено':''),cls:m.cancelled?'t-red':MTYPE[m.type]?.[1],q:moveDelta(m),txt:[m.doc,m.note,m.projectId?projName(m.projectId):''].filter(Boolean).join(' · ')}));
   DB.supplies.filter(s=>s.rawId===id&&s.status!=='received').forEach(s=>ev.push({t:pd(s.date).getTime()+12*H,kind:'Поставка (ожид.)',cls:'t-blue',q:+s.qty||0,txt:[s.supplier,s.note].filter(Boolean).join(' · ')}));
   reserveAt(now,true).list.filter(x=>x.req[id]).forEach(x=>ev.push({t:outTime(x.o),kind:'Резерв: выпуск',cls:'t-amber',q:-x.req[id],txt:`${projName(x.o.projectId)} · смена ${shiftName(x.o.lineId,x.o.shift)} · ждёт тех. отчёт`,res:true}));
   futureReserve(T1,true).list.filter(x=>x.req[id]).forEach(x=>ev.push({t:Math.max(itemStart(x.it),now),kind:'Резерв: план',cls:'t-amber',q:-x.req[id],txt:`${x.p.name} · ${N(x.qty)} шт по плану`,res:true}));
@@ -2286,7 +2336,7 @@ function buildNav(){
 }
 function go(sec){ if(!SECTIONS.find(s=>s.id===sec)?.hidden){ state.draft=null; state.back=null; } state.q=''; state.sec=sec; toggleSide(false); render(); scrollTo(0,0); }
 function render(){
-  const tp=$('#tip'); if(tp) tp.style.display='none';
+  const tp=$('#tip'); if(tp) tp.style.display='none'; const tpp=$('#tipPin'); if(tpp) tpp.style.display='none';
   _sch.clear(); _res=null; _wo=null;
   let s=SECTIONS.find(x=>x.id===state.sec);
   if(!s||(s.admin&&!can('admin'))){ s=SECTIONS[1]; state.sec=s.id; }
