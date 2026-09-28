@@ -224,6 +224,13 @@ tfoot td{font-weight:800;background:var(--card2)}
 .dc-seg.pend{opacity:.6;outline:2px dashed var(--amber);outline-offset:-2px}
 .dc-off{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,rgba(120,130,150,.2) 0 3px,transparent 3px 7px)}
 .dc-down{position:absolute;top:2px;bottom:2px;background:rgba(229,72,77,.18);border:1px solid rgba(229,72,77,.5);border-radius:4px;font-size:10.5px;color:var(--red);font-weight:700;padding:0 4px;line-height:28px;overflow:hidden;white-space:nowrap}
+.dc-sum{position:relative;height:30px;border-bottom:1px solid var(--line)}
+.dc-sh{position:absolute;top:3px;bottom:3px;border:1px solid var(--line2);border-radius:6px;background:var(--card2);display:flex;align-items:center;gap:10px;padding:0 8px;font-size:11.5px;white-space:nowrap;overflow:hidden;margin-right:2px}
+.dc-sh>b{color:var(--text3);font-size:10.5px;text-transform:uppercase;letter-spacing:.03em} .dc-sh span b{font-size:12.5px} .dc-sh em{font-style:normal;font-weight:800}
+.dc-sh.ok{background:var(--greenBg);border-color:rgba(31,169,113,.35)} .dc-sh.ok em{color:var(--green)} .dc-sh.mid{background:var(--amberBg)} .dc-sh.mid em{color:var(--amber)} .dc-sh.bad{background:var(--redBg)} .dc-sh.bad em{color:var(--red)} .dc-sh.miss{background:var(--redBg)}
+.dc-sh.off{background:repeating-linear-gradient(135deg,rgba(120,130,150,.13) 0 4px,transparent 4px 8px);color:var(--text3);border-style:dashed}
+.dc-sh .dn{color:var(--red);font-weight:700} .dc-sh .pd{color:var(--amber);font-weight:800} .dc-sh .pd .btn{padding:2px 7px;font-size:11px} .dc-sh .ms{color:var(--red);font-weight:800}
+.dc-lab-s{height:30px!important;border-bottom:1px solid var(--line);flex-direction:column;align-items:flex-start!important;justify-content:center;gap:0!important} .dc-lab-s small{font-size:10.5px;color:var(--text3);font-weight:700}
 .dc-now{position:absolute;top:0;bottom:0;width:2px;background:var(--red);z-index:3;pointer-events:none}
 .ex-head,.ex-row{display:grid;grid-template-columns:1fr 80px 124px 130px 36px;gap:6px;align-items:center} .ex-row{margin-bottom:6px} .ex-head{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
 .ex-row .fi{padding:7px 9px} .ex-e-l{display:flex;gap:6px;align-items:center;font-size:12.5px;white-space:nowrap}
@@ -1723,8 +1730,7 @@ function renderPlan(){
       ${ov?`<span class="pill" style="color:var(--red)">⚠ Наложений: ${ov}${ce?` <button class="btn btn-s btn-sm" onclick="qRelineAll()">Выстроить очередь</button>`:''}</span>`:''}
       ${DB.output.some(r=>r.approved===false)?`<span class="pill" style="color:var(--amber)">⏳ Отчётов смен на проверке: ${new Set(DB.output.filter(r=>r.approved===false).map(r=>r.reportId||r.id)).size}</span>`:''}</div>
     <div class="card row-gap"><div class="card-h"><div class="card-t">Очередь проектов по линиям</div><div class="card-s">${ce?'стрелками меняется порядок · нажмите строку — детали, паузы, обед, уборка':'порядок наработки на каждой линии'}</div></div>${planQueue(chk)}</div>
-    <div class="card row-gap"><div class="card-h"><div class="card-t">План и факт по сменам</div><div class="card-s">факт появляется после проверки отчёта смены технологом</div></div>${planGrid(days)}</div>
-    <div class="card row-gap"><div class="card-h"><div class="card-t">График по дням</div><div class="card-s">сутки ${dayStartLabel()} → ${dayStartLabel()} · верхняя полоса — план, нижняя — факт из хронометража смен</div><div class="sp"></div>${dcLegend()}</div>${planDayChart(days)}</div>
+    <div class="card row-gap"><div class="card-h"><div class="card-t">План и факт по дням и сменам</div><div class="card-s">сутки ${dayStartLabel()} → ${dayStartLabel()} · по каждой линии: итоги смен, полоса плана, полоса факта · факт засчитывается после проверки отчёта технологом</div><div class="sp"></div>${dcLegend()}</div>${planDayChart(days)}</div>
     <div class="card"><div class="card-h"><div class="card-t">Журнал изменений и оперативок</div></div><div class="log">${planLogHtml()}</div></div>`;
     return;
   }
@@ -1988,6 +1994,25 @@ function factSegs(lineId,a,b){
   });
   return out;
 }
+// итоги смен — полоска над графиком линии, каждая смена на своём месте по времени
+function shiftStrip(l,d,a,b,pct){
+  const cfg=lineCfg(l.id,LIVE), dow=pd(d).getDay(), now=Date.now(), ca=canApprove(), tot=[];
+  const html=lineShiftDefs(l.id).map(s=>{
+    const [sa,sb]=shiftWindow(d,s.n,l.id), u=Math.max(a,sa), v=Math.min(b,sb); if(v<=u) return '';
+    const works=cfg.days.includes(dow)&&cfg.shifts.includes(+s.n), outs=DB.output.filter(r=>r.lineId===l.id&&r.date===d&&+r.shift===+s.n);
+    const pos=`left:${pct(u,a)};width:${pct(v,u)}`, nm=`См. ${s.n} · ${s.from}–${s.to}`;
+    if(!works&&!outs.length) return `<div class="dc-sh off" style="${pos}"><b>${nm}</b> не работает</div>`;
+    const pl=shiftPlan(l.id,sa,sb), plan=pl.reduce((x,p)=>x+p.qty,0), ok=outs.filter(outOk), fact=ok.reduce((x,r)=>x+(+r.good||0),0), pend=outs.filter(r=>!outOk(r)), pq=pend.reduce((x,r)=>x+(+r.good||0),0);
+    tot.push({plan,fact});
+    const down=ok.reduce((x,r)=>x+(+r.downtime||0),0), dn=DB.downs.filter(x=>x.lineId===l.id&&tms(x.start)<sb&&tms(x.end)>sa);
+    const rids=[...new Set(pend.map(r=>r.reportId||r.id))];
+    const cls=!outs.length?(sb<=now&&plan?'miss':''):plan?(fact>=plan*.95?'ok':fact>=plan*.8?'mid':pend.length&&!fact?'':'bad'):'';
+    const tip=`<b>${nm}</b><br>План: ${pl.map(x=>`${esc(projName(x.it.projectId))} — ${N(x.qty)} шт (${hhmm(x.x)}–${hhmm(x.y)}${x.setup?', наладка '+minTxt(x.setup):''}${x.pause?', паузы '+minTxt(x.pause):''})`).join('<br>')||'—'}`
+      +`<br>Факт: ${ok.map(r=>`${esc(projName(r.projectId))} — ${N(r.good)} шт, брак ${N(r.defect)}`).join('<br>')||'—'}${down?`<br>Простои: ${minTxt(down)}`:''}${pend.length?`<br>⏳ На проверке: ${N(pq)} шт`:''}${dn.length?'<br>⛔ '+dn.map(x=>esc(x.reason)).join(', '):''}`;
+    return `<div class="dc-sh ${cls}" style="${pos}" data-tip="${tip.replace(/"/g,'&quot;')}"><b>${nm}</b><span>план <b>${plan?N(plan):'—'}</b></span><span>факт <b>${fact?N(fact):outs.length?'0':'—'}</b>${plan&&fact?` <em>${P(fact/plan*100,0)}</em>`:''}</span>${down?`<span class="dn">простой ${minTxt(down)}</span>`:''}${pend.length?`<span class="pd">⏳ ${N(pq)}${ca?rids.map(rid=>` <button class="btn btn-g btn-sm" onclick="event.stopPropagation();approveOutput('${rid}')">✔ Подтвердить</button>`).join(''):' на проверке'}</span>`:''}${!outs.length&&sb<=now&&plan?'<span class="ms">нет отчёта</span>':''}${!outs.length&&sa<now&&sb>now&&plan?'<span>идёт смена</span>':''}</div>`;
+  }).join('');
+  return {html,tot};
+}
 function planDayChart(days){
   const D0=dayStartMin(), now=Date.now(), W=864e5, pct=(t,a)=>((t-a)/W*100).toFixed(3)+'%';
   const ticks=Array.from({length:13},(_,i)=>{ const m=(D0+i*120)%1440; return `<span style="left:${i/12*100}%">${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}</span>`; }).join('');
@@ -2010,7 +2035,8 @@ function planDayChart(days){
         const tip=`<b>${esc(ac.name)}</b>${f.note?' — '+esc(f.note):''}<br>${esc(p?.name||'')}<br>${fdt(u)} → ${fdt(v)} (${minTxt((v-u)/60e3)})${f.rec?`<br>Смена: годных ${N(f.rec.good)}, брак ${N(f.rec.defect)}`:''}${o?`<br>Заказ ${esc(o.no)}: выполнено ${N(done)} из ${N(o.qty)} (${P(o.qty?done/o.qty*100:0,0)})`:''}${f.ok?'':'<br>⏳ отчёт на проверке'}`;
         return `<div class="dc-seg f ${ac.cat==='setup'?'s':''} ${f.ok?'':'pend'}" style="left:${pct(u,a)};width:${wd.toFixed(3)}%;background-color:${col}" data-tip="${tip.replace(/"/g,'&quot;')}" onclick="openOutputModal('${f.rec?.id}')">${wd>(ac.cat==='work'?4:1.6)?lab:''}</div>`; }).join('');
       const nowX=now>a&&now<b?`<div class="dc-now" style="left:${pct(now,a)}"></div>`:'';
-      return `<div class="dc-line"><div class="dc-lab"><div><span>${esc(l.name)}</span><i>план</i></div><div><i>факт</i></div></div><div class="dc-tracks"><div class="dc-tr" style="${grid}">${off}${downs}${plan}${nowX}</div><div class="dc-tr" style="${grid}">${off}${fact}${nowX}</div></div></div>`;
+      const sm=shiftStrip(l,d,a,b,pct); let dPlan=0, dFact=0; sm.tot.forEach(t=>{ dPlan+=t.plan; dFact+=t.fact; });
+      return `<div class="dc-line"><div class="dc-lab"><div class="dc-lab-s"><span>${esc(l.name)}</span><small>${dPlan||dFact?`${short(dPlan)} / ${short(dFact)}${dPlan?' · '+P(dFact/dPlan*100,0):''}`:''}</small></div><div><i>план</i></div><div><i>факт</i></div></div><div class="dc-tracks"><div class="dc-sum">${sm.html}${nowX}</div><div class="dc-tr" style="${grid}">${off}${downs}${plan}${nowX}</div><div class="dc-tr" style="${grid}">${off}${fact}${nowX}</div></div></div>`;
     }).join('');
     return `<div class="dc-day ${isT?'today':''}"><div class="dc-dh"><b>${WD[(dt.getDay()+6)%7]}, ${fdate(d)}</b>${isT?' <span class="tag t-blue">сегодня</span>':''}</div><div class="dc-ticks">${ticks}</div>${rows}</div>`;
   }).join('');
