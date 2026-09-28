@@ -337,6 +337,7 @@ const ICONS = {
   dash:'M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 9h8V3h-8z',
   plan:'M3 5h18v16H3zM3 10h18M8 3v4M16 3v4M7 14h4M13 17h4',
   model:'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM17 14v6M14 17h6',
+  runs:'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M8 13h8M8 17h5M8 9h2',
   output:'M2 20h20M4 20V9l5 3V9l5 3V9l5 3V4h2v16',
   quality:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4',
   projects:'M12 2l9 5-9 5-9-5zM3 12l9 5 9-5M3 17l9 5 9-5',
@@ -361,6 +362,7 @@ const SECTIONS = [
   {id:'quality',   t:'Брак и качество',       i:'quality',  r:()=>renderQuality()},
   {g:'Технология'},
   {id:'projects',  t:'Проекты',               i:'projects', r:()=>renderProjects()},
+  {id:'runs',      t:'Тех. отчёты',           i:'runs',     r:()=>renderRuns(), badge:()=>new Set(DB.output.filter(outputOpen).map(o=>o.projectId)).size},
   {id:'semis',     t:'Полуфабрикаты',         i:'semis',    r:()=>renderSemis()},
   {id:'raw',       t:'Сырьё',                 i:'raw',      r:()=>renderRaw()},
   {id:'lines',     t:'Линии',                 i:'lines',    r:()=>renderLines()},
@@ -375,7 +377,7 @@ const SECTIONS = [
   {id:'settings',  t:'Настройки',             i:'settings', r:()=>renderSettings(), admin:true},
   {id:'projectEdit', t:'Карточка проекта',    hidden:true, parent:'projects', r:()=>renderProjectEdit()},
   {id:'semiEdit',    t:'Полуфабрикат',        hidden:true, parent:'semis',    r:()=>renderSemiEdit()},
-  {id:'runEdit',     t:'Тех. отчёт наработки',hidden:true, parent:'projects', r:()=>renderRunEdit()},
+  {id:'runEdit',     t:'Тех. отчёт наработки',hidden:true, parent:'runs', r:()=>renderRunEdit()},
 ];
 
 // ═════════════════════════════════════════════
@@ -400,7 +402,7 @@ const pd = s => { const [a,b,c]=s.split('-'); return new Date(+a,b-1,+c); };
 const addD = (d,n) => { const x=new Date(d); x.setDate(x.getDate()+n); return x; };
 const span = (a,b) => Math.round((pd(b)-pd(a))/864e5)+1;
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-const clone = o => JSON.parse(JSON.stringify(o));
+const clone = o => o===undefined?undefined:JSON.parse(JSON.stringify(o));
 const A = x => Array.isArray(x) ? x.filter(v=>v!=null) : x ? Object.values(x) : [];
 const H = 3600e3;
 const tms = s => new Date(s).getTime();
@@ -631,29 +633,34 @@ function itemStatus(it,ctx,chk){
 }
 
 // ═════════════════════════════════════════════
-//  MATERIALS — пока нет тех. отчёта со списанием, позиция плана «держит» сырьё по нормам проекта
+//  MATERIALS — резерв сырья: выпущенное без тех. отчёта + оставшийся объём позиций плана
 // ═════════════════════════════════════════════
+let _res=null;
+function reservedCached(){ if(!_res) _res=reservedByRaw(); return _res; }
 function activePlanReq(ctx){
-  const today=iso(new Date());
+  const today=iso(new Date()), made={};
+  DB.output.forEach(o=>{ if(o.planItemId) made[o.planItemId]=(made[o.planItemId]||0)+(+o.good||0)+(+o.defect||0); });
   return ctxItems(ctx).map(it=>{ const p=byId(DB.projects,it.projectId); if(!p) return null; const run=runFor(it); if(run&&run.writtenOff) return null;
-    const s=iso(new Date(itemStart(it,ctx))); return {it,p,d:s<today?today:s,overdue:endMs(it,ctx)<Date.now(),req:projectReq(p,+it.qty||0)}; })
+    const done=made[it.id]||0, ended=endMs(it,ctx)<Date.now(); if(ended&&done>0) return null;
+    const rest=Math.max(0,(+it.qty||0)-done); if(rest<=0) return null;
+    const s=iso(new Date(itemStart(it,ctx))); return {it,p,d:s<today?today:s,overdue:ended,rest,req:projectReq(p,rest)}; })
     .filter(Boolean).sort((x,y)=>x.d.localeCompare(y.d)||String(x.it.start).localeCompare(String(y.it.start)));
 }
 function demandForecast(ctx){
-  const rows={};
-  DB.raw.forEach(r=>rows[r.id]={r,stock:+r.qty||0,need:0,incoming:0,events:[]});
+  const rows={}, res=reservedCached();
+  DB.raw.forEach(r=>rows[r.id]={r,stock:+r.qty||0,reserved:res[r.id]||0,need:0,incoming:0,events:[]});
   activePlanReq(ctx).forEach(({it,d,req})=>Object.entries(req).forEach(([rid,q])=>{ if(rows[rid]){ rows[rid].need+=q; rows[rid].events.push({d,q:-q,it}); } }));
   DB.supplies.filter(s=>s.status!=='received').forEach(s=>{ if(rows[s.rawId]){ rows[s.rawId].incoming+=+s.qty||0; rows[s.rawId].events.push({d:s.date,q:+s.qty||0}); } });
   Object.values(rows).forEach(x=>{
     x.events.sort((a,b)=>a.d.localeCompare(b.d)||b.q-a.q);
-    let bal=x.stock; x.deficitDate=null; x.maxLack=0;
+    let bal=x.stock-x.reserved; x.deficitDate=bal<-1e-6?iso(new Date()):null; x.maxLack=bal<0?-bal:0;
     x.events.forEach(e=>{ bal+=e.q; if(bal<-1e-6){ if(!x.deficitDate) x.deficitDate=e.d; x.maxLack=Math.max(x.maxLack,-bal); } });
     x.end=bal;
   });
   return rows;
 }
 function planMaterialCheck(ctx){
-  const sup=DB.supplies.filter(s=>s.status!=='received'), used={}, res={};
+  const sup=DB.supplies.filter(s=>s.status!=='received'), used={...reservedCached()}, res={};
   const supBy=(rid,d)=>sup.filter(s=>s.rawId===rid&&s.date<=d).reduce((a,s)=>a+(+s.qty||0),0);
   activePlanReq(ctx).forEach(({it,d,req})=>{
     const lacks=[];
@@ -670,7 +677,7 @@ function planMaterialCheck(ctx){
   return res;
 }
 function matTag(chk){
-  if(!chk) return '<span class="tag t-gray">списано</span>';
+  if(!chk) return '<span class="tag t-gray">выполнено</span>';
   if(!chk.lacks.length) return '<span class="tag t-green">сырьё есть</span>';
   const tip=chk.lacks.map(l=>`${esc(rawName(l.rid))}: не хватает ${QU(l.lack,byId(DB.raw,l.rid)?.unit)} ${esc(byId(DB.raw,l.rid)?.unit||'')}${l.when?' (поставка '+fdate(l.when)+')':''}`).join('<br>');
   return chk.ready?`<span class="tag t-amber" data-tip="${tip}">дефицит · будет ${fdate(chk.ready)}</span>`:`<span class="tag t-red" data-tip="${tip}">дефицит · нет поставки</span>`;
@@ -1187,7 +1194,7 @@ function renderProjectEdit(){
   const verUsed={}; runs.forEach(r=>A(r.stations).forEach(st=>{ const k=st.semiId+'|'+st.ver; if(!verUsed[k]) verUsed[k]={name:st.name,ver:st.ver,color:st.color,dates:[]}; verUsed[k].dates.push(r.dateFrom); }));
   $('#content').innerHTML=`<div class="toolbar"><button class="btn btn-s" onclick="state.draft=null;go('projects')">← Проекты</button><div class="card-t">${esc(d.name||'Новый проект')}</div>${d.id?`<span class="tag ${d.status==='Активный'?'t-green':'t-blue'}">${esc(d.status)}</span>`:''}<div class="sp"></div>
     ${d.id?`<button class="btn btn-s" onclick="printProject('${d.id}')">🖨 Печать рецептуры</button>`:''}
-    ${d.id&&can('edit')?`<button class="btn btn-s" onclick="openRun('${d.id}')">+ Тех. отчёт наработки</button>`:''}
+    ${d.id&&can('edit')?`<button class="btn btn-s" onclick="openRun('${d.id}')">+ Тех. отчёт</button>`:''}
     ${ro?'':`<button class="btn btn-p" onclick="saveProject()">Сохранить</button>`}</div>
   <div class="grid g2 row-gap">
     <div class="card"><div class="card-h"><div class="card-t">Основное и планирование</div></div>
@@ -1229,8 +1236,10 @@ async function saveProject(){
 }
 
 // ═════════════════════════════════════════════
-//  RUNS — тех. отчёт наработки: факт по компонентам и автосписание со склада
+//  RUNS — тех. отчёт наработки: три раздела с отдельным сохранением, история, списание
 // ═════════════════════════════════════════════
+const RSEC={prod:'Наработка',settings:'Настройки машины и станций',materials:'Материалы и списание'};
+function runOutputs(r){ const ids=A(r.outputIds); return ids.length?DB.output.filter(o=>ids.includes(o.id)):DB.output.filter(o=>o.runId&&o.runId===r.id); }
 function runPlanRaw(r){ // плановый расход сырья по нормам: станции + тара
   const q=(+r.qtyGood||0)+(+r.qtyDefect||0), acc={};
   A(r.stations).forEach(st=>{ const kg=stationKg(st.norm,q); Object.entries(st.rawPerKg||{}).forEach(([rid,per])=>acc[rid]=(acc[rid]||0)+per*kg); });
@@ -1243,111 +1252,194 @@ function runTotals(r){
     if(f!==''&&f!=null){ cf+=(+f)*c; filled++; if(raw?.unit==='кг'||raw?.unit==='л') kgF+=+f; } });
   return {q,plan:kgP,fact:filled?kgF:0,costPlan:cp,costFact:cf,filled};
 }
-function openRun(pid,rid,planItemId){
-  const p=byId(DB.projects,pid); if(!p) return toast('Проект не найден');
-  if(rid){ state.draft=clone(byId(DB.runs,rid)); }
-  else {
-    const last=lastRun(pid);
-    let it=planItemId?byId(DB.plan,planItemId):DB.plan.filter(i=>i.projectId===pid&&!runFor(i)&&itemStart(i)<Date.now()).sort((a,b)=>endMs(b)-endMs(a))[0];
-    const f=it?itemFact(it):null, a=it?(f.start||itemStart(it)):Date.now()-8*H, b=it?(f.end||Math.min(endMs(it),Date.now())):Date.now();
-    state.draft={id:null,projectId:pid,planItemId:it?.id||'',lineId:it?.lineId||p.lineId,tareId:p.tareId||'',startAt:toDT(a),endAt:toDT(b),dateFrom:iso(new Date(a)),dateTo:iso(new Date(b)),
-      qtyGood:f?.good||'',qtyDefect:f?.defect||'',setupFact:f?f.recs.reduce((s,r)=>s+(+r.setup||0),0)||'':'',speedFact:'',note:'',rawFact:{},writtenMap:{},writtenOff:false,
-      settings:A(last?.settings).length?A(last.settings).map(x=>({k:x.k,v:x.v})):(DB.settings.machineParams||[]).map(k=>({k,v:''})),
-      stations:A(p.stations).map((st,i)=>({st,i})).filter(x=>x.st.semiId).map(({st,i})=>{ const s=byId(DB.semis,st.semiId), ls=A(last?.stations).find(x=>x.n===i+1&&x.semiId===st.semiId);
-        return {n:i+1,semiId:st.semiId,name:s?.name||'—',color:s?.color||'#ddd',ver:s?.ver||1,rawPerKg:s?expand('semi',s.id,1):{},norm:+st.norm||0,
-          visc:ls?.visc??st.visc??'',press:ls?.press??st.press??'',nozzle:ls?.nozzle??st.nozzle??'',factKg:''}; })};
-  }
-  const d=state.draft; d.stations=A(d.stations); d.settings=A(d.settings); d.rawFact=d.rawFact||{}; d.writtenMap=d.writtenMap||{};
-  if(!d.startAt&&d.dateFrom){ d.startAt=d.dateFrom+'T06:00'; d.endAt=(d.dateTo||d.dateFrom)+'T22:00'; }
-  state.sec='runEdit'; render(); scrollTo(0,0);
+// выпуск, по которому сырьё ещё зарезервировано (нет тех. отчёта с сохранёнными материалами)
+function outputOpen(o){ if(o.resClosed) return false; const r=o.runId?byId(DB.runs,o.runId):null; return !(r&&r.writtenOff); }
+function outputReserve(o){ const p=byId(DB.projects,o.projectId); return p?projectReq(p,(+o.good||0)+(+o.defect||0)):{}; }
+function reservedByRaw(){ const acc={}; DB.output.filter(outputOpen).forEach(o=>Object.entries(outputReserve(o)).forEach(([rid,q])=>acc[rid]=(acc[rid]||0)+q)); return acc; }
+function runCandidates(d){ // отчёты за смены, которые можно включить в этот тех. отчёт
+  return DB.output.filter(o=>o.projectId===d.projectId&&!o.resClosed&&(!o.runId||o.runId===d.id||!byId(DB.runs,o.runId))).sort((a,b)=>(a.startAt||a.date).localeCompare(b.startAt||b.date));
 }
-function DR(k,v){ state.draft[k]=v; }
-function DRS(i,k,v){ state.draft.stations[i][k]=v; }
-function DRF(rid,v){ state.draft.rawFact[rid]=v===''?'':+v; renderRunEdit(); }
-function runFactFromPlan(){ const pl=runPlanRaw(state.draft); Object.entries(pl).forEach(([rid,v])=>state.draft.rawFact[rid]=Math.round(v*1000)/1000); renderRunEdit(); toast('Факт заполнен по плану — поправьте по результатам инвентаризации'); }
+function runRecalc(d){
+  const sel=DB.output.filter(o=>A(d.outputIds).includes(o.id)); if(!sel.length) return;
+  const g=sel.reduce((a,r)=>a+(+r.good||0),0), df=sel.reduce((a,r)=>a+(+r.defect||0),0), su=sel.reduce((a,r)=>a+(+r.setup||0),0);
+  const work=sel.reduce((a,r)=>a+(r.workMin!=null?+r.workMin:0),0), st=sel.map(r=>tms(r.startAt)).filter(isFinite), en=sel.map(r=>tms(r.endAt)).filter(isFinite);
+  Object.assign(d,{qtyGood:g,qtyDefect:df,setupFact:su,speedFact:work>0?Math.round((g+df)/work):''});
+  if(st.length){ d.startAt=toDT(Math.min(...st)); d.endAt=toDT(Math.max(...en)); }
+  const pi=sel.map(o=>o.planItemId).filter(Boolean); if(pi.length&&!d.planItemId) d.planItemId=pi[0];
+  const lines=[...new Set(sel.map(o=>o.lineId))]; if(lines.length===1) d.lineId=lines[0];
+}
+function newRunDraft(pid,planItemId,outputIds){
+  const p=byId(DB.projects,pid), last=lastRun(pid), d={id:null,projectId:pid,planItemId:planItemId||'',lineId:p.lineId,tareId:p.tareId||'',startAt:'',endAt:'',outputIds:[],
+    qtyGood:'',qtyDefect:'',setupFact:'',speedFact:'',note:'',rawFact:{},writtenMap:{},writtenOff:false,log:[],sec:{},
+    settings:A(last?.settings).length?A(last.settings).map(x=>({k:x.k,v:x.v})):(DB.settings.machineParams||[]).map(k=>({k,v:''})),
+    stations:A(p.stations).map((st,i)=>({st,i})).filter(x=>x.st.semiId).map(({st,i})=>{ const s=byId(DB.semis,st.semiId), ls=A(last?.stations).find(x=>x.n===i+1&&x.semiId===st.semiId);
+      return {n:i+1,semiId:st.semiId,name:s?.name||'—',color:s?.color||'#ddd',ver:s?.ver||1,rawPerKg:s?expand('semi',s.id,1):{},norm:+st.norm||0,visc:ls?.visc??st.visc??'',press:ls?.press??st.press??'',nozzle:ls?.nozzle??st.nozzle??'',factKg:''}; })};
+  const cand=runCandidates(d);
+  d.outputIds=(outputIds&&outputIds.length?outputIds:(planItemId&&cand.some(o=>o.planItemId===planItemId)?cand.filter(o=>o.planItemId===planItemId):cand).map(o=>o.id));
+  runRecalc(d); return d;
+}
+function openRun(pid,rid,planItemId,outputIds){
+  if(!byId(DB.projects,pid)) return toast('Проект не найден');
+  state.draft=rid?clone(byId(DB.runs,rid)):newRunDraft(pid,planItemId,outputIds);
+  const d=state.draft; d.stations=A(d.stations); d.settings=A(d.settings); d.rawFact=d.rawFact||{}; d.writtenMap=d.writtenMap||{}; d.log=A(d.log); d.sec=d.sec||{};
+  if(!A(d.outputIds).length&&d.id) d.outputIds=runOutputs(d).map(o=>o.id);
+  if(!d.startAt&&d.dateFrom){ d.startAt=d.dateFrom+'T07:00'; d.endAt=(d.dateTo||d.dateFrom)+'T19:00'; }
+  state.runDirty={}; state.sec='runEdit'; render(); scrollTo(0,0);
+}
+const dirty = s => { state.runDirty[s]=true; const b=document.getElementById('rsave_'+s); if(b){ b.classList.add('btn-p'); b.classList.remove('btn-s'); b.textContent=b.dataset.l; } };
+function DR(k,v,s='prod'){ state.draft[k]=v; dirty(s); }
+function DRS(i,k,v,s){ state.draft.stations[i][k]=v; dirty(s); }
+function DRF(rid,v){ state.draft.rawFact[rid]=v===''?'':+v; dirty('materials'); renderRunEdit(); }
+function runToggleOut(id,on){ const d=state.draft, s=new Set(A(d.outputIds)); on?s.add(id):s.delete(id); d.outputIds=[...s]; runRecalc(d); dirty('prod'); renderRunEdit(); }
+function runFactFromPlan(){ const pl=runPlanRaw(state.draft); Object.entries(pl).forEach(([rid,v])=>state.draft.rawFact[rid]=Math.round(v*1000)/1000); dirty('materials'); renderRunEdit(); toast('Факт заполнен по плану — поправьте по результатам инвентаризации'); }
 function runFactFromStations(){
   const d=state.draft, acc={}; let n=0;
   d.stations.forEach(st=>{ if(st.factKg===''||st.factKg==null) return; n++; Object.entries(st.rawPerKg||{}).forEach(([rid,per])=>acc[rid]=(acc[rid]||0)+per*(+st.factKg)); });
   if(!n) return toast('Сначала внесите факт кг хотя бы по одной станции');
-  Object.entries(acc).forEach(([rid,v])=>d.rawFact[rid]=Math.round(v*1000)/1000); renderRunEdit(); toast('Факт по сырью пересчитан из станций через рецептуры');
+  Object.entries(acc).forEach(([rid,v])=>d.rawFact[rid]=Math.round(v*1000)/1000); dirty('materials'); renderRunEdit(); toast('Факт по сырью пересчитан из станций через рецептуры');
 }
+const secBadge = (d,s) => d.sec?.[s]?`<span class="tag t-green" data-tip="${esc(d.sec[s].by||'')} · ${fts(d.sec[s].ts)}">✓ ${esc(d.sec[s].by||'')} · ${fts(d.sec[s].ts)}</span>`:'<span class="tag t-gray">не заполнен</span>';
+const saveBtn = (s,label) => can('edit')?`<button class="btn ${state.runDirty[s]?'btn-p':'btn-s'}" id="rsave_${s}" data-l="${label}" onclick="saveRunSection('${s}')">${state.runDirty[s]?label:'✓ Сохранено'}</button>`:'';
 function renderRunEdit(){
-  const d=state.draft; if(!d) return go('projects');
+  const d=state.draft; if(!d) return go('runs');
   const p=byId(DB.projects,d.projectId), ro=!can('edit'), q=(+d.qtyGood||0)+(+d.qtyDefect||0), plan=runPlanRaw(d), tot=runTotals(d);
-  const items=DB.plan.filter(i=>i.projectId===d.projectId).sort((a,b)=>itemStart(b)-itemStart(a));
-  const stRows=d.stations.map((st,i)=>{ const pk=stationKg(st.norm,q), hasF=st.factKg!==''&&st.factKg!=null, dv=hasF&&pk?(+st.factKg/pk-1)*100:null;
-    return `<tr><td><span class="stn">${st.n}</span></td><td><span class="sw" style="background:${st.color}"></span><b>${esc(st.name)}</b> <span class="tag t-gray">v${st.ver}</span></td><td class="num">${Q(st.norm)}</td>
-      <td><input class="fi" style="width:74px" value="${esc(st.visc||'')}" ${ro?'disabled':''} oninput="DRS(${i},'visc',this.value)"></td>
-      <td><input class="fi" style="width:74px" value="${esc(st.press||'')}" ${ro?'disabled':''} oninput="DRS(${i},'press',this.value)"></td>
-      <td><input class="fi" style="width:74px" value="${esc(st.nozzle||'')}" ${ro?'disabled':''} oninput="DRS(${i},'nozzle',this.value)"></td>
-      <td class="num">${Q(pk,3)}</td><td><input class="fi" type="number" step="any" min="0" style="width:96px" value="${st.factKg??''}" ${ro?'disabled':''} onchange="DRS(${i},'factKg',this.value===''?'':+this.value);renderRunEdit()"></td>
+  const cand=runCandidates(d), sel=new Set(A(d.outputIds));
+  const outRows=cand.map(o=>`<tr><td><input type="checkbox" ${sel.has(o.id)?'checked':''} ${ro?'disabled':''} onchange="runToggleOut('${o.id}',this.checked)" style="width:18px;height:18px;accent-color:var(--brand)"></td>
+    <td>${fdate(o.date)}</td><td>${esc(shiftName(o.lineId,o.shift))}</td><td>${esc(lineName(o.lineId))}</td><td>${miniTL(o)}</td><td class="num"><b>${N(o.good)}</b></td><td class="num">${N(o.defect)}</td><td class="num">${o.workMin!=null?minTxt(o.workMin):'—'}</td><td class="num">${o.setup?minTxt(o.setup):'—'}</td><td class="muted">${esc(o.operator||'')}</td></tr>`).join('');
+  const stSet=d.stations.map((st,i)=>`<tr><td><span class="stn">${st.n}</span></td><td><span class="sw" style="background:${st.color}"></span><b>${esc(st.name)}</b> <span class="tag t-gray">v${st.ver}</span></td>
+      <td><input class="fi" style="width:84px" value="${esc(st.visc||'')}" ${ro?'disabled':''} oninput="DRS(${i},'visc',this.value,'settings')"></td>
+      <td><input class="fi" style="width:84px" value="${esc(st.press||'')}" ${ro?'disabled':''} oninput="DRS(${i},'press',this.value,'settings')"></td>
+      <td><input class="fi" style="width:84px" value="${esc(st.nozzle||'')}" ${ro?'disabled':''} oninput="DRS(${i},'nozzle',this.value,'settings')"></td></tr>`).join('');
+  const stMat=d.stations.map((st,i)=>{ const pk=stationKg(st.norm,q), hasF=st.factKg!==''&&st.factKg!=null, dv=hasF&&pk?(+st.factKg/pk-1)*100:null;
+    return `<tr><td><span class="stn">${st.n}</span></td><td><span class="sw" style="background:${st.color}"></span><b>${esc(st.name)}</b></td><td class="num">${Q(st.norm)}</td><td class="num">${Q(pk,3)}</td>
+      <td><input class="fi" type="number" step="any" min="0" style="width:100px" value="${st.factKg??''}" ${ro?'disabled':''} onchange="DRS(${i},'factKg',this.value===''?'':+this.value,'materials');renderRunEdit()"></td>
       <td class="num">${dv==null?'—':`<span class="tag ${Math.abs(dv)<=5?'t-green':Math.abs(dv)<=15?'t-amber':'t-red'}">${dv>0?'+':''}${P(dv,0)}</span>`}</td></tr>`; }).join('');
   const rids=[...new Set([...Object.keys(plan),...Object.keys(d.rawFact)])].sort((a,b)=>(plan[b]?1:0)-(plan[a]?1:0));
-  const rawRows=rids.map(rid=>{ const r=byId(DB.raw,rid), pl=plan[rid]||0, fa=d.rawFact[rid], has=fa!==''&&fa!=null, c=+r?.cost||0, wr=d.writtenMap[rid];
+  const rawRows=rids.map(rid=>{ const r=byId(DB.raw,rid), pl=plan[rid]||0, fa=d.rawFact[rid], has=fa!==''&&fa!=null, c=+r?.cost||0, wr=d.writtenMap[rid], delta=(has?+fa:0)-(+wr||0);
     return `<tr><td>${esc(r?.name||'—')}${pl?'':' <span class="tag t-gray">вне норм</span>'}</td><td class="num">${QU(pl,r?.unit)} ${esc(r?.unit||'')}</td>
       <td><input class="fi" type="number" step="any" min="0" style="width:110px" value="${has?fa:''}" ${ro?'disabled':''} onchange="DRF('${rid}',this.value)"></td>
-      <td class="num">${has?(fa-pl>0?'+':'')+QU(fa-pl,r?.unit):'—'}</td><td class="num">${has?money((fa-pl)*c):'—'}</td><td class="num muted">${wr!=null?QU(wr,r?.unit):'—'}</td></tr>`; }).join('');
+      <td class="num">${has?(fa-pl>0?'+':'')+QU(fa-pl,r?.unit):'—'}</td><td class="num">${has?money((fa-pl)*c):'—'}</td><td class="num muted">${wr!=null?QU(wr,r?.unit):'—'}</td>
+      <td class="num">${Math.abs(delta)>1e-9?`<span class="tag ${delta>0?'t-amber':'t-blue'}">${delta>0?'спишется +':'вернётся '}${QU(Math.abs(delta),r?.unit)}</span>`:''}</td></tr>`; }).join('');
   const addable=DB.raw.filter(r=>!rids.includes(r.id));
-  const changed=Object.keys({...d.rawFact,...d.writtenMap}).some(rid=>{ const f=d.rawFact[rid], w=d.writtenMap[rid]; return ((f===''||f==null)?0:+f)!==(+w||0); });
-  $('#content').innerHTML=`<div class="toolbar"><button class="btn btn-s" onclick="openProject('${d.projectId}')">← ${esc(p?.name||'Проект')}</button><div class="card-t">Тех. отчёт наработки</div>${d.writtenOff?'<span class="tag t-green">сырьё списано</span>':'<span class="tag t-amber">сырьё не списано</span>'}<div class="sp"></div>
-    ${d.id?`<button class="btn btn-s" onclick="printRun('${d.id}')">🖨 Печать</button>`:''}
-    ${ro?'':`<button class="btn btn-p" onclick="saveRun()">${changed?'Сохранить и списать со склада':'Сохранить'}</button>`}</div>
-  <div class="grid g2 row-gap">
-    <div class="card"><div class="card-h"><div class="card-t">Наработка</div><div class="sp"></div>${ro?'':`<button class="btn btn-s btn-sm" onclick="pullJournal()" data-tip="Сложить выпуск, наладку, простои и фактическое время из журнала выпуска">↻ Подтянуть из журнала выпуска</button>`}</div>
-      <div class="frow"><div class="fg"><label class="fl">Позиция плана</label><select class="fi" ${ro?'disabled':''} onchange="DR('planItemId',this.value)">${opts(items,d.planItemId,i=>`${fdt(itemStart(i))} · ${lineName(i.lineId)} · ${N(i.qty)} шт`,'— не связан —')}</select></div>
-      <div class="fg"><label class="fl">Линия</label><select class="fi" ${ro?'disabled':''} onchange="DR('lineId',this.value)">${opts(DB.lines,d.lineId)}</select></div></div>
-      <div class="frow"><div class="fg"><label class="fl">Факт: приступили</label><input class="fi" type="datetime-local" value="${d.startAt||''}" ${ro?'disabled':''} onchange="DR('startAt',this.value);DR('dateFrom',this.value.slice(0,10))"></div>
-      <div class="fg"><label class="fl">Факт: закончили</label><input class="fi" type="datetime-local" value="${d.endAt||''}" ${ro?'disabled':''} onchange="DR('endAt',this.value);DR('dateTo',this.value.slice(0,10))"></div></div>
-      <div class="frow"><div class="fg"><label class="fl">Годные, шт</label><input class="fi" type="number" min="0" value="${d.qtyGood}" ${ro?'disabled':''} onchange="DR('qtyGood',+this.value);renderRunEdit()"></div>
-      <div class="fg"><label class="fl">Брак, шт</label><input class="fi" type="number" min="0" value="${d.qtyDefect}" ${ro?'disabled':''} onchange="DR('qtyDefect',+this.value);renderRunEdit()"></div></div>
-      <div class="frow"><div class="fg"><label class="fl">Наладка факт, мин <span class="muted">(план ${N(p?.setupMin)})</span></label><input class="fi" type="number" min="0" value="${d.setupFact}" ${ro?'disabled':''} onchange="DR('setupFact',+this.value)"></div>
+  const items=DB.plan.filter(i=>i.projectId===d.projectId).sort((a,b)=>itemStart(b)-itemStart(a));
+  const log=A(d.log).slice().sort((a,b)=>b.ts-a.ts);
+  $('#content').innerHTML=`<div class="toolbar"><button class="btn btn-s" onclick="state.draft=null;go('runs')">← Журнал тех. отчётов</button><button class="btn btn-s" onclick="openProject('${d.projectId}')">Проект: ${esc(p?.name||'—')}</button><div class="sp"></div>
+    ${d.writtenOff?'<span class="tag t-green">сырьё списано</span>':'<span class="tag t-amber">сырьё в резерве, не списано</span>'}
+    ${d.id?`<button class="btn btn-s" onclick="printRun('${d.id}')">🖨 Печать</button>`:''}</div>
+  ${!d.id?`<div class="note row-gap" style="background:var(--blueBg)">Новый тех. отчёт. Разделы сохраняются <b>по отдельности</b> — их могут заполнять разные сотрудники в разное время. Отчёт появится в журнале после первого сохранения любого раздела.</div>`:''}
+
+  <div class="card row-gap"><div class="card-h"><div class="card-t">1. ${RSEC.prod}</div>${secBadge(d,'prod')}<div class="sp"></div>${saveBtn('prod','Сохранить раздел')}</div>
+    <div class="frow4"><div class="fg"><label class="fl">Позиция плана (необязательно)</label><select class="fi" ${ro?'disabled':''} onchange="DR('planItemId',this.value);renderRunEdit()">${opts(items,d.planItemId,i=>`${fdt(itemStart(i))} · ${lineName(i.lineId)} · ${N(i.qty)} шт`,'— без привязки —')}</select></div>
+      <div class="fg"><label class="fl">Линия</label><select class="fi" ${ro?'disabled':''} onchange="DR('lineId',this.value)">${opts(DB.lines,d.lineId)}</select></div>
+      <div class="fg"><label class="fl">Факт: приступили</label><input class="fi" type="datetime-local" value="${d.startAt||''}" ${ro?'disabled':''} onchange="DR('startAt',this.value)"></div>
+      <div class="fg"><label class="fl">Факт: закончили</label><input class="fi" type="datetime-local" value="${d.endAt||''}" ${ro?'disabled':''} onchange="DR('endAt',this.value)"></div></div>
+    <div class="fl" style="margin:4px 0 6px">Отчёты за смены, вошедшие в наработку <span class="muted">(${sel.size} из ${cand.length} · все линии, ещё не включённые в другие тех. отчёты)</span></div>
+    ${cand.length?`<div class="tw ed" style="margin:0 0 12px;border:1px solid var(--line);border-radius:10px;max-height:320px;overflow:auto"><table><tr><th></th><th>Дата</th><th>Смена</th><th>Линия</th><th>Хронометраж</th><th class="num">Годные</th><th class="num">Брак</th><th class="num">Работа</th><th class="num">Наладка</th><th>Оператор</th></tr>${outRows}</table></div>`
+      :'<div class="msg" style="display:block;background:var(--amberBg);color:var(--amber)">По этому проекту нет отчётов за смены без тех. отчёта. Внесите выпуск в «Журнале выпуска» или заполните количество вручную.</div>'}
+    <div class="frow4"><div class="fg"><label class="fl">Годные, шт</label><input class="fi" type="number" min="0" value="${d.qtyGood}" ${ro?'disabled':''} onchange="DR('qtyGood',+this.value);renderRunEdit()"></div>
+      <div class="fg"><label class="fl">Брак, шт</label><input class="fi" type="number" min="0" value="${d.qtyDefect}" ${ro?'disabled':''} onchange="DR('qtyDefect',+this.value);renderRunEdit()"></div>
+      <div class="fg"><label class="fl">Наладка факт, мин <span class="muted">(план ${N(p?.setupMin)})</span></label><input class="fi" type="number" min="0" value="${d.setupFact}" ${ro?'disabled':''} onchange="DR('setupFact',+this.value)"></div>
       <div class="fg"><label class="fl">Скорость факт, шт/мин <span class="muted">(план ${N(p?.speed)})</span></label><input class="fi" type="number" min="0" value="${d.speedFact}" ${ro?'disabled':''} onchange="DR('speedFact',+this.value)"></div></div>
-    </div>
-    <div class="card"><div class="card-h"><div class="card-t">Итог по материалам</div></div>
-      <div class="stat"><span>План по нормам</span><b>${Q(tot.plan,2)} кг · ${money(tot.costPlan)}</b></div>
-      <div class="stat"><span>Факт (после инвентаризации)</span><b>${tot.filled?Q(tot.fact,2)+' кг · '+money(tot.costFact):'—'}</b></div>
-      <div class="stat"><span>Отклонение</span><b>${tot.filled&&tot.costPlan?`<span class="tag ${Math.abs(tot.costFact/tot.costPlan-1)<=.05?'t-green':'t-amber'}">${tot.costFact>=tot.costPlan?'+':''}${P((tot.costFact/tot.costPlan-1)*100,1)}</span> ${money(tot.costFact-tot.costPlan)}`:'—'}</b></div>
-      <div class="stat"><span>Изделий обработано</span><b>${N(q)} шт</b></div>
-      <div class="note" style="margin-top:10px">При сохранении фактический расход по каждому компоненту <b>списывается со склада</b>. Повторное сохранение проводит только разницу. Пока отчёта нет, позиция плана резервирует сырьё по нормам проекта.</div>
-    </div>
   </div>
-  <div class="card row-gap"><div class="card-h"><div class="card-t">Сырьё: план / факт по компонентам</div><div class="card-s">факт — по инвентаризации после наработки</div><div class="sp"></div>
-    ${ro?'':`<button class="btn btn-s btn-sm" onclick="runFactFromStations()">Пересчитать из факта по станциям</button><button class="btn btn-s btn-sm" onclick="runFactFromPlan()">Факт = план</button>`}</div>
-    ${rawRows?`<div class="tw ed"><table><tr><th>Сырьё</th><th class="num">План</th><th>Факт</th><th class="num">Откл.</th><th class="num">Деньги</th><th class="num">Уже списано</th></tr>${rawRows}</table></div>`:'<div class="empty">Внесите количество изделий</div>'}
-    ${ro||!addable.length?'':`<div style="margin-top:12px"><select class="sel" onchange="if(this.value){state.draft.rawFact[this.value]='';renderRunEdit()}"><option value="">+ Добавить сырьё вне норм (промывка, потери…)</option>${addable.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select></div>`}</div>
-  <div class="card row-gap"><div class="card-h"><div class="card-t">Станции: настройки и расход полуфабрикатов</div><div class="card-s">план = норма × количество изделий · рецептуры зафиксированы версией на момент наработки</div></div>
-    <div class="tw ed"><table><tr><th>№</th><th>Рецептура</th><th class="num">Норма г/1000</th><th>Вязкость</th><th>Давление</th><th>Сопло</th><th class="num">План, кг</th><th>Факт, кг</th><th class="num">Откл.</th></tr>${stRows||'<tr><td colspan="9" class="empty">В проекте не заданы станции</td></tr>'}</table></div></div>
-  <div class="grid g11">
-    <div class="card"><div class="card-h"><div class="card-t">Настройки машины</div><div class="card-s">на эту наработку</div><div class="sp"></div>${ro?'':`<button class="btn btn-s btn-sm" onclick="state.draft.settings.push({k:'',v:''});renderRunEdit()">+ Параметр</button>`}</div>
-      <div class="tw ed"><table><tr><th>Параметр</th><th>Значение</th><th></th></tr>${d.settings.map((x,i)=>`<tr><td><input class="fi" style="min-width:200px" value="${esc(x.k)}" ${ro?'disabled':''} oninput="state.draft.settings[${i}].k=this.value"></td><td><input class="fi" style="min-width:120px" value="${esc(x.v)}" ${ro?'disabled':''} oninput="state.draft.settings[${i}].v=this.value"></td><td>${ro?'':`<button class="btn btn-s btn-sm" onclick="state.draft.settings.splice(${i},1);renderRunEdit()">✕</button>`}</td></tr>`).join('')}</table></div></div>
-    <div class="card"><div class="card-h"><div class="card-t">Замечания по наработке</div></div><textarea class="fi" rows="8" ${ro?'disabled':''} oninput="DR('note',this.value)" placeholder="Что пошло не так, что поменяли в настройках, рекомендации на следующий раз…">${esc(d.note||'')}</textarea></div>
-  </div>`;
+
+  <div class="card row-gap"><div class="card-h"><div class="card-t">2. ${RSEC.settings}</div>${secBadge(d,'settings')}<div class="sp"></div>${saveBtn('settings','Сохранить раздел')}</div>
+    <div class="grid g11" style="align-items:start">
+      <div><div class="card-h" style="margin-bottom:6px"><div class="fl" style="margin:0">Параметры машины</div><div class="sp"></div>${ro?'':`<button class="btn btn-s btn-sm" onclick="state.draft.settings.push({k:'',v:''});dirty('settings');renderRunEdit()">+ Параметр</button>`}</div>
+        <div class="tw ed" style="margin:0;border:1px solid var(--line);border-radius:10px"><table><tr><th>Параметр</th><th>Значение</th><th></th></tr>${d.settings.map((x,i)=>`<tr><td><input class="fi" style="min-width:190px" value="${esc(x.k)}" ${ro?'disabled':''} oninput="state.draft.settings[${i}].k=this.value;dirty('settings')"></td><td><input class="fi" style="min-width:110px" value="${esc(x.v)}" ${ro?'disabled':''} oninput="state.draft.settings[${i}].v=this.value;dirty('settings')"></td><td>${ro?'':`<button class="btn btn-s btn-sm" onclick="state.draft.settings.splice(${i},1);dirty('settings');renderRunEdit()">✕</button>`}</td></tr>`).join('')}</table></div></div>
+      <div><div class="fl" style="margin-bottom:6px">Настройки станций</div>
+        <div class="tw ed" style="margin:0;border:1px solid var(--line);border-radius:10px"><table><tr><th>№</th><th>Рецептура</th><th>Вязкость</th><th>Давление</th><th>Сопло</th></tr>${stSet||'<tr><td colspan="5" class="empty">В проекте не заданы станции</td></tr>'}</table></div>
+        <div class="fg" style="margin-top:12px"><label class="fl">Замечания по наработке</label><textarea class="fi" rows="4" ${ro?'disabled':''} oninput="state.draft.note=this.value;dirty('settings')" placeholder="Что поменяли в настройках, что пошло не так, рекомендации на следующий раз…">${esc(d.note||'')}</textarea></div></div>
+    </div></div>
+
+  <div class="card row-gap"><div class="card-h"><div class="card-t">3. ${RSEC.materials}</div>${secBadge(d,'materials')}<div class="sp"></div>
+    ${ro?'':`<button class="btn btn-s btn-sm" onclick="runFactFromStations()">Пересчитать из станций</button><button class="btn btn-s btn-sm" onclick="runFactFromPlan()">Факт = план</button>`}${saveBtn('materials','Сохранить и провести по складу')}</div>
+    <div class="grid g2" style="align-items:start">
+      <div><div class="fl" style="margin-bottom:6px">Сырьё: план / факт по компонентам <span class="muted">(факт — по инвентаризации после наработки)</span></div>
+        ${rawRows?`<div class="tw ed" style="margin:0;border:1px solid var(--line);border-radius:10px"><table><tr><th>Сырьё</th><th class="num">План</th><th>Факт</th><th class="num">Откл.</th><th class="num">Деньги</th><th class="num">Уже списано</th><th class="num">При сохранении</th></tr>${rawRows}</table></div>`:'<div class="empty">Сначала заполните количество изделий в разделе «Наработка»</div>'}
+        ${ro||!addable.length?'':`<div style="margin-top:10px"><select class="sel" onchange="if(this.value){state.draft.rawFact[this.value]='';dirty('materials');renderRunEdit()}"><option value="">+ Сырьё вне норм (промывка, потери…)</option>${addable.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select></div>`}
+        <div class="fl" style="margin:14px 0 6px">Расход полуфабрикатов по станциям <span class="muted">(необязательно — можно пересчитать в сырьё кнопкой выше)</span></div>
+        <div class="tw ed" style="margin:0;border:1px solid var(--line);border-radius:10px"><table><tr><th>№</th><th>Рецептура</th><th class="num">Норма г/1000</th><th class="num">План, кг</th><th>Факт, кг</th><th class="num">Откл.</th></tr>${stMat||'<tr><td colspan="6" class="empty">Нет станций</td></tr>'}</table></div></div>
+      <div class="card" style="box-shadow:none;padding:14px"><div class="card-t" style="margin-bottom:6px">Итог по материалам</div>
+        <div class="stat"><span>Изделий обработано</span><b>${N(q)} шт</b></div>
+        <div class="stat"><span>План по нормам</span><b>${Q(tot.plan,2)} кг · ${money(tot.costPlan)}</b></div>
+        <div class="stat"><span>Факт</span><b>${tot.filled?Q(tot.fact,2)+' кг · '+money(tot.costFact):'—'}</b></div>
+        <div class="stat"><span>Отклонение</span><b>${tot.filled&&tot.costPlan?`<span class="tag ${Math.abs(tot.costFact/tot.costPlan-1)<=.05?'t-green':'t-amber'}">${tot.costFact>=tot.costPlan?'+':''}${P((tot.costFact/tot.costPlan-1)*100,1)}</span> ${money(tot.costFact-tot.costPlan)}`:'—'}</b></div>
+        <div class="note" style="margin-top:10px">До сохранения этого раздела сырьё по выбранным сменам <b>зарезервировано</b> по нормам. При сохранении резерв снимается и фактический расход <b>списывается со склада</b>. Если отчёт потом исправят — проведётся только разница, и это будет видно в истории.</div></div>
+    </div></div>
+
+  <div class="card"><div class="card-h"><div class="card-t">История изменений</div><div class="card-s">кто, когда и какой раздел сохранял</div></div>
+    ${log.length?`<div class="log">${log.map(x=>`<div><small>${fts(x.ts)} · ${esc(x.by||'')} · ${esc(RSEC[x.sec]||x.sec||'')}</small>${esc(x.text).replace(/\n/g,'<br>')}</div>`).join('')}</div>`:'<div class="empty">Ещё не сохранялся</div>'}</div>`;
 }
-function pullJournal(){
-  const d=state.draft, recs=d.planItemId?DB.output.filter(r=>r.planItemId===d.planItemId):DB.output.filter(r=>r.projectId===d.projectId&&r.date>=(d.startAt||'').slice(0,10)&&r.date<=(d.endAt||'').slice(0,10)&&(!d.lineId||r.lineId===d.lineId));
-  if(!recs.length) return toast('В журнале нет записей по этой позиции / датам');
-  const g=recs.reduce((a,r)=>a+(+r.good||0),0), df=recs.reduce((a,r)=>a+(+r.defect||0),0), su=recs.reduce((a,r)=>a+(+r.setup||0),0), dn=recs.reduce((a,r)=>a+(+r.downtime||0),0);
-  const st=recs.map(r=>tms(r.startAt)).filter(isFinite), en=recs.map(r=>tms(r.endAt)).filter(isFinite);
-  const workMin=recs.reduce((a,r)=>{ if(r.workMin!=null) return a+(+r.workMin||0); const x=tms(r.startAt), y=tms(r.endAt); return a+(isFinite(x)&&isFinite(y)?(y-x)/60e3:(DB.settings.shiftHours||8)*60)-(+r.setup||0)-(+r.downtime||0); },0);
-  Object.assign(d,{qtyGood:g,qtyDefect:df,setupFact:su,speedFact:workMin>0?Math.round((g+df)/workMin):''});
-  if(st.length){ d.startAt=toDT(Math.min(...st)); d.endAt=toDT(Math.max(...en)); d.dateFrom=d.startAt.slice(0,10); d.dateTo=d.endAt.slice(0,10); }
-  renderRunEdit(); toast(`Подтянуто ${recs.length} смен из журнала`);
+const SEC_FIELDS={prod:['planItemId','lineId','startAt','endAt','outputIds','qtyGood','qtyDefect','setupFact','speedFact'],settings:['settings','note'],materials:['rawFact']};
+function runDiff(sec,o,n){
+  const ch=[], lbl={planItemId:'позиция плана',lineId:'линия',startAt:'начало',endAt:'окончание',qtyGood:'годные',qtyDefect:'брак',setupFact:'наладка',speedFact:'скорость'};
+  if(sec==='prod'){ Object.keys(lbl).forEach(k=>{ const a=o?.[k]??'', b=n[k]??''; if(String(a)!==String(b)) ch.push(`${lbl[k]}: ${k==='lineId'?lineName(a)+' → '+lineName(b):k==='planItemId'?'изменена':(a===''?'—':k.endsWith('At')?fdt(tms(a)):N(a))+' → '+(k.endsWith('At')?fdt(tms(b)):N(b))}`); });
+    const oa=A(o?.outputIds).length, nb=A(n.outputIds).length; if(oa!==nb) ch.push(`смен в отчёте: ${oa} → ${nb}`); }
+  if(sec==='settings'){ const os=Object.fromEntries(A(o?.settings).map(x=>[x.k,x.v])); A(n.settings).forEach(x=>{ if(os[x.k]!==x.v) ch.push(`${x.k}: ${os[x.k]??'—'} → ${x.v}`); });
+    A(n.stations).forEach((st,i)=>{ const ob=A(o?.stations)[i]||{}; ['visc','press','nozzle'].forEach(k=>{ if(String(ob[k]??'')!==String(st[k]??'')) ch.push(`ст.${st.n} ${({visc:'вязкость',press:'давление',nozzle:'сопло'})[k]}: ${ob[k]||'—'} → ${st[k]||'—'}`); }); });
+    if((o?.note||'')!==(n.note||'')) ch.push('замечания обновлены'); }
+  return ch;
 }
-async function saveRun(){
-  const d=state.draft; if(!(+d.qtyGood)&&!(+d.qtyDefect)) return toast('Укажите количество изделий');
-  const id=d.id||uid(), prev=d.writtenMap||{}, next={};
-  Object.entries(d.rawFact||{}).forEach(([rid,v])=>{ if(v!==''&&v!=null&&isFinite(+v)) next[rid]=+v; });
-  const list=[], date=(d.endAt||iso(new Date())).slice(0,10); let n=0;
-  [...new Set([...Object.keys(prev),...Object.keys(next)])].forEach(rid=>{
-    const delta=Math.round(((next[rid]||0)-(prev[rid]||0))*1000)/1000, r=byId(DB.raw,rid); if(!delta||!r) return; n++;
-    list.push({col:'raw',obj:{...r,qty:Math.round(((+r.qty||0)-delta)*1000)/1000}});
-    list.push({col:'moves',obj:{id:uid(),date,type:delta>0?'out':'in',rawId:rid,qty:Math.abs(delta),projectId:d.projectId,runId:id,note:delta>0?'Списание по тех. отчёту':'Корректировка тех. отчёта (возврат)',by:state.me.name,ts:Date.now()}});
-  });
-  const rec={...d,id,qtyGood:+d.qtyGood||0,qtyDefect:+d.qtyDefect||0,setupFact:+d.setupFact||0,speedFact:+d.speedFact||0,dateFrom:(d.startAt||'').slice(0,10)||d.dateFrom,dateTo:(d.endAt||'').slice(0,10)||d.dateTo,
-    settings:d.settings.filter(x=>x.k||x.v),rawFact:next,writtenMap:next,writtenOff:Object.keys(next).length>0,by:state.me.name,ts:Date.now()};
+async function saveRunSection(sec){
+  if(!can('edit')) return;
+  const d=state.draft, isNew=!d.id, id=d.id||uid(), old=d.id?byId(DB.runs,d.id):null;
+  if(sec==='prod'&&!(+d.qtyGood)&&!(+d.qtyDefect)) return toast('Укажите количество изделий или выберите отчёты за смены');
+  // берём свежую версию из базы и меняем только поля этого раздела — чужие разделы не затираются
+  const base=old?clone(old):{id,projectId:d.projectId,tareId:d.tareId,stations:clone(d.stations).map(s=>({...s,factKg:''})),settings:clone(d.settings),rawFact:{},writtenMap:{},writtenOff:false,log:[],sec:{},created:Date.now(),createdBy:state.me.name};
+  base.stations=A(base.stations); base.log=A(base.log); base.sec=base.sec||{};
+  const rec=clone(base); SEC_FIELDS[sec].forEach(k=>rec[k]=clone(d[k]));
+  if(sec==='settings') rec.stations=rec.stations.map((s,i)=>({...s,visc:d.stations[i]?.visc??s.visc,press:d.stations[i]?.press??s.press,nozzle:d.stations[i]?.nozzle??s.nozzle}));
+  if(sec==='materials') rec.stations=rec.stations.map((s,i)=>({...s,factKg:d.stations[i]?.factKg??''}));
+  if(sec==='prod'){ rec.qtyGood=+rec.qtyGood||0; rec.qtyDefect=+rec.qtyDefect||0; rec.setupFact=+rec.setupFact||0; rec.speedFact=+rec.speedFact||0; rec.dateFrom=(rec.startAt||'').slice(0,10); rec.dateTo=(rec.endAt||'').slice(0,10); }
+  if(sec==='settings') rec.settings=rec.settings.filter(x=>x.k||x.v);
+  const list=[], moveNotes=[];
+  if(sec==='materials'){
+    const prev=base.writtenMap||{}, next={}, date=(rec.endAt||iso(new Date())).slice(0,10);
+    Object.entries(d.rawFact||{}).forEach(([rid,v])=>{ if(v!==''&&v!=null&&isFinite(+v)) next[rid]=+v; });
+    if(!Object.keys(next).length) return toast('Внесите фактический расход хотя бы по одному компоненту');
+    const corr=!!base.writtenOff;
+    [...new Set([...Object.keys(prev),...Object.keys(next)])].forEach(rid=>{
+      const delta=Math.round(((next[rid]||0)-(prev[rid]||0))*1000)/1000, r=byId(DB.raw,rid); if(!delta||!r) return;
+      list.push({col:'raw',obj:{...r,qty:Math.round(((+r.qty||0)-delta)*1000)/1000}});
+      list.push({col:'moves',obj:{id:uid(),date,type:delta>0?'out':'in',rawId:rid,qty:Math.abs(delta),projectId:rec.projectId,runId:id,note:corr?(delta>0?'Корректировка тех. отчёта: доп. списание':'Корректировка тех. отчёта: возврат на склад'):'Списание по тех. отчёту',by:state.me.name,ts:Date.now()}});
+      moveNotes.push(`${r.name}: ${delta>0?'списано':'возвращено'} ${QU(Math.abs(delta),r.unit)} ${r.unit}`);
+    });
+    rec.rawFact=next; rec.writtenMap=next; rec.writtenOff=true;
+  }
+  const ch=sec==='materials'?(moveNotes.length?[(base.writtenOff?'Корректировка списания:\n':'Списание со склада, резерв снят:\n')+moveNotes.join('\n')]:['Сохранено без изменений по складу']):runDiff(sec,old,rec);
+  rec.sec={...base.sec,[sec]:{by:state.me.name,ts:Date.now()}};
+  rec.log=[...base.log,{ts:Date.now(),by:state.me.name,sec,text:(isNew?'Отчёт создан. ':'')+(ch.length?ch.join('; '):'сохранено без изменений')}].slice(-100);
+  rec.by=state.me.name; rec.ts=Date.now();
+  if(sec==='prod'){ // привязка отчётов за смены к тех. отчёту
+    const was=new Set(runOutputs(base).map(o=>o.id)), now=new Set(A(rec.outputIds));
+    DB.output.forEach(o=>{ if(now.has(o.id)&&o.runId!==id) list.push({col:'output',obj:{...o,runId:id}}); else if(!now.has(o.id)&&(was.has(o.id)||o.runId===id)) list.push({col:'output',obj:{...o,runId:''}}); });
+  }
   list.push({col:'runs',obj:rec});
-  await Store.batch(list); state.draft=clone(rec); state.draft.stations=A(rec.stations); state.draft.settings=A(rec.settings); render();
-  toast(n?`Тех. отчёт сохранён · проведено по складу: ${n} поз.`:'Тех. отчёт сохранён');
+  await Store.batch(list);
+  // сохраняем несохранённые правки других разделов в черновике
+  const keep=state.runDirty, nd=clone(rec); nd.stations=A(nd.stations); nd.settings=A(nd.settings); nd.log=A(nd.log); nd.rawFact=nd.rawFact||{}; nd.writtenMap=nd.writtenMap||{};
+  Object.keys(keep).filter(s=>s!==sec&&keep[s]).forEach(s=>{ SEC_FIELDS[s].forEach(k=>nd[k]=clone(d[k])); if(s==='settings'||s==='materials') nd.stations=nd.stations.map((x,i)=>({...x,...(s==='settings'?{visc:d.stations[i]?.visc,press:d.stations[i]?.press,nozzle:d.stations[i]?.nozzle}:{factKg:d.stations[i]?.factKg})})); });
+  delete keep[sec]; state.draft=nd; render();
+  toast(sec==='materials'?(moveNotes.length?`Проведено по складу: ${moveNotes.length} поз.`:'Сохранено'):`Раздел «${RSEC[sec]}» сохранён`);
+}
+function renderRuns(){
+  const q=state.q.toLowerCase();
+  const runs=DB.runs.filter(r=>{ const d=r.endAt?r.endAt.slice(0,10):(r.dateTo||r.dateFrom||''); return d>=state.from&&d<=state.to&&(!q||(projName(r.projectId)+' '+lineName(r.lineId)).toLowerCase().includes(q)); })
+    .sort((a,b)=>(b.endAt||b.dateTo||'').localeCompare(a.endAt||a.dateTo||''));
+  const open=DB.output.filter(outputOpen), byP={}; open.forEach(o=>{ (byP[o.projectId]=byP[o.projectId]||[]).push(o); });
+  const secCell=(r,s)=>r.sec?.[s]?`<span class="tag t-green" data-tip="${esc(r.sec[s].by)} · ${fts(r.sec[s].ts)}">✓</span>`:(s==='materials'&&r.writtenOff?'<span class="tag t-green">✓</span>':'<span class="tag t-gray">—</span>');
+  $('#content').innerHTML=`${Object.keys(byP).length?`<div class="card row-gap"><div class="card-h"><div class="card-t">⚠ Выпуск без тех. отчёта</div><div class="card-s">сырьё по этим сменам в резерве и ещё не списано</div></div>
+    <div class="tw"><table><tr><th>Проект</th><th class="num">Смен</th><th>Период</th><th class="num">Годные</th><th class="num">Резерв сырья</th><th></th></tr>
+    ${Object.entries(byP).map(([pid,os])=>{ const res={}; os.forEach(o=>Object.entries(outputReserve(o)).forEach(([rid,v])=>res[rid]=(res[rid]||0)+v)); const val=Object.entries(res).reduce((a,[rid,v])=>a+v*(+byId(DB.raw,rid)?.cost||0),0), ds=os.map(o=>o.date).sort();
+      return `<tr><td><b>${esc(projName(pid))}</b></td><td class="num">${os.length}</td><td>${fdate(ds[0])}${ds.length>1?' — '+fdate(ds[ds.length-1]):''}</td><td class="num">${N(os.reduce((a,o)=>a+(+o.good||0),0))}</td><td class="num">${money(val)}</td>
+      <td>${can('edit')?`<button class="btn btn-p btn-sm" onclick="openRun('${pid}',null,null,${esc(JSON.stringify(os.map(o=>o.id)))})">Создать тех. отчёт</button>`:''}</td></tr>`; }).join('')}</table></div></div>`:''}
+  ${periodBar()}<div class="toolbar">${searchBox('Проект или линия')}<span class="muted" style="font-weight:600">${runs.length} отчётов</span></div>
+  <div class="card">${runs.length?`<div class="tw flush"><table><tr><th>Наработка</th><th>Проект</th><th>Линия</th><th class="num">Смен</th><th class="num">Годные</th><th class="num">Материалы факт / план</th><th>1 · Наработка</th><th>2 · Настройки</th><th>3 · Материалы</th><th>Последнее изменение</th></tr>
+    ${runs.map(r=>{ const t=runTotals(r), last=A(r.log).slice().sort((a,b)=>b.ts-a.ts)[0], corr=A(r.log).filter(x=>x.sec==='materials').length>1;
+      return `<tr class="click" onclick="openRun('${r.projectId}','${r.id}')"><td><b>${r.startAt?fdt(tms(r.startAt)):fdate(r.dateFrom||'')}</b><div class="muted" style="font-size:12px">→ ${r.endAt?fdt(tms(r.endAt)):fdate(r.dateTo||r.dateFrom||'')}</div></td>
+      <td>${esc(projName(r.projectId))}</td><td>${esc(lineName(r.lineId))}</td><td class="num">${runOutputs(r).length||'—'}</td><td class="num">${N(r.qtyGood)}</td>
+      <td class="num">${t.filled?`${money(t.costFact)} / ${money(t.costPlan)}`:'—'}</td><td>${secCell(r,'prod')}</td><td>${secCell(r,'settings')}</td><td>${secCell(r,'materials')}${corr?' <span class="tag t-amber" data-tip="Списание корректировалось">испр.</span>':''}</td>
+      <td class="muted" style="font-size:12px">${last?`${fts(last.ts)} · ${esc(last.by)}<br>${esc(RSEC[last.sec]||'')}`:esc(r.by||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Тех. отчётов за период нет</div>'}</div>`;
 }
 
 // ═════════════════════════════════════════════
@@ -1743,8 +1835,8 @@ async function applyScenario(id){
 //  DEMAND — потребность и поставки
 // ═════════════════════════════════════════════
 function renderDemand(){
-  const fc=demandForecast(), rows=Object.values(fc).filter(x=>x.need>0||x.incoming>0||x.deficitDate).sort((a,b)=>(a.deficitDate||'9999').localeCompare(b.deficitDate||'9999')||b.need-a.need);
-  const def=rows.filter(x=>x.deficitDate), chk=planMaterialCheck(), active=activePlanReq(), noReport=active.filter(x=>x.overdue);
+  const fc=demandForecast(), rows=Object.values(fc).filter(x=>x.need>0||x.reserved>0||x.incoming>0||x.deficitDate).sort((a,b)=>(a.deficitDate||'9999').localeCompare(b.deficitDate||'9999')||b.need-a.need);
+  const def=rows.filter(x=>x.deficitDate), chk=planMaterialCheck(), active=activePlanReq();
   const sup=DB.supplies.slice().sort((a,b)=>(a.status==='received')-(b.status==='received')||a.date.localeCompare(b.date)), today=new Date();
   const ordCost=def.filter(x=>x.end<0).reduce((a,x)=>a+(-x.end)*(+x.r.cost||0),0);
   $('#content').innerHTML=`<div class="grid kpis k4">
@@ -1752,19 +1844,18 @@ function renderDemand(){
     <div class="card kpi"><div class="kl">Позиций плана под угрозой</div><div class="kv">${Object.values(chk).filter(c=>c.lacks.length).length} <small>из ${active.length}</small></div><div class="kd flat">по наличию сырья</div></div>
     <div class="card kpi"><div class="kl">Ожидается поставок</div><div class="kv">${DB.supplies.filter(s=>s.status!=='received').length}</div><div class="kd flat">на ${money(DB.supplies.filter(s=>s.status!=='received').reduce((a,s)=>a+(+s.qty||0)*(+byId(DB.raw,s.rawId)?.cost||0),0))}</div></div>
     <div class="card kpi"><div class="kl">Нужно дозаказать</div><div class="kv" style="font-size:20px">${money(ordCost)}</div><div class="kd flat">чтобы закрыть дефицит</div></div></div>
-  <div class="note row-gap" style="background:var(--blueBg)">Потребность считается по <b>плановым нормам проектов</b> и количествам <b>действующего плана</b>. Позиция перестаёт резервировать сырьё, когда по ней сохранён тех. отчёт с фактическим расходом — в этот момент сырьё списывается со склада.</div>
-  ${noReport.length?`<div class="card row-gap"><div class="card-h"><div class="card-t">⚠ Наработки без тех. отчёта</div><div class="card-s">позиция закончилась, но фактический расход ещё не внесён — сырьё остаётся зарезервированным по норме</div></div>
-    <div class="tw"><table><tr><th>Окончание по плану</th><th>Проект</th><th>Линия</th><th class="num">Кол-во</th><th></th></tr>${noReport.map(({it,p})=>`<tr><td>${fdt(endMs(it))}</td><td>${esc(p.name)}</td><td>${esc(lineName(it.lineId))}</td><td class="num">${N(it.qty)}</td><td>${can('edit')?`<button class="btn btn-p btn-sm" onclick="openRun('${p.id}',null,'${it.id}')">Заполнить тех. отчёт</button>`:''}</td></tr>`).join('')}</table></div></div>`:''}
+  <div class="note row-gap" style="background:var(--blueBg)"><b>Резерв</b> — сырьё по нормам под уже выпущенную продукцию, по которой ещё нет тех. отчёта с материалами. <b>Потребность</b> — нормы на оставшийся объём позиций действующего плана. Когда в тех. отчёте сохраняют материалы, резерв снимается и сырьё списывается со склада по факту.</div>
+  ${(()=>{ const os=DB.output.filter(outputOpen); if(!os.length) return ''; const ps=new Set(os.map(o=>o.projectId)); return `<div class="note row-gap" style="background:var(--amberBg)">⚠ Выпуск без тех. отчёта: ${os.length} смен по ${ps.size} проектам — сырьё по ним в резерве, но ещё не списано. <button class="btn btn-s btn-sm" onclick="go('runs')">Открыть журнал тех. отчётов</button></div>`; })()}
   <div class="card row-gap"><div class="card-h"><div class="card-t">Прогноз сырья по действующему плану</div><div class="card-s">остаток + поставки − потребность позиций плана в хронологии</div><div class="sp"></div>${can('edit')?`<button class="btn btn-s btn-sm" onclick="openFeasibility()">🧮 Когда сможем выполнить проект?</button>`:''}</div>
-    ${rows.length?`<div class="tw"><table><tr><th>Сырьё</th><th class="num">Остаток</th><th class="num">Потребность</th><th class="num">Ожидается</th><th class="num">Прогноз</th><th>Дефицит</th><th>Заказать до</th><th></th></tr>
+    ${rows.length?`<div class="tw"><table><tr><th>Сырьё</th><th class="num">Остаток</th><th class="num">Резерв</th><th class="num">Потребность плана</th><th class="num">Ожидается</th><th class="num">Прогноз</th><th>Дефицит</th><th>Заказать до</th><th></th></tr>
     ${rows.map(x=>{ const ob=x.deficitDate?addD(pd(x.deficitDate),-(+x.r.leadDays||0)):null, urgent=ob&&iso(ob)<iso(today), u=x.r.unit, short=x.end<0, lack=short?-x.end:0;
-      return `<tr><td><b>${esc(x.r.name)}</b><div class="muted" style="font-size:12px">${esc(x.r.supplier||'')}${x.r.leadDays?' · поставка '+x.r.leadDays+' дн.':''}</div></td><td class="num">${QU(x.stock,u)} ${esc(u)}</td><td class="num">${QU(x.need,u)}</td><td class="num">${x.incoming?'+'+QU(x.incoming,u):'—'}</td>
+      return `<tr><td><b>${esc(x.r.name)}</b><div class="muted" style="font-size:12px">${esc(x.r.supplier||'')}${x.r.leadDays?' · поставка '+x.r.leadDays+' дн.':''}</div></td><td class="num">${QU(x.stock,u)} ${esc(u)}</td><td class="num">${x.reserved>1e-9?QU(x.reserved,u):'—'}</td><td class="num">${QU(x.need,u)}</td><td class="num">${x.incoming?'+'+QU(x.incoming,u):'—'}</td>
       <td class="num"><b style="color:${short?'var(--red)':'inherit'}">${QU(x.end,u)}</b></td><td>${x.deficitDate?`<span class="tag t-red">−${QU(x.maxLack,u)} с ${fdate(x.deficitDate)}</span>`:'<span class="tag t-green">хватает</span>'}</td>
       <td>${!x.deficitDate?'':short?`<span class="tag ${urgent?'t-red':'t-amber'}">${urgent?'срочно!':fdate(iso(ob))}</span>`:'<span class="tag t-amber" data-tip="Поставка уже заказана, но приходит позже, чем нужно сырьё">ускорить поставку</span>'}</td>
       <td>${short&&can('edit')?`<button class="btn btn-s btn-sm" onclick="openSupply(null,'${x.r.id}',${u==='шт'?Math.ceil(lack):Math.ceil(lack*10)/10},'${iso(ob&&!urgent?ob:addD(today,+x.r.leadDays||0))}')">Заказать ${QU(lack,u)}</button>`:''}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Нет потребности: в плане нет позиций без тех. отчёта или у проектов не заданы рецептуры</div>'}</div>
   <div class="grid g11">
     <div class="card"><div class="card-h"><div class="card-t">Позиции плана и сырьё</div><div class="card-s">когда реально можно начинать</div></div>
-      ${active.length?`<div class="tw"><table><tr><th>Старт по плану</th><th>Проект</th><th class="num">Кол-во</th><th>Сырьё</th></tr>${active.map(({it,p,overdue})=>`<tr class="${can('edit')?'click':''}" ${can('edit')?`onclick="openPlanItem('${it.id}')"`:''}><td>${fdt(itemStart(it))}${overdue?' <span class="tag t-amber">ждёт тех. отчёт</span>':''}</td><td><span class="sw" style="background:${pColor(p)}"></span>${esc(p.name)}</td><td class="num">${N(it.qty)}</td><td>${matTag(chk[it.id])}</td></tr>`).join('')}</table></div>`:'<div class="empty">Позиций нет</div>'}</div>
+      ${active.length?`<div class="tw"><table><tr><th>Старт по плану</th><th>Проект</th><th class="num">Осталось сделать</th><th>Сырьё</th></tr>${active.map(({it,p,overdue,rest})=>`<tr class="${can('edit')?'click':''}" ${can('edit')?`onclick="openPlanItem('${it.id}')"`:''}><td>${fdt(itemStart(it))}${overdue?' <span class="tag t-red">просрочена</span>':''}</td><td><span class="sw" style="background:${pColor(p)}"></span>${esc(p.name)}</td><td class="num">${N(rest)}${rest<(+it.qty||0)?`<div class="muted" style="font-size:11px">из ${N(it.qty)}</div>`:''}</td><td>${matTag(chk[it.id])}</td></tr>`).join('')}</table></div>`:'<div class="empty">Позиций нет</div>'}</div>
     <div class="card"><div class="card-h"><div class="card-t">Поставки сырья</div><div class="sp"></div>${can('edit')?`<button class="btn btn-p btn-sm" onclick="openSupply()">+ Поставка</button>`:''}</div>
       ${sup.length?`<div class="tw"><table><tr><th>Дата</th><th>Сырьё</th><th class="num">Кол-во</th><th>Поставщик</th><th>Статус</th><th></th></tr>
       ${sup.map(s=>{ const r=byId(DB.raw,s.rawId), late=s.status!=='received'&&s.date<iso(today); return `<tr><td>${fdate(s.date)}</td><td>${esc(r?.name||'—')}</td><td class="num">${QU(s.qty,r?.unit)} ${esc(r?.unit||'')}</td><td class="muted">${esc(s.supplier||'')}</td>
@@ -1826,17 +1917,26 @@ function renderStock(){
   let body='';
   if(tab==='raw'){
     const cats=[...new Set(DB.raw.map(r=>r.cat||'Прочее'))].sort();
-    body=cats.map(c=>`<div class="card row-gap"><div class="card-h"><div class="card-t">${esc(c)}</div></div><div class="tw"><table><tr><th>Сырьё</th><th class="num">Остаток</th><th class="num">Мин.</th><th class="num">Сумма</th><th>Состояние</th></tr>
-      ${DB.raw.filter(r=>(r.cat||'Прочее')===c).map(r=>`<tr><td><b>${esc(r.name)}</b></td><td class="num">${Q(r.qty)} ${esc(r.unit)}</td><td class="num muted">${Q(r.min)}</td><td class="num">${money((+r.qty||0)*(+r.cost||0))}</td>
+    const res=reservedCached();
+    body=`<div class="note row-gap" style="background:var(--blueBg)"><b>Остаток</b> — физически на складе. <b>Резерв</b> — по нормам под уже выпущенную продукцию без тех. отчёта; снимается, когда в тех. отчёте сохраняют материалы и сырьё списывается по факту. <b>Доступно</b> = остаток − резерв.</div>`+cats.map(c=>`<div class="card row-gap"><div class="card-h"><div class="card-t">${esc(c)}</div></div><div class="tw"><table><tr><th>Сырьё</th><th class="num">Остаток</th><th class="num">Резерв (выпущено, не списано)</th><th class="num">Доступно</th><th class="num">Мин.</th><th class="num">Сумма</th><th>Состояние</th></tr>
+      ${DB.raw.filter(r=>(r.cat||'Прочее')===c).map(r=>`<tr><td><b>${esc(r.name)}</b></td><td class="num">${QU(r.qty,r.unit)} ${esc(r.unit)}</td><td class="num">${res[r.id]>1e-9?`<span class="tag t-amber">${QU(res[r.id],r.unit)}</span>`:'—'}</td><td class="num"><b>${QU((+r.qty||0)-(res[r.id]||0),r.unit)}</b></td><td class="num muted">${QU(r.min,r.unit)}</td><td class="num">${money((+r.qty||0)*(+r.cost||0))}</td>
       <td>${(+r.qty||0)<(+r.min||0)?'<span class="tag t-red">ниже минимума</span>':(+r.qty||0)<(+r.min||0)*1.5?'<span class="tag t-amber">заканчивается</span>':'<span class="tag t-green">норма</span>'}</td></tr>`).join('')}</table></div></div>`).join('')||'<div class="card"><div class="empty">Сырья нет</div></div>';
   } else if(tab==='fg'){
     const m=fgStock();
     body=`<div class="card"><div class="tw flush"><table><tr><th>Проект</th><th>Клиент</th><th class="num">Произведено</th><th class="num">Отгружено</th><th class="num">На складе</th></tr>
       ${Object.entries(m).filter(([,v])=>v.made||v.ship).sort((a,b)=>(b[1].made-b[1].ship)-(a[1].made-a[1].ship)).map(([pid,v])=>`<tr><td><b>${esc(projName(pid))}</b></td><td class="muted">${esc(byId(DB.projects,pid)?.client||'')}</td><td class="num">${N(v.made)}</td><td class="num">${N(v.ship)}</td><td class="num"><b>${N(v.made-v.ship)}</b></td></tr>`).join('')}</table></div></div>`;
   } else {
-    const mv=DB.moves.filter(x=>x.date>=state.from&&x.date<=state.to).sort((a,b)=>b.date.localeCompare(a.date)||(b.ts||0)-(a.ts||0));
-    body=periodBar()+`<div class="card">${mv.length?`<div class="tw flush"><table><tr><th>Дата</th><th>Операция</th><th>Позиция</th><th class="num">Кол-во</th><th>Документ / основание</th><th>Кто</th></tr>
-      ${mv.slice(0,400).map(x=>{ const r=byId(DB.raw,x.rawId); return `<tr><td>${fdate(x.date)}</td><td><span class="tag ${MTYPE[x.type]?.[1]}">${MTYPE[x.type]?.[0]}</span></td><td>${x.type==='ship'?esc(projName(x.projectId)):esc(r?.name||'—')}</td>
+    const resRows=DB.output.filter(o=>!o.resClosed&&o.date>=state.from&&o.date<=state.to).map(o=>{ const run=o.runId?byId(DB.runs,o.runId):null, open=!(run&&run.writtenOff), req=outputReserve(o);
+      return {date:o.date,ts:tms(o.startAt)||0,type:'res',open,run,o,req,by:o.operator}; });
+    const tf=state.moveType||'';
+    const mv=[...DB.moves.filter(x=>x.date>=state.from&&x.date<=state.to),...resRows].filter(x=>!tf||x.type===tf||(tf==='res_open'&&x.type==='res'&&x.open)).sort((a,b)=>b.date.localeCompare(a.date)||(b.ts||0)-(a.ts||0));
+    body=periodBar()+`<div class="toolbar"><select class="sel" onchange="state.moveType=this.value;render()">${[['','Все операции'],['in','Приход'],['out','Расход / списание'],['res','Резервы под выпуск'],['res_open','Только активные резервы'],['inv','Инвентаризация'],['ship','Отгрузка']].map(([k,l])=>`<option value="${k}" ${k===tf?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="card">${mv.length?`<div class="tw flush"><table><tr><th>Дата</th><th>Операция</th><th>Позиция</th><th class="num">Кол-во</th><th>Документ / основание</th><th>Кто</th></tr>
+      ${mv.slice(0,400).map(x=>{ if(x.type==='res'){ const it=Object.entries(x.req), val=it.reduce((a,[rid,v])=>a+v*(+byId(DB.raw,rid)?.cost||0),0);
+          return `<tr${x.open?'':' style="opacity:.6"'}><td>${fdate(x.date)}</td><td><span class="tag ${x.open?'t-amber':'t-gray'}">${x.open?'Резерв':'Резерв снят'}</span></td><td>${esc(projName(x.o.projectId))}<div class="muted" style="font-size:12px">смена ${esc(shiftName(x.o.lineId,x.o.shift))} · ${esc(lineName(x.o.lineId))} · ${N((+x.o.good||0)+(+x.o.defect||0))} изд.</div></td>
+          <td class="num" data-tip="${it.map(([rid,v])=>esc(rawName(rid))+': '+QU(v,byId(DB.raw,rid)?.unit)+' '+esc(byId(DB.raw,rid)?.unit||'')).join('<br>')}">${it.length} поз. · ${money(val)}</td>
+          <td class="muted wrap">${x.open?(x.run?'тех. отчёт создан, материалы ещё не сохранены':'ждёт тех. отчёт'):`списано по факту тех. отчётом ${x.run?.endAt?fdate(x.run.endAt.slice(0,10)):''}`}</td><td class="muted">${esc(x.by||'')}</td></tr>`; }
+        const r=byId(DB.raw,x.rawId); return `<tr${x.runId?` class="click" onclick="const r=byId(DB.runs,'${x.runId}');if(r)openRun(r.projectId,r.id)"`:''}><td>${fdate(x.date)}</td><td><span class="tag ${MTYPE[x.type]?.[1]}">${MTYPE[x.type]?.[0]}</span></td><td>${x.type==='ship'?esc(projName(x.projectId)):esc(r?.name||'—')}</td>
       <td class="num">${x.type==='out'||x.type==='ship'?'−':x.type==='inv'&&x.qty<0?'':'+'}${Q(x.qty)} ${x.type==='ship'?'шт':esc(r?.unit||'')}</td><td class="muted wrap">${esc([x.doc,x.note,x.projectId&&x.type!=='ship'?projName(x.projectId):''].filter(Boolean).join(' · '))}</td><td class="muted">${esc(x.by||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Движений за период нет</div>'}</div>`;
   }
   $('#content').innerHTML=`<div class="toolbar"><div class="seg">${[['raw','Остатки сырья'],['fg','Готовая продукция'],['moves','Движения']].map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="state.stockTab='${k}';render()">${l}</button>`).join('')}</div><div class="sp"></div>
@@ -2031,7 +2131,7 @@ function buildNav(){
 }
 function go(sec){ if(!SECTIONS.find(s=>s.id===sec)?.hidden){ state.draft=null; state.back=null; } state.q=''; state.sec=sec; toggleSide(false); render(); scrollTo(0,0); }
 function render(){
-  _sch.clear();
+  _sch.clear(); _res=null;
   let s=SECTIONS.find(x=>x.id===state.sec);
   if(!s||(s.admin&&!can('admin'))){ s=SECTIONS[1]; state.sec=s.id; }
   $('#pageTitle').textContent=s.t; buildNav();
@@ -2057,7 +2157,7 @@ function normalize(db){
   COLS.forEach(c=>db[c]=A(db[c]));
   db.projects.forEach(p=>p.stations=A(p.stations));
   db.semis.forEach(s=>{ s.items=A(s.items); s.history=A(s.history); });
-  db.runs.forEach(r=>{ r.stations=A(r.stations); r.settings=A(r.settings); r.rawFact=r.rawFact||{}; r.writtenMap=r.writtenMap||{}; });
+  db.runs.forEach(r=>{ r.stations=A(r.stations); r.settings=A(r.settings); r.rawFact=r.rawFact||{}; r.writtenMap=r.writtenMap||{}; r.log=A(r.log); r.outputIds=A(r.outputIds); r.sec=r.sec||{}; });
   db.scenarios.forEach(s=>{ s.items=A(s.items); s.downs=A(s.downs); s.lineShifts=s.lineShifts||{}; });
   db.lines.forEach(l=>{ l.workShifts=A(l.workShifts); l.workDays=A(l.workDays); });
   Object.values(db.approved||{}).forEach(a=>{ if(a){ a.items=A(a.items); a.items.forEach(i=>i.segs=A(i.segs)); } });
@@ -2127,7 +2227,7 @@ function genDemo(){
     ['R11','Грунт-адгезив для стекла','Основы и лаки','кг',14.8,90,40,'ChemCoat',10],
     ['R12','Отвердитель','Добавки','кг',19,20,10,'ChemCoat',10],
     ['R13','Промывочный растворитель','Растворители','л',2.1,180,150,'SolvTrade',5],
-    ['R14','Бутылка 0,5 л «Классик»','Тара','шт',0.18,1400000,300000,'GlassWorks',14],
+    ['R14','Бутылка 0,5 л «Классик»','Тара','шт',0.18,1900000,300000,'GlassWorks',14],
     ['R15','Бутылка 0,7 л «Флинт»','Тара','шт',0.24,900000,200000,'GlassWorks',14],
   ].map(([id,name,cat,unit,cost,qty,min,supplier,leadDays])=>({id,name,cat,unit,cost,qty,min,supplier,leadDays}));
   const it=(kind,id,qty)=>({kind,id,qty});
@@ -2246,13 +2346,20 @@ function genDemo(){
   const mkRun=(p,o)=>{ const q=o.good+o.defect;
     const stations=A(p.stations).map((s0,i)=>({s0,i})).filter(x=>x.s0.semiId).map(({s0,i})=>{ const s=semis.find(x=>x.id===s0.semiId); return {n:i+1,semiId:s.id,name:s.name,color:s.color,ver:o.oldVer&&s.id==='S2'?1:(s.ver||1),rawPerKg:expand('semi',s.id,1),norm:s0.norm,visc:s0.visc,press:s0.press,nozzle:s0.nozzle,factKg:R3(stationKg(s0.norm,q)*(.97+rnd()*.1))}; });
     const r={id:o.id,projectId:p.id,planItemId:o.planItemId||'',lineId:o.lineId,tareId:p.tareId,startAt:o.startAt,endAt:o.endAt,dateFrom:o.startAt.slice(0,10),dateTo:o.endAt.slice(0,10),qtyGood:o.good,qtyDefect:o.defect,setupFact:o.setup,speedFact:o.speed,
-      settings:DEFAULT_SETTINGS.machineParams.map((kk,j)=>({k:kk,v:[String(p.speed),'85','45','6,0','24','45','60'][j]})),stations,note:o.note||'',by:'Ольга Петренко',ts:tms(o.endAt)};
-    const pl=runPlanRaw(r); r.rawFact={}; Object.entries(pl).forEach(([rid,v])=>r.rawFact[rid]=R3(v*(rid===p.tareId?1:(.98+rnd()*.08)))); r.writtenMap={...r.rawFact}; r.writtenOff=true; return r; };
+      settings:DEFAULT_SETTINGS.machineParams.map((kk,j)=>({k:kk,v:[String(p.speed),'85','45','6,0','24','45','60'][j]})),stations,note:o.note||'',by:'Ольга Петренко',ts:tms(o.endAt),outputIds:o.outs||[]};
+    const e=tms(o.endAt); r.sec={prod:{by:'Ольга Петренко',ts:e+2*H},settings:{by:'Ольга Петренко',ts:e+2.2*H},materials:{by:'Марина Коваль',ts:e+26*H}};
+    r.log=[{ts:e+2*H,by:'Ольга Петренко',sec:'prod',text:`Отчёт создан. смен в отчёте: 0 → ${(o.outs||[]).length}; годные: — → ${N(o.good)}`},{ts:e+2.2*H,by:'Ольга Петренко',sec:'settings',text:'параметры машины и настройки станций внесены'}];
+    const pl=runPlanRaw(r); r.rawFact={}; Object.entries(pl).forEach(([rid,v])=>r.rawFact[rid]=R3(v*(rid===p.tareId?1:(.98+rnd()*.08)))); r.writtenMap={...r.rawFact}; r.writtenOff=true;
+    r.log.push({ts:e+26*H,by:'Марина Коваль',sec:'materials',text:'Списание со склада, резерв снят:\n'+Object.entries(r.rawFact).slice(0,4).map(([rid,q])=>`${raw.find(x=>x.id===rid)?.name}: списано ${rid===p.tareId?N(q):String(q).replace('.',',')}`).join('\n')+(Object.keys(r.rawFact).length>4?'\n…':'')});
+    if(o.corr){ const rid=Object.keys(r.rawFact).find(k=>k!==p.tareId); r.log.push({ts:e+50*H,by:'Администратор',sec:'materials',text:`Корректировка списания:\n${raw.find(x=>x.id===rid)?.name}: списано 1,5 (после повторной инвентаризации)`}); r.rawFact[rid]=R3(r.rawFact[rid]+1.5); r.writtenMap={...r.rawFact}; r.sec.materials={by:'Администратор',ts:e+50*H}; }
+    return r; };
   projects.filter(p=>p.status==='Активный').forEach((p,pi)=>[70,40].forEach((back,k)=>{ const df=iso(addD(now,-back-pi)), dt=iso(addD(now,-back-pi+2)), good=Math.round((150+rnd()*150))*1000;
     runs.push(mkRun(p,{id:'RN'+runs.length,lineId:p.lineId,startAt:at(df,6),endAt:at(dt,20),good,defect:Math.round(good*.018),setup:Math.round(p.setupMin*(1.1+rnd()*.5)),speed:Math.round(p.speed*(.9+rnd()*.08)),oldVer:k===0,note:k?'':'Первая наработка после смены поставщика пигмента — вязкость пришлось поднять на 1–2 с.'})); }));
-  plan.filter(x=>sched(x,LIVE).end<NOW).forEach(x=>{ const rs=output.filter(r=>r.planItemId===x.id); if(!rs.length) return; const p=projects.find(q=>q.id===x.projectId);
+  output.forEach(o=>{ if(o.date<iso(m0)) o.resClosed=true; });
+  const finished=plan.filter(x=>sched(x,LIVE).end<NOW).sort((a,b)=>sched(b,LIVE).end-sched(a,LIVE).end), skip=new Set(finished.slice(0,2).map(x=>x.id));
+  finished.filter(x=>!skip.has(x.id)).forEach((x,xi)=>{ const rs=output.filter(r=>r.planItemId===x.id); if(!rs.length) return; const p=projects.find(q=>q.id===x.projectId);
     const g=rs.reduce((a,r)=>a+r.good,0), df=rs.reduce((a,r)=>a+r.defect,0), su=rs.reduce((a,r)=>a+r.setup,0), fa=Math.min(...rs.map(r=>tms(r.startAt))), fb=Math.max(...rs.map(r=>tms(r.endAt)));
-    const r=mkRun(p,{id:'RN'+runs.length,planItemId:x.id,lineId:x.lineId,startAt:toDT(fa),endAt:toDT(fb),good:g,defect:df,setup:su,speed:Math.round(p.speed*(.9+rnd()*.06))}); runs.push(r);
+    const r=mkRun(p,{id:'RN'+runs.length,planItemId:x.id,lineId:x.lineId,startAt:toDT(fa),endAt:toDT(fb),good:g,defect:df,setup:su,speed:Math.round(p.speed*(.9+rnd()*.06)),outs:rs.map(o=>o.id),corr:xi===1}); runs.push(r); rs.forEach(o=>o.runId=r.id);
     Object.entries(r.rawFact).forEach(([rid,q])=>moves.push({id:'MV'+(100+moves.length),date:r.dateTo,type:'out',rawId:rid,qty:q,projectId:p.id,runId:r.id,note:'Списание по тех. отчёту',by:'Ольга Петренко',ts:tms(r.endAt)})); });
   const supplies=[
     {id:'SP1',rawId:'R7',qty:12,date:iso(addD(now,6)),supplier:'MetaFX',status:'ordered',note:'Заказ MF-2231'},
