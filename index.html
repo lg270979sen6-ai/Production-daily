@@ -1374,6 +1374,7 @@ function renderRunEdit(){
   $('#content').innerHTML=`<div class="toolbar"><button class="btn btn-s" onclick="state.draft=null;go('runs')">← Журнал тех. отчётов</button><button class="btn btn-s" onclick="openProject('${d.projectId}')">Проект: ${esc(p?.name||'—')}</button><div class="sp"></div>
     ${d.cancelled?'<span class="tag t-red">отменён</span>':d.writtenOff?'<span class="tag t-green">сырьё списано</span>':'<span class="tag t-amber">сырьё в резерве, не списано</span>'}
     ${d.id?`<button class="btn btn-s" onclick="printRun('${d.id}')">🖨 Печать</button>`:''}${d.id&&!d.cancelled&&can('edit')?`<button class="btn btn-d" onclick="cancelRun('${d.id}')">Отменить тех. отчёт</button>`:''}</div>
+  ${(()=>{ const mm=d.id?runMismatch(byId(DB.runs,d.id)):null; return mm?`<div class="msg err row-gap" style="display:block">⚠ <b>Сырьё по этому отчёту списано не так, как указано в факте</b> (например, списалось несколько раз):<br>${mm.map(b=>`${esc(rawName(b.rid))}: проведено ${QU(b.booked,byId(DB.raw,b.rid)?.unit)}, по факту отчёта ${QU(b.should,byId(DB.raw,b.rid)?.unit)}`).join('<br>')}<div style="margin-top:8px">${can('edit')?`<button class="btn btn-p btn-sm" onclick="repairRun('${d.id}')">Исправить списание</button>`:''}</div></div>`:''; })()}
   ${d.cancelled?`<div class="msg err row-gap" style="display:block"><b>Отчёт отменён</b> ${fts(d.cancelledAt)} · ${esc(d.cancelledBy||'')} · ${esc(d.cancelReason||'')}. Его списание помечено «отменено» и не учитывается в остатках.</div>`:runDupes().has(d.id)?`<div class="msg err row-gap" style="display:block">⚠ Похоже на дубль: по этому проекту есть другой тех. отчёт с таким же расходом за те же сутки. Если это лишний отчёт — нажмите «Отменить тех. отчёт».</div>`:''}
   ${d.id&&state.runAuto?`<div class="msg err row-gap" style="display:block">В отчёте не были отмечены смены — поэтому резерв по ним не снимался. Программа отметила свободные смены этого проекта: проверьте список в разделе «Наработка» и нажмите <b>«Сохранить раздел»</b>. Уже проведённое списание при этом не повторится.</div>`:''}
   ${d.id&&!state.runAuto&&!A(d.outputIds).length&&!(+d.qtyGood)?`<div class="msg err row-gap" style="display:block">К отчёту не привязаны смены. Отметьте их в разделе «Наработка» и сохраните раздел — иначе резерв сырья не снимется.</div>`:''}
@@ -1497,16 +1498,35 @@ async function cancelRun(id){
   list.push({col:'runs',obj:{...r,cancelled:true,cancelledAt:now,cancelledBy:state.me.name,cancelReason:why,writtenOff:false,writtenMap:{},outputIds:[],log:[...A(r.log),{ts:now,by:state.me.name,sec:'materials',text:`Отчёт отменён (${why}). Списание отменено и возвращено на склад: `+mv.map(m=>`${rawName(m.rawId)} ${QU(m.qty,byId(DB.raw,m.rawId)?.unit)}`).join(', ')}]}});
   await Store.batch(list); toast('Тех. отчёт отменён, сырьё возвращено на склад'); state.draft=null; go('runs');
 }
+function runMismatch(r){ // проведено по складу ≠ факт отчёта
+  if(!r||r.cancelled) return null; const net={}, wm=r.writtenMap||{};
+  DB.moves.filter(m=>m.runId===r.id&&!m.cancelled&&m.rawId).forEach(m=>net[m.rawId]=(net[m.rawId]||0)-moveDelta(m));
+  const bad=[...new Set([...Object.keys(net),...Object.keys(wm)])].filter(rid=>Math.abs((net[rid]||0)-(+wm[rid]||0))>1e-6).map(rid=>({rid,booked:net[rid]||0,should:+wm[rid]||0}));
+  return bad.length?bad:null;
+}
+async function repairRun(id){
+  const r=byId(DB.runs,id), bad=runMismatch(r); if(!bad) return toast('Расхождений нет');
+  if(!confirm(`Исправить списание по отчёту?\n\n`+bad.map(b=>`${rawName(b.rid)}: проведено ${QU(b.booked,byId(DB.raw,b.rid)?.unit)}, должно быть ${QU(b.should,byId(DB.raw,b.rid)?.unit)}`).join('\n')+`\n\nВсе прошлые строки списания этого отчёта будут помечены «отменено», и будет проведено одно списание по факту отчёта.`)) return;
+  const now=Date.now(), qty={}, list=[]; DB.raw.forEach(x=>qty[x.id]=+x.qty||0);
+  DB.moves.filter(m=>m.runId===id&&!m.cancelled).forEach(m=>{ if(qty[m.rawId]!=null) qty[m.rawId]-=moveDelta(m); list.push({col:'moves',obj:{...m,cancelled:true,cancelledAt:now,cancelledBy:state.me.name,cancelReason:'исправление повторного списания'}}); });
+  const date=(r.endAt||iso(new Date())).slice(0,10);
+  Object.entries(r.writtenMap||{}).forEach(([rid,v])=>{ if(!+v||qty[rid]==null) return; qty[rid]-=+v; list.push({col:'moves',obj:{id:uid(),date,type:'out',rawId:rid,qty:+v,projectId:r.projectId,runId:id,note:'Списание по тех. отчёту (исправлено)',by:state.me.name,ts:now}}); });
+  DB.raw.forEach(x=>{ const nq=Math.round(qty[x.id]*1000)/1000; if(Math.abs(nq-(+x.qty||0))>1e-9) list.push({col:'raw',obj:{...x,qty:nq}}); });
+  list.push({col:'runs',obj:{...r,log:[...A(r.log),{ts:now,by:state.me.name,sec:'materials',text:'Исправлено повторное списание:\n'+bad.map(b=>`${rawName(b.rid)}: было проведено ${QU(b.booked,byId(DB.raw,b.rid)?.unit)} → ${QU(b.should,byId(DB.raw,b.rid)?.unit)}`).join('\n')}]}});
+  await Store.batch(list); toast('Списание исправлено'); if(state.draft&&state.draft.id===id) openRun(r.projectId,id); else render();
+}
 function runDupes(){ // похожие отчёты: тот же проект, одинаковый расход, списаны в пределах суток
   const live=DB.runs.filter(r=>r.writtenOff&&!r.cancelled), d=new Set();
   live.forEach((a,i)=>live.slice(i+1).forEach(b=>{ if(a.projectId!==b.projectId) return; const ka=JSON.stringify(Object.entries(a.writtenMap||{}).sort()), kb=JSON.stringify(Object.entries(b.writtenMap||{}).sort()); const ta=a.sec?.materials?.ts||0, tb=b.sec?.materials?.ts||0;
     if(ka===kb&&Math.abs(ta-tb)<864e5){ d.add(a.id); d.add(b.id); } }));
   return d;
 }
+const runDate = r => (r.endAt||'').slice(0,10)||r.dateTo||r.dateFrom||iso(new Date(r.created||r.sec?.materials?.ts||r.ts||Date.now()));
+const runNoDates = r => !r.endAt&&!r.dateTo&&!r.dateFrom;
 function renderRuns(){
   const q=state.q.toLowerCase();
-  const runs=DB.runs.filter(r=>{ const d=r.endAt?r.endAt.slice(0,10):(r.dateTo||r.dateFrom||''); return d>=state.from&&d<=state.to&&(!q||(projName(r.projectId)+' '+lineName(r.lineId)).toLowerCase().includes(q)); })
-    .sort((a,b)=>(b.endAt||b.dateTo||'').localeCompare(a.endAt||a.dateTo||''));
+  const runs=DB.runs.filter(r=>{ const d=runDate(r); return (runNoDates(r)||(d>=state.from&&d<=state.to))&&(!q||(projName(r.projectId)+' '+lineName(r.lineId)).toLowerCase().includes(q)); })
+    .sort((a,b)=>runDate(b).localeCompare(runDate(a))||(b.ts||0)-(a.ts||0));
   const open=DB.output.filter(outputOpen), byP={}; open.forEach(o=>{ (byP[o.projectId]=byP[o.projectId]||[]).push(o); });
   const secCell=(r,s)=>r.sec?.[s]?`<span class="tag t-green" data-tip="${esc(r.sec[s].by)} · ${fts(r.sec[s].ts)}">✓</span>`:(s==='materials'&&r.writtenOff?'<span class="tag t-green">✓</span>':'<span class="tag t-gray">—</span>');
   $('#content').innerHTML=`${Object.keys(byP).length?`<div class="card row-gap"><div class="card-h"><div class="card-t">⚠ Выпуск без тех. отчёта</div><div class="card-s">сырьё по этим сменам в резерве и ещё не списано</div></div>
@@ -1516,11 +1536,13 @@ function renderRuns(){
       <td>${can('edit')?(()=>{ const rids=[...new Set(os.map(o=>o.runId).filter(r=>r&&byId(DB.runs,r)))], free=os.filter(o=>!o.runId||!byId(DB.runs,o.runId));
         return rids.map(r=>`<button class="btn btn-s btn-sm" onclick="openRun('${pid}','${r}')">Открыть тех. отчёт (материалы не сохранены)</button> `).join('')+(free.length?`<button class="btn btn-p btn-sm" onclick="openRun('${pid}',null,null,${esc(JSON.stringify(free.map(o=>o.id)))})">Создать тех. отчёт</button>`:''); })():''}</td></tr>`; }).join('')}
     </table></div>${DB.runs.filter(r=>r.writtenOff&&!r.cancelled&&!runOutputs(r).length&&DB.output.some(o=>o.projectId===r.projectId&&outputOpen(o))).map(r=>`<div class="msg err" style="display:block;margin:12px 0 0">Тех. отчёт по «${esc(projName(r.projectId))}» списал сырьё, но к нему не привязаны смены — резерв по этим сменам висит повторно. <button class="btn btn-s btn-sm" onclick="openRun('${r.projectId}','${r.id}')">Открыть и привязать смены</button></div>`).join('')}</div>`:''}
+  ${(()=>{ const mm=DB.runs.filter(r=>runMismatch(r)); return mm.length?`<div class="msg err row-gap" style="display:block">⚠ Отчёты, у которых проведённое списание не совпадает с фактом (списалось несколько раз): ${mm.map(r=>`<button class="btn btn-s btn-sm" style="margin:4px 4px 0 0" onclick="openRun('${r.projectId}','${r.id}')">${esc(projName(r.projectId))} · ${fdate(runDate(r))}</button>`).join('')}<br>Откройте отчёт и нажмите «Исправить списание».</div>`:''; })()}
+  ${(()=>{ const nd=DB.runs.filter(r=>!r.cancelled&&r.writtenOff&&runNoDates(r)); return nd.length?`<div class="msg err row-gap" style="display:block">⚠ Тех. отчёты без «Наработки» (без дат), которые списали сырьё: ${nd.length} шт. Раньше они не показывались в журнале. Они отмечены «без дат» в списке ниже — если это лишние отчёты, откройте и нажмите «Отменить тех. отчёт».</div>`:''; })()}
   ${(()=>{ const dd=runDupes(); return dd.size?`<div class="msg err row-gap" style="display:block">⚠ Возможные дубли тех. отчётов: ${dd.size} шт. с одинаковым расходом по одному проекту в течение суток — сырьё могло списаться несколько раз. Откройте лишний отчёт и нажмите «Отменить тех. отчёт». Дубли отмечены в списке ниже.</div>`:''; })()}
   ${periodBar()}<div class="toolbar">${searchBox('Проект или линия')}<span class="muted" style="font-weight:600">${runs.length} отчётов</span></div>
   <div class="card">${runs.length?`<div class="tw flush"><table><tr><th>Наработка</th><th>Проект</th><th>Линия</th><th class="num">Смен</th><th class="num">Годные</th><th class="num">Материалы факт / план</th><th>1 · Наработка</th><th>2 · Настройки</th><th>3 · Материалы</th><th>Последнее изменение</th></tr>
     ${runs.map(r=>{ const t=runTotals(r), last=A(r.log).slice().sort((a,b)=>b.ts-a.ts)[0], corr=A(r.log).filter(x=>x.sec==='materials').length>1;
-      return `<tr class="click" ${r.cancelled?'style="opacity:.55"':''} onclick="openRun('${r.projectId}','${r.id}')"><td>${r.cancelled?`<span class="tag t-red" data-tip="${esc(r.cancelledBy||'')} · ${fts(r.cancelledAt)}<br>${esc(r.cancelReason||'')}">отменён</span> `:runDupes().has(r.id)?'<span class="tag t-red">дубль?</span> ':''}<b>${r.startAt?fdt(tms(r.startAt)):fdate(r.dateFrom||'')}</b><div class="muted" style="font-size:12px">→ ${r.endAt?fdt(tms(r.endAt)):fdate(r.dateTo||r.dateFrom||'')}</div></td>
+      return `<tr class="click" ${r.cancelled?'style="opacity:.55"':''} onclick="openRun('${r.projectId}','${r.id}')"><td>${r.cancelled?`<span class="tag t-red" data-tip="${esc(r.cancelledBy||'')} · ${fts(r.cancelledAt)}<br>${esc(r.cancelReason||'')}">отменён</span> `:runDupes().has(r.id)?'<span class="tag t-red">дубль?</span> ':''}${runNoDates(r)?`<b style="color:var(--red)">без дат</b><div class="muted" style="font-size:12px">создан ${fts(r.created||r.sec?.materials?.ts||r.ts)}</div>`:`<b>${r.startAt?fdt(tms(r.startAt)):fdate(r.dateFrom||'')}</b><div class="muted" style="font-size:12px">→ ${r.endAt?fdt(tms(r.endAt)):fdate(r.dateTo||r.dateFrom||'')}</div>`}</td>
       <td>${esc(projName(r.projectId))}</td><td>${esc(lineName(r.lineId))}</td><td class="num">${runOutputs(r).length||'—'}</td><td class="num">${N(r.qtyGood)}</td>
       <td class="num">${t.filled?`${money(t.costFact)} / ${money(t.costPlan)}`:'—'}</td><td>${secCell(r,'prod')}</td><td>${secCell(r,'settings')}</td><td>${secCell(r,'materials')}${corr?' <span class="tag t-amber" data-tip="Списание корректировалось">испр.</span>':''}</td>
       <td class="muted" style="font-size:12px">${last?`${fts(last.ts)} · ${esc(last.by)}<br>${esc(RSEC[last.sec]||'')}`:esc(r.by||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Тех. отчётов за период нет</div>'}</div>`;
@@ -2088,7 +2110,8 @@ function renderMovesTab(){
   const s0=stockAt(T0-1), s1=stockAt(Math.min(T1,Date.now())), resEnd=reserveAt(Math.min(T1,Date.now()),true);
   const allP=DB.moves.filter(m=>m.rawId&&ids.includes(m.rawId)&&moveTime(m)>=T0&&moveTime(m)<=T1).sort((a,b)=>moveTime(a)-moveTime(b)), inP=allP.filter(m=>!m.cancelled), cnP=allP.filter(m=>m.cancelled);
   const tipRows=(arr,fn)=>arr.slice(0,25).map(fn).join('<br>')+(arr.length>25?`<br>… ещё ${arr.length-25}`:'');
-  const src=m=>m.runId?(m.type==='in'?'возврат по тех. отчёту':'тех. отчёт')+' · '+projName(m.projectId):m.type==='inv'?'инвентаризация':m.note&&m.note.startsWith('Приёмка')?'поставка':m.type==='out'?'ручной расход'+(m.projectId?' · '+projName(m.projectId):''):'ручной приход';
+  const runTag=id=>{ const r=byId(DB.runs,id); if(!r) return ' (отчёт удалён)'; const n=DB.runs.filter(x=>x.projectId===r.projectId).sort((a,b)=>(a.created||a.ts||0)-(b.created||b.ts||0)).indexOf(r)+1; return ` №${n}${r.cancelled?' (отменён)':''}${runNoDates(r)?' без дат':''}`; };
+  const src=m=>m.runId?(m.type==='in'?'возврат по тех. отчёту':'тех. отчёт')+runTag(m.runId)+' · '+projName(m.projectId):m.type==='inv'?'инвентаризация':m.note&&m.note.startsWith('Приёмка')?'поставка':m.type==='out'?'ручной расход'+(m.projectId?' · '+projName(m.projectId):''):'ручной приход';
   const rows=ids.map(id=>{ const r=byId(DB.raw,id); if(!r) return null; const u=r.unit, ms=inP.filter(m=>m.rawId===id), cn=cnP.filter(m=>m.rawId===id);
     const ins=ms.filter(m=>moveDelta(m)>0), outs=ms.filter(m=>moveDelta(m)<0), inSum=ins.reduce((a,m)=>a+moveDelta(m),0), outSum=-outs.reduce((a,m)=>a+moveDelta(m),0);
     const resList=resEnd.list.filter(x=>x.req[id]), res=resEnd.acc[id]||0, end=s1[id]||0;
