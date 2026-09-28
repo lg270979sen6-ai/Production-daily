@@ -969,8 +969,19 @@ function tlCalc(od){
   const total=(B0-A0)/60e3, filled=Object.values(byCat).reduce((s,v)=>s+v,0);
   return {rows,errs,warns,gaps,byAct,byCat,byProj,total,filled,ongoing,end:cur};
 }
+// хронометраж по умолчанию — из плана смены: каждый проект своими интервалами (наладка, работа, паузы)
 function defaultRows(od){
-  const [A0,B0]=od.win, t=od.tasks.find(x=>x.it.id===od.taskId), rows=[];
+  const [A0,B0]=od.win;
+  if(od.tasks.length>1||od.tasks.some(x=>A(x.it.extras).length)){
+    const brk=(acts().find(a=>a.cat==='break')||{}).id||'lunch', segs=[];
+    od.tasks.forEach(x=>itemSegs(x.it).forEach(([a,b,k,l])=>{ const u=Math.max(a,A0), v=Math.min(b,B0); if(v-u>=60e3) segs.push({a:r5(u),b:r5(v),act:k==='s'?'setup':k==='p'?brk:'work',projectId:x.it.projectId===od.projectId?'':x.it.projectId,note:k==='p'?(l||''):''}); }));
+    segs.sort((p,q)=>p.a-q.a); const rows=[]; let cur=A0;
+    segs.forEach(s=>{ if(s.a<cur) s.a=cur; if(s.b<=s.a) return; if(s.a>cur+60e3) rows.push({from:hhmm(cur),to:hhmm(s.a),act:'other',projectId:'',note:''});
+      const l=rows[rows.length-1]; if(l&&l.act===s.act&&l.projectId===s.projectId&&l.note===s.note&&l.to===hhmm(s.a)) l.to=hhmm(s.b); else rows.push({from:hhmm(s.a),to:hhmm(s.b),act:s.act,projectId:s.projectId,note:s.note}); cur=s.b; });
+    if(cur<B0-60e3) rows.push({from:hhmm(cur),to:hhmm(B0),act:rows.length?'other':'work',projectId:'',note:''});
+    if(rows.length) return rows;
+  }
+  const t=od.tasks.find(x=>x.it.id===od.taskId), rows=[];
   if(t&&t.setupMin>=5){ const s=r5(Math.max(A0,t.from||A0)), e=r5(s+t.setupMin*60e3); if(s>A0+60e3) rows.push({from:hhmm(A0),to:hhmm(s),act:'other',projectId:'',note:''}); rows.push({from:hhmm(s),to:hhmm(e),act:'setup',projectId:'',note:''}); rows.push({from:hhmm(e),to:hhmm(B0),act:'work',projectId:'',note:''}); }
   else rows.push({from:hhmm(A0),to:hhmm(B0),act:'work',projectId:'',note:''});
   return rows;
@@ -982,7 +993,7 @@ function openOutputModal(id){
   if(id){
     const r0=byId(DB.output,id), grp=r0.reportId?DB.output.filter(r=>r.reportId===r0.reportId):[r0], main=grp.find(r=>A(r.timeline).length)||grp[0];
     od={id:main.reportId||main.id,recs:grp.map(r=>r.id),date:main.date,lineId:main.lineId,shift:main.shift,projectId:main.projectId,orderId:main.orderId||'',taskId:main.planItemId||'',operator:main.operator||'',outs:{}};
-    grp.forEach(r=>od.outs[r.projectId]={good:r.good,defect:r.defect,reason:r.reason||''});
+    grp.forEach(r=>od.outs[r.projectId]={good:r.good,defect:r.defect,reason:r.reason||''}); od.extra=grp.map(r=>r.projectId);
     odWindow(od);
     if(A(main.timeline).length) od.rows=A(main.timeline).map(x=>({...x}));
     else { // старая запись без хронометража — восстанавливаем примерно
@@ -1029,7 +1040,7 @@ function tlBar(od,c,h=26){
 function odRender(){
   const od=state.od, c=tlCalc(od), ro=!can('output'), main=byId(DB.projects,od.projectId), t=od.tasks.find(x=>x.it.id===od.taskId);
   const actOpts=sel=>Object.entries(ACAT).map(([k,v])=>`<optgroup label="${v.n}">${acts().filter(a=>a.cat===k).map(a=>`<option value="${a.id}" ${a.id===sel?'selected':''}>${esc(a.name)}</option>`).join('')}</optgroup>`).join('');
-  const projs=[...new Set([od.projectId,...od.rows.filter(r=>r.projectId).map(r=>r.projectId)].filter(Boolean))];
+  const projs=[...new Set([od.projectId,...od.rows.filter(r=>r.projectId).map(r=>r.projectId),...od.tasks.map(x=>x.it.projectId),...A(od.extra)].filter(Boolean))];
   const taskHtml=od.tasks.length?od.tasks.map(x=>`<label class="task ${x.it.id===od.taskId?'on':''}"><input type="radio" name="odTask" ${x.it.id===od.taskId?'checked':''} onchange="odSet('taskId','${x.it.id}')">
       <span class="sw" style="background:${pColor(x.p)}"></span><span style="flex:1;min-width:0"><b>${esc(x.p?.name||'—')}</b><small>${hhmm(x.from)}–${hhmm(x.to)} · ${x.it.orderId?'заказ '+esc(byId(DB.orders,x.it.orderId)?.no||'')+' · ':''}${esc(x.p?.client||'')}</small></span>
       <span style="text-align:right"><b>${N(x.qty)} шт</b><small>${x.setupMin>=1?'наладка '+minTxt(x.setupMin)+' · ':''}работа ${minTxt(x.runMin)}</small></span></label>`).join('')
@@ -1043,8 +1054,8 @@ function odRender(){
       <td><input class="fi" value="${esc(r.note||'')}" ${ro?'disabled':''} oninput="odRow(${i},'note',this.value)" placeholder="что случилось…" style="min-width:140px"></td>
       <td style="white-space:nowrap">${ro?'':`<button type="button" class="btn btn-s btn-sm" title="Разделить пополам" onclick="odSplit(${i})">⇹</button> <button type="button" class="btn btn-s btn-sm" onclick="state.od.rows.splice(${i},1);odRender()">✕</button>`}</td></tr>`; }).join('');
   const good=projs.reduce((s,p)=>s+(+od.outs[p]?.good||0),0), defect=projs.reduce((s,p)=>s+(+od.outs[p]?.defect||0),0), speed=c.byCat.work?(good+defect)/c.byCat.work:0;
-  const outRows=projs.map(pid=>{ const o=od.outs[pid]||(od.outs[pid]={good:'',defect:0,reason:''}), p=byId(DB.projects,pid);
-    return `<div class="${projs.length>1?'card':''}" style="${projs.length>1?'padding:12px;margin-bottom:8px;box-shadow:none':''}">${projs.length>1?`<div style="font-weight:800;margin-bottom:8px"><span class="sw" style="background:${pColor(p)}"></span>${esc(p?.name||'—')} <span class="muted" style="font-weight:600">· работа ${minTxt(c.byProj[pid]?.work)}${c.byProj[pid]?.down?' · простои '+minTxt(c.byProj[pid].down):''}</span></div>`:''}
+  const outRows=projs.map(pid=>{ const o=od.outs[pid]||(od.outs[pid]={good:'',defect:0,reason:''}), p=byId(DB.projects,pid), pq=od.tasks.filter(x=>x.it.projectId===pid).reduce((a,x)=>a+x.qty,0), bp=c.byProj[pid];
+    return `<div class="${projs.length>1?'card':''}" style="${projs.length>1?'padding:12px;margin-bottom:8px;box-shadow:none':''}">${projs.length>1?`<div style="font-weight:800;margin-bottom:8px;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap"><span class="sw" style="background:${pColor(p)}"></span>${esc(p?.name||'—')} <span class="muted" style="font-weight:600;font-size:12px">${pq?`план ${N(pq)} шт · `:''}работа ${bp?.work?minTxt(bp.work):'<span style="color:var(--amber)">нет в хронометраже</span>'}${bp?.down?' · простои '+minTxt(bp.down):''}</span>${pid!==od.projectId&&!od.rows.some(r=>r.projectId===pid)&&!ro?`<button type="button" class="btn btn-s btn-sm" style="margin-left:auto" onclick="state.od.extra=A(state.od.extra).filter(x=>x!=='${pid}');delete state.od.outs['${pid}'];odRender()" title="Убрать из отчёта">✕</button>`:''}</div>`:''}
       <div class="frow3"><div class="fg"><label class="fl">Годные, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" inputmode="numeric" value="${o.good}" ${ro?'disabled':''} onchange="state.od.outs['${pid}'].good=this.value;odRender()"></div>
       <div class="fg"><label class="fl">Брак, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" inputmode="numeric" value="${o.defect}" ${ro?'disabled':''} onchange="state.od.outs['${pid}'].defect=this.value;odRender()"></div>
       <div class="fg"><label class="fl">Основная причина брака</label><select class="fi" ${ro?'disabled':''} onchange="state.od.outs['${pid}'].reason=this.value"><option value="">—</option>${(DB.settings.defectReasons||[]).map(x=>`<option ${x===o.reason?'selected':''}>${esc(x)}</option>`).join('')}</select></div></div></div>`; }).join('');
@@ -1065,7 +1076,8 @@ function odRender(){
     ${c.errs.length?`<div class="msg err" style="margin-top:10px">${c.errs.map(esc).join('<br>')}${c.gaps.length&&!ro?`<div style="margin-top:6px">${c.gaps.map(([a,b])=>`<button type="button" class="btn btn-s btn-sm" onclick="odAddRow('${hhmm(a)}','${hhmm(b)}','other')">+ заполнить ${hhmm(a)}–${hhmm(b)}</button>`).join(' ')}</div>`:''}</div>`:''}
     ${c.warns.length?`<div class="msg" style="display:block;background:var(--amberBg);color:var(--amber);margin-top:10px">${c.warns.map(esc).join('<br>')}</div>`:''}
     <div class="grid g2" style="margin-top:14px;align-items:start">
-      <div><div class="card-t" style="margin-bottom:8px">Выпуск за смену</div>${outRows||'<div class="hint">Выберите проект</div>'}
+      <div><div class="card-t" style="margin-bottom:4px">Выпуск за смену${projs.length>1?' — по каждому проекту':''}</div>${projs.length>1?'<div class="hint" style="margin-bottom:8px">Годные и брак вносятся отдельно по каждому проекту. Время работы проекта берётся из хронометража — укажите проект в строках выше.</div>':''}${outRows||'<div class="hint">Выберите проект</div>'}
+        ${ro||!od.projectId?'':`<select class="fi" style="margin:2px 0 12px" onchange="if(this.value){state.od.extra=[...A(state.od.extra),this.value];odRender()}"><option value="">+ ещё проект в этой смене…</option>${DB.projects.filter(p=>p.status!=='Архив'&&!projs.includes(p.id)).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>`}
         <div class="fg"><label class="fl">Оператор</label><input class="fi" value="${esc(od.operator||'')}" oninput="state.od.operator=this.value"></div></div>
       <div class="card" style="box-shadow:none;padding:14px"><div class="card-t" style="margin-bottom:6px">Итог смены</div>
         ${stat('Работа',minTxt(c.byCat.work),ACAT.work.c)}${stat('Наладка',minTxt(c.byCat.setup),ACAT.setup.c)}${stat('Простои',minTxt(c.byCat.down),ACAT.down.c)}
@@ -1081,8 +1093,12 @@ async function odSave(){
   const od=state.od, c=tlCalc(od);
   if(!od.projectId){ toast('Выберите проект'); return false; }
   if(c.errs.length){ toast(c.errs[0]); return false; }
-  const projs=[...new Set([od.projectId,...c.rows.filter(r=>r.projectId).map(r=>r.projectId)])];
-  if(projs.some(p=>od.outs[p]?.good===''||od.outs[p]?.good==null)){ toast('Укажите количество годных'+(projs.length>1?' по каждому проекту':'')); return false; }
+  const cand=[...new Set([od.projectId,...c.rows.filter(r=>r.projectId).map(r=>r.projectId),...od.tasks.map(x=>x.it.projectId),...A(od.extra)].filter(Boolean))];
+  const empty=p=>(od.outs[p]?.good===''||od.outs[p]?.good==null)&&!(+od.outs[p]?.defect);
+  const need=cand.filter(p=>p===od.projectId||(c.byProj[p]&&(c.byProj[p].work||c.byProj[p].setup)));
+  const miss=need.filter(p=>od.outs[p]?.good===''||od.outs[p]?.good==null);
+  if(miss.length){ toast('Укажите годные'+(cand.length>1?': '+miss.map(projName).join(', '):'')); return false; }
+  const projs=cand.filter(p=>need.includes(p)||!empty(p));
   const timeline=od.rows.filter(r=>r.from&&r.to).map(r=>({from:r.from,to:r.to,act:r.act,projectId:r.projectId||'',note:r.note||''})).sort((x,y)=>tlAbs(od,x.from)-tlAbs(od,y.from));
   const oldRecs=od.recs.map(id=>byId(DB.output,id)).filter(Boolean), list=[];
   projs.forEach((pid,k)=>{
