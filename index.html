@@ -2096,8 +2096,11 @@ function factSegs(lineId,a,b){
     const rs=DB.output.filter(x=>(x.reportId||x.id)===rid), main=rs.find(x=>A(x.timeline).length)||rs[0], ok=rs.every(outOk);
     if(A(main.timeline).length){ seen.add(rid);
       const od={win:shiftWindow(main.date,main.shift,main.lineId)};
-      main.timeline.forEach(t=>{ const x=tlAbs(od,t.from); let y=tlAbs(od,t.to); if(y<=x) y+=864e5; const pid=t.projectId||main.projectId, rec=rs.find(q=>q.projectId===pid)||main;
-        if(y>a&&x<b) out.push({x,y,act:t.act,pid,rec,ok,rid,note:t.note||''}); });
+      const segs=main.timeline.map(t=>{ const x=tlAbs(od,t.from); let y=tlAbs(od,t.to); if(y<=x) y+=864e5; const pid=t.projectId||main.projectId; return {x,y,act:t.act,pid,rec:rs.find(q=>q.projectId===pid)||main,ok,rid,note:t.note||''}; });
+      // выпуск смены делим на отрезки работы пропорционально их длительности (по каждому проекту отдельно)
+      const wt={}; segs.forEach(s=>{ if(actById(s.act).cat==='work') wt[s.pid]=(wt[s.pid]||0)+(s.y-s.x); });
+      const left={}; segs.filter(s=>actById(s.act).cat==='work').forEach(s=>{ const g=+s.rec.good||0; if(left[s.pid]==null) left[s.pid]={g,t:wt[s.pid]}; const L=left[s.pid], q=L.t>0?Math.round(L.g*(s.y-s.x)/L.t):0; s.qty=q; L.g-=q; L.t-=(s.y-s.x); s.share=wt[s.pid]; });
+      segs.forEach(s=>{ if(s.y>a&&s.x<b) out.push(s); });
     } else { const x=tms(r.startAt), y=tms(r.endAt); if(isFinite(x)&&isFinite(y)&&y>a&&x<b) out.push({x,y,act:'work',pid:r.projectId,rec:r,ok:outOk(r),rid,note:''}); }
   });
   return out;
@@ -2138,9 +2141,9 @@ function planDayChart(days){
           return `<div class="dc-seg ${k}" style="left:${pct(u,a)};width:${wd.toFixed(3)}%;${k==='p'?'':`background-color:${col}`}" data-tip="${tip.replace(/"/g,'&quot;')}" onclick="openQItem('${it.id}')">${wd>(k==='r'?4:1.6)?nm:''}</div>`; }).join(''); }).join('');
       const fs=factSegs(l.id,a,b);
       const fact=fs.map(f=>{ const u=Math.max(a,f.x), v=Math.min(b,f.y), wd=(v-u)/W*100, p=byId(DB.projects,f.pid), ac=actById(f.act), col=actColor(f.act,pColor(p));
-        const lab=ac.cat==='work'?`${esc(p?.name||'—')}${f.rec&&f.rec.projectId===f.pid?' · '+N(f.rec.good)+' шт':''}`:esc(ac.name);
+        const fq=f.qty!=null?f.qty:(f.rec&&f.rec.projectId===f.pid?+f.rec.good||0:null), lab=ac.cat==='work'?`${esc(p?.name||'—')}${fq!=null?' · '+N(fq)+' шт':''}`:esc(ac.name);
         const o=byId(DB.orders,f.rec?.orderId), done=o?orderDone(o):0;
-        const tip=`<b>${esc(ac.name)}</b>${f.note?' — '+esc(f.note):''}<br>${esc(p?.name||'')}<br>${fdt(u)} → ${fdt(v)} (${minTxt((v-u)/60e3)})${f.rec?`<br>Смена: годных ${N(f.rec.good)}, брак ${N(f.rec.defect)}`:''}${o?`<br>Заказ ${esc(o.no)}: выполнено ${N(done)} из ${N(o.qty)} (${P(o.qty?done/o.qty*100:0,0)})`:''}${f.ok?'':'<br>⏳ отчёт на проверке'}`;
+        const tip=`<b>${esc(ac.name)}</b>${f.note?' — '+esc(f.note):''}<br>${esc(p?.name||'')}<br>${fdt(u)} → ${fdt(v)} (${minTxt((v-u)/60e3)})${ac.cat==='work'&&fq!=null&&f.qty!=null?`<br>В этом отрезке ≈ ${N(fq)} шт (доля по времени работы)`:''}${f.rec?`<br>Всего за смену: годных ${N(f.rec.good)}, брак ${N(f.rec.defect)}`:''}${o?`<br>Заказ ${esc(o.no)}: выполнено ${N(done)} из ${N(o.qty)} (${P(o.qty?done/o.qty*100:0,0)})`:''}${f.ok?'':'<br>⏳ отчёт на проверке'}`;
         return `<div class="dc-seg f ${ac.cat==='setup'?'s':''} ${f.ok?'':'pend'}" style="left:${pct(u,a)};width:${wd.toFixed(3)}%;background-color:${col}" data-tip="${tip.replace(/"/g,'&quot;')}" onclick="openOutputModal('${f.rec?.id}')">${wd>(ac.cat==='work'?4:1.6)?lab:''}</div>`; }).join('');
       const nowX=now>a&&now<b?`<div class="dc-now" style="left:${pct(now,a)}"></div>`:'';
       const sm=shiftStrip(l,d,a,b,pct); let dPlan=0, dFact=0; sm.tot.forEach(t=>{ dPlan+=t.plan; dFact+=t.fact; });
