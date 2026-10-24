@@ -958,7 +958,12 @@ function renderDashboard(){
 // ═════════════════════════════════════════════
 //  OUTPUT JOURNAL — отчёт за смену: сменное задание, хронометраж по часам, выпуск
 // ═════════════════════════════════════════════
-const QUALS=['Junior','Operator','Senior'], qRank=q=>QUALS.indexOf(q)+1, AREAS={coating:'Coating',printing:'Printing'};
+const QUALS=['Junior','Operator','Senior'], qRank=q=>QUALS.indexOf(q)+1;
+// участки для квалификации персонала — список задаётся в настройках
+const DEF_AREAS=[{id:'coating',name:'Coating'},{id:'printing',name:'Printing'},{id:'aux',name:'Упаковка и вспомогательные'}];
+function areas(){ const a=A(DB.settings?.areas).filter(x=>x&&x.id); return a.length?a:DEF_AREAS; }
+const areaName = id => id==='none'?'без проверки квалификации':(areas().find(a=>a.id===id)?.name||id||'');
+const areaShort = id => { const n=areaName(id); return n.split(/\s+/)[0].slice(0,1).toUpperCase(); };
 const lineArea = l => (l&&l.area)||((/принт|print|шелк|стемп|stamp/i.test(l?.name||'')||/печат|тиснен/i.test(l?.type||''))?'printing':'coating');
 const ACAT={work:{n:'Работа',c:'#1fa971'},setup:{n:'Наладка',c:'#3b7cf6'},down:{n:'Простой',c:'#e5484d'},break:{n:'Перерыв',c:'#98a1b1'}};
 function acts(){ const a=A(DB.settings.activities); return a.length?a:DEFAULT_SETTINGS.activities; }
@@ -1404,7 +1409,7 @@ function renderProjectEdit(){
       <div class="fg"><div class="hint" style="margin-top:22px">Обед, уборку, пересменку технолог добавляет в самом плане — у каждого проекта отдельно</div></div></div>
       <div class="frow"><div class="fg"><label class="fl">Квалификация: настройка линии</label><select class="fi" ${ro?'disabled':''} onchange="D('qualSetup',this.value)"><option value="">— не важно —</option>${QUALS.map(q=>`<option ${q===d.qualSetup?'selected':''}>${q}</option>`).join('')}</select></div>
       <div class="fg"><label class="fl">Квалификация: массовое производство</label><select class="fi" ${ro?'disabled':''} onchange="D('qualRun',this.value)"><option value="">— не важно —</option>${QUALS.map(q=>`<option ${q===d.qualRun?'selected':''}>${q}</option>`).join('')}</select></div></div>
-      <div class="hint" style="margin-top:-4px">Уровень сравнивается с квалификацией персонала по участку линии (${esc(Object.values(AREAS).join(' / '))}). Если в смене нет человека нужного уровня — в плане появится красное предупреждение.</div>
+      <div class="hint" style="margin-top:-4px">Уровень сравнивается с квалификацией персонала по участку линии (${esc(areaName(lineArea(byId(DB.lines,d.lineId))))}). Если в смене нет человека нужного уровня — в плане появится красное предупреждение.</div>
     </div>
     <div class="card"><div class="card-h"><div class="card-t">Расчёт</div></div>
       <div class="stat"><span>Выработка в час / смену</span><b>${N(d.speed*60)} / ${N(d.speed*60*sh)} шт</b></div>
@@ -1865,7 +1870,7 @@ function openLineModal(id){
     <div class="fg"><label class="fl">Работающие смены</label><div id="lnSh" style="display:flex;gap:6px;flex-wrap:wrap">${lineShiftChips(scId,ws)}</div></div></div>
     <div class="fg"><label class="fl">Рабочие дни</label><div style="display:flex;gap:6px;flex-wrap:wrap">${[1,2,3,4,5,6,0].map(x=>`<label class="chip ${wd.includes(x)?'on':''}" style="cursor:pointer"><input type="checkbox" name="d_${x}" style="display:none" ${wd.includes(x)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${DAYN[x]}</label>`).join('')}</div></div>
     <div class="frow"><div class="fg"><label class="fl">Мощность, шт/смену</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="cap" value="${l.cap}"><div class="hint" style="margin-top:4px">Для плана по умолчанию, пока месяц не утверждён.</div></div>
-    <div class="fg"><label class="fl">Участок (для квалификации персонала)</label><select class="fi" name="area">${Object.entries(AREAS).map(([k,v])=>`<option value="${k}" ${lineArea(l)===k?'selected':''}>${v}</option>`).join('')}</select></div></div>`,
+    <div class="fg"><label class="fl">Участок (для квалификации персонала)</label><select class="fi" name="area">${areas().map(a=>`<option value="${esc(a.id)}" ${lineArea(l)===a.id?'selected':''}>${esc(a.name)}</option>`).join('')}<option value="none" ${lineArea(l)==='none'?'selected':''}>— без проверки квалификации —</option></select><div class="hint" style="margin-top:4px">Список участков — в «Настройках».</div></div></div>`,
   async f=>{ if(!f.name.trim()) return false;
     const sc=shiftSchemes().find(x=>x.id===f.scheme)||shiftSchemes()[0], workShifts=A(sc.shifts).map((_,i)=>i+1).filter(n=>f['sh_'+n]), workDays=[0,1,2,3,4,5,6].filter(x=>f['d_'+x]);
     if(!workShifts.length||!workDays.length){ toast('Выберите хотя бы одну смену и один день'); return false; }
@@ -2247,10 +2252,12 @@ function factSegs(lineId,a,b){
 // персонал смены и проверка квалификации
 function shiftCrew(lineId,d,n){ return DB.roster.filter(r=>r.date===d&&r.lineId===lineId&&+r.shift===+n).map(r=>byId(DB.people,r.staffId)).filter(Boolean); }
 function shiftQual(l,d,n,sa,sb){
-  const pl=shiftPlan(l.id,sa,sb), crew=shiftCrew(l.id,d,n), area=lineArea(l), best=Math.max(0,...crew.map(s=>qRank(s.qual?.[area])));
+  const pl=shiftPlan(l.id,sa,sb), crew=shiftCrew(l.id,d,n), area=lineArea(l);
+  if(area==='none') return {crew,best:0,need:[],lacks:[],empty:false,tip:`<b>Персонал смены</b><br>${crew.map(s=>esc(s.name)+' — '+esc(s.position||'')).join('<br>')||'никого'}<br><span style="opacity:.7">участок без проверки квалификации</span>`};
+  const best=Math.max(0,...crew.map(s=>qRank(s.qual?.[area])));
   const need=[]; pl.forEach(x=>{ const p=byId(DB.projects,x.it.projectId); if(!p) return; if(x.setup>0&&p.qualSetup) need.push({w:'наладка',p,q:p.qualSetup}); if(x.run>0&&p.qualRun) need.push({w:'массовое пр-во',p,q:p.qualRun}); });
   const lacks=need.filter(x=>qRank(x.q)>best), empty=pl.length>0&&!crew.length&&DB.roster.some(r=>r.date===d);
-  const tip=`<b>Персонал смены (${AREAS[area]})</b><br>${crew.map(s=>`${esc(s.name)} — ${esc(s.position||'')} · ${s.qual?.[area]||'без квалиф.'}`).join('<br>')||'никого'}${need.length?'<br><b>Требуется</b><br>'+need.map(x=>`${x.w} «${esc(x.p.name)}»: ${x.q}`).join('<br>'):''}`;
+  const tip=`<b>Персонал смены (${esc(areaName(area))})</b><br>${crew.map(s=>`${esc(s.name)} — ${esc(s.position||'')} · ${s.qual?.[area]||'без квалиф.'}`).join('<br>')||'никого'}${need.length?'<br><b>Требуется</b><br>'+need.map(x=>`${x.w} «${esc(x.p.name)}»: ${x.q}`).join('<br>'):''}`;
   return {crew,best,need,lacks,empty,tip};
 }
 async function toggleShift(lineId,d,n,on){
@@ -2897,11 +2904,11 @@ function exportCSV(){
 //  PEOPLE — персонал, квалификация и график работы
 // ═════════════════════════════════════════════
 const teamRank=t=>{ if(!t) return 999; const i=DB.lines.findIndex(l=>lineShort(l)===String(t).split('-')[0]); return i>=0?i:500; };
-const pBest=p=>Math.max(qRank(p.qual?.coating),qRank(p.qual?.printing));
+const pBest=p=>Math.max(0,...Object.values(p.qual||{}).map(qRank));
 const personSort=(a,b)=>teamRank(a.team)-teamRank(b.team)||String(a.team||'').localeCompare(String(b.team||''),'ru',{numeric:true})||pBest(b)-pBest(a)||a.name.localeCompare(b.name);
 const POSITIONS=['Оператор линии','Наладчик','Мастер смены','Контролёр ОТК','Технолог','Подсобный рабочий'];
 const lineShort = l => { if(!l) return '?'; if(l.code) return l.code; const nm=String(l.name||''), d=(nm.match(/\d+/)||[''])[0];
-  return d?(lineArea(l)==='printing'?'P':'C')+d:nm.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join(''); };
+  const ar=lineArea(l); return d&&(ar==='printing'||ar==='coating')?(ar==='printing'?'P':'C')+d:d?nm.split(/\s+/)[0][0].toUpperCase()+d:nm.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join(''); };
 const qTag = q => q?`<span class="tag ${q==='Senior'?'t-green':q==='Operator'?'t-blue':'t-gray'}">${q}</span>`:'<span class="muted">—</span>';
 function renderPeople(){
   const tab=state.peopleTab||'roster', ce=can('edit');
@@ -2909,10 +2916,10 @@ function renderPeople(){
   if(tab==='list'){
     const ps=DB.people.slice().sort((a,b)=>(a.active===false)-(b.active===false)||personSort(a,b));
     $('#content').innerHTML=`<div class="toolbar">${tabs}<span class="muted" style="font-weight:600">${ps.filter(p=>p.active!==false).length} работают</span><div class="sp"></div>${ce?`<button class="btn btn-p" onclick="openPerson()">+ Сотрудник</button>`:''}</div>
-    <div class="card">${ps.length?`<div class="tw flush"><table><tr><th>Бригада</th><th>ФИО</th><th>Должность</th><th>Доступ в программу</th><th>Coating</th><th>Printing</th><th class="num">Смен за 30 дней</th><th>Заметка</th></tr>
+    <div class="card">${ps.length?`<div class="tw flush"><table><tr><th>Бригада</th><th>ФИО</th><th>Должность</th><th>Доступ в программу</th>${areas().map(a=>`<th>${esc(a.name)}</th>`).join('')}<th class="num">Смен за 30 дней</th><th>Заметка</th></tr>
     ${ps.map(p=>{ const n=DB.roster.filter(r=>r.staffId===p.id&&r.date<=iso(new Date())&&r.date>iso(addD(new Date(),-30))).length;
-      return `<tr class="${ce?'click':''}" style="${p.active===false?'opacity:.5':''}" ${ce?`onclick="openPerson('${p.id}')"`:''}><td>${p.team?`<span class="tag t-blue">${esc(p.team)}</span>`:'<span class="muted">—</span>'}</td><td><b>${esc(p.name)}</b>${p.active===false?' <span class="tag t-gray">не работает</span>':''}</td><td>${esc(p.position||'')}</td><td>${(()=>{ const m=DB.members.find(x=>x.personId===p.id); return m?`<span class="tag ${m.active===false?'t-gray':'t-blue'}">${esc(m.login)} · ${esc(ROLES[m.role]?.n||m.role)}</span>`:'<span class="muted">—</span>'; })()}</td><td>${qTag(p.qual?.coating)}</td><td>${qTag(p.qual?.printing)}</td><td class="num">${n||'—'}</td><td class="muted">${esc(p.note||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Персонал ещё не заведён</div>'}</div>
-    <div class="hint" style="margin-top:10px">Квалификация (Junior / Operator / Senior) задаётся отдельно для участков Coating и Printing. Участок линии указывается в разделе «Линии», требования — в карточке проекта.</div>`;
+      return `<tr class="${ce?'click':''}" style="${p.active===false?'opacity:.5':''}" ${ce?`onclick="openPerson('${p.id}')"`:''}><td>${p.team?`<span class="tag t-blue">${esc(p.team)}</span>`:'<span class="muted">—</span>'}</td><td><b>${esc(p.name)}</b>${p.active===false?' <span class="tag t-gray">не работает</span>':''}</td><td>${esc(p.position||'')}</td><td>${(()=>{ const m=DB.members.find(x=>x.personId===p.id); return m?`<span class="tag ${m.active===false?'t-gray':'t-blue'}">${esc(m.login)} · ${esc(ROLES[m.role]?.n||m.role)}</span>`:'<span class="muted">—</span>'; })()}</td>${areas().map(a=>`<td>${qTag(p.qual?.[a.id])}</td>`).join('')}<td class="num">${n||'—'}</td><td class="muted">${esc(p.note||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Персонал ещё не заведён</div>'}</div>
+    <div class="hint" style="margin-top:10px">Квалификация (Junior / Operator / Senior) задаётся отдельно для каждого участка (${esc(areas().map(a=>a.name).join(', '))}); список участков — в «Настройках». Участок линии указывается в разделе «Линии», требования — в карточке проекта.</div>`;
     return;
   }
   // график
@@ -2928,7 +2935,7 @@ function renderPeople(){
   const sumHead=c=>{ const full=c.days.length===new Date(+c.sum.slice(0,4),+c.sum.slice(5,7),0).getDate(); return `<th class="c rs-sum">Σ ${mName(c.sum)}${full?'':`<br><small>${+c.days[0].slice(8)}–${+c.days[c.days.length-1].slice(8)}</small>`}</th>`; };
   const head=lab=>`<tr><th style="position:sticky;left:0;z-index:2">${lab}</th>${cols.map(c=>{ if(c.sum) return sumHead(c); const d=c.d, dt=pd(d), we=[0,6].includes(dt.getDay()); return `<th class="c ${d===td?'rs-td':''}" style="${we?'color:var(--red)':''}">${WD[(dt.getDay()+6)%7]}<br>${dt.getDate()}.${String(dt.getMonth()+1).padStart(2,'0')}</th>`; }).join('')}</tr>`;
   const ABS={'Б':'Больничный','О':'Отпуск','Н':'Неявка'};
-  const rows=ps.map(p=>`<tr><td class="rs-name ${p.team&&ps[ps.indexOf(p)-1]?.team!==p.team?'rs-team':''}"><b>${p.team?`<span class="tag t-blue" style="margin-right:4px">${esc(p.team)}</span>`:''}${esc(p.name)}</b><small>${esc(p.position||'')} · C:${p.qual?.coating||'—'} · P:${p.qual?.printing||'—'}</small></td>${cols.map(c=>{
+  const rows=ps.map(p=>`<tr><td class="rs-name ${p.team&&ps[ps.indexOf(p)-1]?.team!==p.team?'rs-team':''}"><b>${p.team?`<span class="tag t-blue" style="margin-right:4px">${esc(p.team)}</span>`:''}${esc(p.name)}</b><small>${esc(p.position||'')}${areas().map(a=>p.qual?.[a.id]?` · ${esc(a.name.split(/\s+/)[0])}:${p.qual[a.id][0]}`:'').join('')}</small></td>${cols.map(c=>{
       if(c.sum){ const h=rosterHours(p.id,c.days); return `<td class="rs-c rs-sum" data-tip="${esc(p.name)} · ${mName(c.sum)}<br>Смен по графику: ${h.n}<br>Часов к оплате: ${Q(h.paid,1)} (смена минус обед)<br>Из них ночных: ${Q(h.night,1)}">${h.n?`<b>${Q(h.paid,0)} ч</b><small>${h.n} см · ночь ${Q(h.night,0)}</small>`:'<span class="muted">—</span>'}</td>`; }
       const d=c.d, r=rmap[d+'|'+p.id], v=r?(r.absence?'abs|'+r.absence:r.lineId+'|'+r.shift):'';
       const lbl=r?(r.absence?r.absence:`${esc(lineShort(byId(DB.lines,r.lineId)))}·${r.shift}`):'—';
@@ -2988,11 +2995,11 @@ function openPerson(id){
   modal(id?'Сотрудник':'Новый сотрудник',`<div class="fg"><label class="fl">ФИО</label><input class="fi" name="name" value="${esc(p.name)}" autofocus></div>
     <div class="fg"><label class="fl">Должность</label><input class="fi" name="position" list="posList" value="${esc(p.position||'')}"><datalist id="posList">${POSITIONS.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
     <div class="fg"><label class="fl">Бригада</label><input class="fi" name="team" list="teamList" value="${esc(p.team||'')}" placeholder="например C1-A"><datalist id="teamList">${[...new Set(DB.people.map(x=>x.team).filter(Boolean))].sort().map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
-    <div class="frow"><div class="fg"><label class="fl">Квалификация · Coating</label>${qs('coating')}</div><div class="fg"><label class="fl">Квалификация · Printing</label>${qs('printing')}</div></div>
+    <div class="frow3">${areas().map(a=>`<div class="fg"><label class="fl">Квалификация · ${esc(a.name)}</label>${qs(a.id)}</div>`).join('')}</div>
     <div class="fg"><label class="fl">Заметка</label><input class="fi" name="note" value="${esc(p.note||'')}" placeholder="Допуски, ограничения…"></div>
     <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" name="active" ${p.active!==false?'checked':''}> Работает</label>`,
   async f=>{ if(!f.name.trim()){ toast('Укажите ФИО'); return false; }
-    await Store.put('people',{...(id?clone(p):{}),id:id||uid(),name:f.name.trim(),position:f.position.trim(),team:(f.team||'').trim(),qual:{coating:f.q_coating||'',printing:f.q_printing||''},note:f.note,active:!!f.active}); },'Сохранить',
+    await Store.put('people',{...(id?clone(p):{}),id:id||uid(),name:f.name.trim(),position:f.position.trim(),team:(f.team||'').trim(),qual:Object.fromEntries([...Object.entries(p.qual||{}),...areas().map(a=>[a.id,f['q_'+a.id]||''])]),note:f.note,active:!!f.active}); },'Сохранить',
   id?`<button class="btn btn-d" type="button" onclick="if(confirm('Удалить сотрудника? Его смены в графике тоже удалятся.')){ closeModal(); Store.batch([{col:'people',id:'${id}',del:true},...DB.roster.filter(r=>r.staffId==='${id}').map(r=>({col:'roster',id:r.id,del:true}))]); }">Удалить</button>`:'');
 }
 
@@ -3077,6 +3084,7 @@ const schemeBlock = s => `<div class="scheme" data-id="${esc(s.id)}"><div style=
 const shRow = (x,i) => `<div class="sh-row"><b class="sh-n">${(i??0)+1}-я</b><input class="fi sh-f" type="time" value="${x.from}"><span>—</span><input class="fi sh-t" type="time" value="${x.to}"><span class="muted sh-len" style="font-size:12px;min-width:44px"></span><button type="button" class="btn btn-s btn-sm" onclick="const s=this.closest('.scheme');this.parentNode.remove();scRenum(s)">✕</button></div>`;
 function scRenum(s){ s.querySelectorAll('.sh-row').forEach((r,i)=>{ r.querySelector('.sh-n').textContent=(i+1)+'-я'; const a=hm(r.querySelector('.sh-f').value), b=hm(r.querySelector('.sh-t').value); r.querySelector('.sh-len').textContent=(((b-a+1440)%1440)||1440)/60+' ч'; }); }
 function schemeDel(btn){ const s=btn.closest('.scheme'), id=s.dataset.id; if(DB.lines.some(l=>lineScheme(l.id).id===id)) return toast('Схема используется на линии — сначала переключите линию на другую схему'); if(document.querySelectorAll('.scheme').length<2) return toast('Нужна хотя бы одна схема'); s.remove(); }
+const areaRow = a => { const used=a.id?DB.lines.filter(l=>lineArea(l)===a.id).map(l=>l.name):[]; return `<div class="act-row area-row" data-id="${esc(a.id||'')}"><input class="fi area-n" value="${esc(a.name||'')}" placeholder="Название участка, например «Печь»"><span class="muted" style="font-size:12px;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis">${used.length?esc(used.join(', ')):'не используется'}</span><button type="button" class="btn btn-s btn-sm" onclick="${used.length?`toast('Участок используется на линиях — сначала переключите линии')`:`this.parentNode.remove()`}">✕</button></div>`; };
 const actRow = a => `<div class="act-row" data-id="${esc(a.id||'')}"><span class="sw" style="background:${ACAT[a.cat||'down'].c};width:10px;height:26px;border-radius:3px;margin:0"></span><input class="fi act-n" value="${esc(a.name||'')}" placeholder="Название"><select class="fi act-c" onchange="this.parentNode.querySelector('.sw').style.background=ACAT[this.value].c">${Object.entries(ACAT).map(([k,v])=>`<option value="${k}" ${k===(a.cat||'down')?'selected':''}>${v.n}</option>`).join('')}</select><button type="button" class="btn btn-s btn-sm" onclick="this.parentNode.remove()">✕</button></div>`;
 function renderSettings(){
   const s=DB.settings, wd=s.workDays||[1,2,3,4,5];
@@ -3087,6 +3095,9 @@ function renderSettings(){
   <div class="card row-gap"><div class="card-h"><div class="card-t">Виды работ и простоев</div><div class="card-s">для хронометража смены</div><div class="sp"></div><button class="btn btn-s btn-sm" onclick="document.getElementById('acts').insertAdjacentHTML('beforeend',actRow({cat:'down'}))">+ Вид</button></div>
     <div class="hint" style="margin-bottom:10px">Категория определяет, куда пойдёт время в итогах: <b style="color:${ACAT.work.c}">работа</b>, <b style="color:${ACAT.setup.c}">наладка</b>, <b style="color:${ACAT.down.c}">простой</b> или <b style="color:${ACAT.break.c}">перерыв</b>.</div>
     <div id="acts">${acts().map(actRow).join('')}</div></div>
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Участки</div><div class="card-s">для квалификации персонала: у линии — участок, у сотрудника — уровень по каждому участку</div><div class="sp"></div><button class="btn btn-s btn-sm" onclick="document.getElementById('areas').insertAdjacentHTML('beforeend',areaRow({}))">+ Участок</button></div>
+    <div id="areas">${areas().map(areaRow).join('')}</div>
+    <div class="hint" style="margin-top:6px">Для линий, где квалификация не важна, в карточке линии можно выбрать «без проверки квалификации».</div></div>
   </div>
   <div>
   <div class="card row-gap"><div class="card-h"><div class="card-t">Производство</div></div>
@@ -3114,10 +3125,12 @@ async function saveSettings(){
   const lines=id=>$(id).value.split('\n').map(x=>x.trim()).filter(Boolean);
   const schemes=[...document.querySelectorAll('.scheme')].map(b=>({id:b.dataset.id,name:b.querySelector('.sc-name').value.trim()||'Схема',shifts:[...b.querySelectorAll('.sh-row')].map(r=>({from:r.querySelector('.sh-f').value,to:r.querySelector('.sh-t').value})).filter(x=>x.from&&x.to)}));
   if(schemes.some(s=>!s.shifts.length)) return toast('В каждой схеме должна быть хотя бы одна смена');
-  const activities=[...document.querySelectorAll('.act-row')].map(r=>({id:r.dataset.id||('a'+uid()),name:r.querySelector('.act-n').value.trim(),cat:r.querySelector('.act-c').value})).filter(a=>a.name);
+  const areasL=[...document.querySelectorAll('.area-row')].map(r=>({id:r.dataset.id||('ar'+uid()),name:r.querySelector('.area-n').value.trim()})).filter(a=>a.name);
+  if(!areasL.length) return toast('Нужен хотя бы один участок');
+  const activities=[...document.querySelectorAll('.act-row:not(.area-row)')].map(r=>({id:r.dataset.id||('a'+uid()),name:r.querySelector('.act-n').value.trim(),cat:r.querySelector('.act-c').value})).filter(a=>a.name);
   if(!activities.some(a=>a.cat==='work')) return toast('Нужен хотя бы один вид с категорией «Работа»');
   const s={...DB.settings,orgName:$('#sOrg').value.trim(),currency:$('#sCur').value,planFactor:+$('#sK').value||.85,setupTarget:+$('#sSet').value||5,defectTarget:+$('#sDef').value||2,
-    workDays:[...document.querySelectorAll('.sWD:checked')].map(x=>+x.value),payBreakMin:+String($('#sPayBrk').value).replace(',','.')||0,nightFrom:$('#sNf').value||'22:00',nightTo:$('#sNt').value||'06:00',defectReasons:lines('#sR'),downReasons:lines('#sDR'),machineParams:lines('#sM'),shiftSchemes:schemes,activities};
+    workDays:[...document.querySelectorAll('.sWD:checked')].map(x=>+x.value),payBreakMin:+String($('#sPayBrk').value).replace(',','.')||0,nightFrom:$('#sNf').value||'22:00',nightTo:$('#sNt').value||'06:00',defectReasons:lines('#sR'),downReasons:lines('#sDR'),machineParams:lines('#sM'),shiftSchemes:schemes,activities,areas:areasL};
   delete s.shifts;
   await Store.settings(s); toast('Настройки сохранены');
 }
