@@ -3154,7 +3154,8 @@ function renderPeople(){
   const ps=DB.people.filter(p=>p.active!==false).sort(personSort);
   const rmap={}; DB.roster.forEach(r=>rmap[r.date+'|'+r.staffId]=r);
   const SHOP={id:'*',name:'Цех (без линии)'};
-  const slots=d=>[...DB.lines.flatMap(l=>dayShifts(l.id,d,LIVE).map(n=>({l,n}))),...lineShiftDefs('*').map(s=>({l:SHOP,n:s.n}))];
+  // в выборе — все линии и все смены их схемы; если линия по своему графику в эту смену не работает — помечаем
+  const slots=d=>[...DB.lines.flatMap(l=>{ const ws=dayShifts(l.id,d,LIVE); return lineShiftDefs(l.id).map(s=>({l,n:s.n,off:!ws.includes(+s.n)})); }),...lineShiftDefs('*').map(s=>({l:SHOP,n:s.n}))];
   const td=iso(new Date());
   // колонки: дни + итог в конце каждого месяца (или в конце периода)
   const cols=[]; days.forEach((d,i)=>{ cols.push({d}); const nx=days[i+1]; if(!nx||nx.slice(0,7)!==d.slice(0,7)){ const mDays=days.filter(x=>x.slice(0,7)===d.slice(0,7)); cols.push({sum:d.slice(0,7),days:mDays}); } });
@@ -3173,7 +3174,7 @@ function renderPeople(){
       if(r&&r.absence) return `<td class="rs-c abs rs-d0 ${tdc}" colspan="${NS}">${ce?`<select onchange="setRoster('${d}','${p.id}',this.value)"><option value="">—</option>${absOpts}</select>`:r.absence}</td>`;
       return Array.from({length:NS},(_,k)=>{ const n=k+1, mine=r&&+r.shift===n, sl=slots(d).filter(x=>+x.n===n), cur=mine?r.lineId+'|'+n:'';
         const lbl=mine?esc(r.lineId==='*'?'Цех':lineShort(byId(DB.lines,r.lineId))):'';
-        return `<td class="rs-c ${mine?'on':''} ${k?'rs-dn':'rs-d0'} ${tdc}">${ce?`<select title="${SL[k]}-смена" onchange="setRoster('${d}','${p.id}',this.value,${n},${mine?1:0})"><option value="">—</option>${sl.map(({l})=>`<option value="${l.id}|${n}" ${cur===l.id+'|'+n?'selected':''}>${esc(lineShort(l))}</option>`).join('')}${mine&&!sl.some(({l})=>cur===l.id+'|'+n)?`<option value="${cur}" selected>${lbl} ⚠</option>`:''}${k===0?absOpts:''}</select>`:(lbl||'—')}</td>`; }).join(''); }).join('')}</tr>`).join('');
+        return `<td class="rs-c ${mine?'on':''} ${k?'rs-dn':'rs-d0'} ${tdc}">${ce?`<select title="${SL[k]}-смена" onchange="setRoster('${d}','${p.id}',this.value,${n},${mine?1:0})"><option value="">—</option>${sl.map(({l,off})=>`<option value="${l.id}|${n}" ${cur===l.id+'|'+n?'selected':''}>${esc(lineShort(l))}${off?' · линия не по графику':''}</option>`).join('')}${mine&&!sl.some(({l})=>cur===l.id+'|'+n)?`<option value="${cur}" selected>${lbl} ⚠</option>`:''}${k===0?absOpts:''}</select>`:(lbl||'—')}</td>`; }).join(''); }).join('')}</tr>`).join('');
   // покрытие: по каждой линии/смене — сколько людей и хватает ли квалификации под план
   // покрытие: одна строка на линию, в каждом дне — по ячейке на смену (2 при 12-часовой схеме, 3 при 8-часовой)
   const cover=DB.lines.map(l=>{ const defs=lineShiftDefs(l.id), two=defs.length===2;
