@@ -231,6 +231,21 @@ tfoot td{font-weight:800;background:var(--card2)}
 .dc-sh.off{background:repeating-linear-gradient(135deg,rgba(120,130,150,.13) 0 4px,transparent 4px 8px);color:var(--text3);border-style:dashed}
 .dc-sh .dn{color:var(--red);font-weight:700} .dc-sh .pd{color:var(--amber);font-weight:800} .dc-sh .pd .btn{padding:2px 7px;font-size:11px} .dc-sh .ms{color:var(--red);font-weight:800}
 .dc-lab-s{height:30px!important;border-bottom:1px solid var(--line);flex-direction:column;align-items:flex-start!important;justify-content:center;gap:0!important} .dc-lab-s small{font-size:10.5px;color:var(--text3);font-weight:700}
+.dc-ln{display:flex;align-items:center;gap:6px;width:100%} .dc-ln>span:first-child{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-chks{display:flex;gap:3px} .dc-chk{display:inline-flex;align-items:center;justify-content:center;width:20px;height:18px;border:1.5px solid var(--line2);border-radius:5px;font-size:10.5px;font-weight:800;color:var(--text3);cursor:pointer;background:var(--card)}
+.dc-chk input{display:none} .dc-chk.on{background:var(--green);border-color:var(--green);color:#fff}
+.dc-q{position:relative;height:20px} .dc-qlab{height:20px!important} .dc-qw{position:absolute;top:2px;height:16px;line-height:16px;font-size:10.5px;font-weight:800;color:var(--red);background:var(--redBg);border-radius:4px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc-sh .cr{margin-left:auto;color:var(--text2);font-weight:700}
+.rs table{font-size:12px} .rs th,.rs td{padding:4px 5px} .rs th.c{text-align:center;line-height:1.25} .rs-name{position:sticky;left:0;background:var(--card);z-index:1;white-space:nowrap;min-width:170px} .rs-name small{display:block;color:var(--text3);font-size:10.5px}
+.rs-c{text-align:center;border-left:1px solid var(--line);white-space:nowrap} .rs-c select{border:1px solid transparent;background:transparent;font-size:11.5px;padding:3px 2px;border-radius:6px;width:62px;color:var(--text3)} .rs-c.on select{background:var(--blueBg);color:var(--blue);font-weight:700}
+.rs-c select:hover{border-color:var(--line2)} .rs-td{background:rgba(226,70,44,.05)} .rs-off{background:repeating-linear-gradient(135deg,rgba(120,130,150,.13) 0 4px,transparent 4px 8px)} .rs-ok{color:var(--green);font-weight:800} .rs-bad{background:var(--redBg);color:var(--red);font-weight:800}
+.rs-sum{background:var(--card2);border-left:2px solid var(--line2)!important;min-width:84px} .rs-c.rs-sum b{display:block;font-size:12.5px} .rs-c.rs-sum small{display:block;color:var(--text3);font-size:10.5px;font-weight:700} th.rs-sum small{font-weight:700}
+.rs-team{border-top:2px solid var(--line2)} tr:has(.rs-team) td{border-top:2px solid var(--line2)}
+.rs-c.abs select{background:var(--amberBg);color:var(--amber);font-weight:800}
+.au td{vertical-align:top} .au-ch{font-size:12px;line-height:1.5} .au-ch span{color:var(--text3);font-weight:700} .au-ch s{color:var(--red);opacity:.75}
+.pv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px} .pv{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--card2)} .pv:hover{border-color:var(--brand)}
+.pv img{display:block;width:100%;height:170px;object-fit:cover} .pv-t{padding:6px 8px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .pv-star{position:absolute;top:6px;right:6px;background:#fff;color:#e8a400;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.card.drop{outline:2px dashed var(--brand);outline-offset:-4px}
 .dc-now{position:absolute;top:0;bottom:0;width:2px;background:var(--red);z-index:3;pointer-events:none}
 .ex-head,.ex-row{display:grid;grid-template-columns:1fr 80px 124px 130px 36px;gap:6px;align-items:center} .ex-row{margin-bottom:6px} .ex-head{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
 .ex-row .fi{padding:7px 9px} .ex-e-l{display:flex;gap:6px;align-items:center;font-size:12.5px;white-space:nowrap}
@@ -317,6 +332,7 @@ b.click{cursor:pointer;text-decoration:underline dotted}
     <div class="side-foot">
       <div class="av" id="meAv">?</div>
       <div style="flex:1;min-width:0"><div class="me-name" id="meName"></div><div class="me-role" id="meRole"></div></div>
+      <button class="icon-btn" title="Сменить пароль" onclick="openMyPassword()" style="font-size:15px">🔑</button>
       <button class="icon-btn" title="Выйти" onclick="logout()"><svg class="i" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
     </div>
   </aside>
@@ -327,6 +343,7 @@ b.click{cursor:pointer;text-decoration:underline dotted}
       <h1 id="pageTitle">Дашборд</h1>
       <div class="sp"></div>
       <span class="mode" id="modeTag"></span>
+      <a class="btn btn-s btn-sm hide-m" id="demoLink" href="?demo" target="_blank" title="Открыть демо-песочницу с тестовыми данными в новой вкладке — рабочая база не затрагивается">🧪 Демо-песочница</a>
       <select class="sel hide-m" id="roleSwitch" style="display:none" onchange="demoRole(this.value)" title="Посмотреть интерфейс глазами роли"></select>
       <button class="btn btn-p" id="quickAdd" onclick="openOutputModal()"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span class="hide-m">Внести выпуск</span></button>
     </header>
@@ -351,23 +368,23 @@ b.click{cursor:pointer;text-decoration:underline dotted}
 //  Всё приложение живёт в ветке /prod и не трогает другие данные.
 // ═════════════════════════════════════════════
 const FB_CONFIG = {
-  apiKey: "AIzaSyBZ1b6yf1WQbhZ7lhIbeYw_fKc4k88mmFc",
-  authDomain: "family-budget-32149.firebaseapp.com",
-  databaseURL: "https://family-budget-32149-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "family-budget-32149",
-  storageBucket: "family-budget-32149.firebasestorage.app",
-  messagingSenderId: "1015461302295",
-  appId: "1:1015461302295:web:835d7a14a852c224534c52"
+  apiKey: "AIzaSyA37rJj7SW5ts9Nv-HbzCm92uc-bAY4fdI",
+  authDomain: "production-daily-7de9d.firebaseapp.com",
+  databaseURL: "https://production-daily-7de9d-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "production-daily-7de9d",
+  storageBucket: "production-daily-7de9d.firebasestorage.app",
+  messagingSenderId: "1001892488299",
+  appId: "1:1001892488299:web:6aa3b532924b1d80e2fd2e"
 };
 const ROOT = 'prod';
-const COLS = ['lines','projects','raw','semis','orders','output','runs','plan','planLog','supplies','moves','downs','scenarios'];
+const COLS = ['lines','projects','raw','semis','orders','output','runs','plan','planLog','supplies','moves','downs','scenarios','shiftCal','people','roster'];
 
 // ═════════════════════════════════════════════
 //  ROLES
 // ═════════════════════════════════════════════
 const ROLES = {
   admin:        {n:'Администратор',  lvl:4, d:'Всё + сотрудники, настройки, утверждение плана'},
-  technologist: {n:'Технолог',       lvl:3, d:'Рецептуры, проекты, план, склад, выпуск'},
+  technologist: {n:'Технолог',       lvl:3, d:'Рецептуры, проекты, план, склад, выпуск, подтверждение отчётов смен'},
   master:       {n:'Мастер смены',   lvl:3, d:'План, выпуск, тех. отчёты, склад'},
   operator:     {n:'Оператор',       lvl:1, d:'Внесение выпуска за смену, просмотр плана'},
   viewer:       {n:'Наблюдатель',    lvl:0, d:'Только просмотр'},
@@ -413,8 +430,11 @@ const SECTIONS = [
   {id:'orders',    t:'Заказы и отгрузки',     i:'orders',   r:()=>renderOrders(), badge:()=>orderStats().overdue},
   {g:'Аналитика'},
   {id:'reports',   t:'Отчёты',                i:'reports',  r:()=>renderReports()},
+  {g:'Персонал'},
+  {id:'people',    t:'Персонал и график',     i:'staff',    r:()=>renderPeople()},
   {g:'Управление', admin:true},
   {id:'staff',     t:'Сотрудники и доступы',  i:'staff',    r:()=>renderStaff(), admin:true},
+  {id:'audit',     t:'Журнал изменений',      i:'runs',     r:()=>renderAudit(), admin:true},
   {id:'settings',  t:'Настройки',             i:'settings', r:()=>renderSettings(), admin:true},
   {id:'projectEdit', t:'Карточка проекта',    hidden:true, parent:'projects', r:()=>renderProjectEdit()},
   {id:'semiEdit',    t:'Полуфабрикат',        hidden:true, parent:'semis',    r:()=>renderSemiEdit()},
@@ -628,13 +648,20 @@ function lineCfg(lineId,ctx){
   const all=lineShiftDefs(lineId).map(s=>s.n), sh=(ov.length?ov:A(l.workShifts)).map(Number).filter(n=>all.includes(n));
   return {shifts:sh.length?sh:all, days:A(l.workDays).length?A(l.workDays).map(Number):[0,1,2,3,4,5,6], restart:+l.restartMin||0};
 }
+// календарь смен: вручную отмеченные смены линии на дату (иначе — по настройке линии)
+let _calMap=null;
+function calMap(){ if(_calMap) return _calMap; const m={}; A(DB.shiftCal).forEach(r=>{ m[r.lineId+'|'+r.date]=String(r.shifts??'').split(',').filter(Boolean).map(Number); }); return _calMap=m; }
+function dayShifts(lineId,ds,ctx){
+  if(!(ctx&&ctx.lineShifts&&A(ctx.lineShifts[lineId]).length)){ const o=calMap()[lineId+'|'+ds]; if(o) return o; }
+  const c=lineCfg(lineId,ctx); return c.days.includes(pd(ds).getDay())?c.shifts:[];
+}
 const shiftLabel = (lineId,ctx) => { const c=lineCfg(lineId,ctx), all=lineShiftDefs(lineId).length; return `${lineScheme(lineId).name} · ${c.shifts.length===all?(all===1?'1 смена':'все '+all+' смены'):c.shifts.length===1?'только '+c.shifts[0]+'-я смена':'смены '+c.shifts.join('+')}`; };
 function lineWindows(lineId,from,to,ctx){
-  const cfg=lineCfg(lineId,ctx), w=[], d=new Date(from); d.setHours(0,0,0,0); d.setDate(d.getDate()-1);
+  const w=[], d=new Date(from); d.setHours(0,0,0,0); d.setDate(d.getDate()-1);
   for(; d.getTime()<to; d.setDate(d.getDate()+1)){
-    if(!cfg.days.includes(d.getDay())) continue;
+    const ws=dayShifts(lineId,iso(d),ctx); if(!ws.length) continue;
     const base=d.getTime();
-    lineShiftDefs(lineId).forEach(s=>{ if(!cfg.shifts.includes(+s.n)) return; const a=base+hm(s.from)*60e3; let b=base+hm(s.to)*60e3; if(b<=a) b+=864e5; w.push([a,b]); });
+    lineShiftDefs(lineId).forEach(s=>{ if(!ws.includes(+s.n)) return; const a=base+hm(s.from)*60e3; let b=base+hm(s.to)*60e3; if(b<=a) b+=864e5; w.push([a,b]); });
   }
   w.sort((x,y)=>x[0]-y[0]); const m=[];
   w.forEach(x=>{ const l=m[m.length-1]; if(l&&x[0]<=l[1]) l[1]=Math.max(l[1],x[1]); else m.push([x[0],x[1]]); });
@@ -647,10 +674,10 @@ const _sch = new Map();
 const PAUSE_KINDS=['Обед','Уборка','Пересменка','Подсчёт материалов','Мойка / промывка','Смена цвета'];
 // рабочие окна линии по сменам (не склеиваем — нужны начала смен), минус простои
 function shiftWins(lineId,from,to,ctx){
-  const cfg=lineCfg(lineId,ctx), w=[], d=new Date(from); d.setHours(0,0,0,0); d.setDate(d.getDate()-1);
+  const w=[], d=new Date(from); d.setHours(0,0,0,0); d.setDate(d.getDate()-1);
   for(; d.getTime()<to; d.setDate(d.getDate()+1)){
-    if(!cfg.days.includes(d.getDay())) continue; const base=d.getTime();
-    lineShiftDefs(lineId).forEach(s=>{ if(!cfg.shifts.includes(+s.n)) return; const a=base+hm(s.from)*60e3; let b=base+hm(s.to)*60e3; if(b<=a) b+=864e5; w.push([a,b,a]); });
+    const ws=dayShifts(lineId,iso(d),ctx); if(!ws.length) continue; const base=d.getTime();
+    lineShiftDefs(lineId).forEach(s=>{ if(!ws.includes(+s.n)) return; const a=base+hm(s.from)*60e3; let b=base+hm(s.to)*60e3; if(b<=a) b+=864e5; w.push([a,b,a]); });
   }
   w.sort((x,y)=>x[0]-y[0]); let res=w;
   ctxDowns(ctx).filter(dn=>dn.lineId===lineId).forEach(dn=>{ const da=tms(dn.start), db=tms(dn.end), nx=[];
@@ -697,7 +724,7 @@ function schedCore(it,ctx,start,qty,withSetup,withOnce){
 }
 // подтверждённый факт по позициям плана (для пересчёта остатка)
 let _factMap=null;
-function factMap(){ if(_factMap) return _factMap; const m={}; DB.output.forEach(r=>{ if(!r.planItemId||r.approved===false) return; const x=m[r.planItemId]=m[r.planItemId]||{good:0,end:0}; x.good+=+r.good||0; const e=tms(r.endAt); if(isFinite(e)&&e>x.end) x.end=e; }); return _factMap=m; }
+function factMap(){ if(_factMap) return _factMap; const m={}; DB.output.forEach(r=>{ if(!r.planItemId||r.approved===false) return; const x=m[r.planItemId]=m[r.planItemId]||{good:0,end:0}; x.good+=+r.good||0; let e=NaN; if(r.date&&r.shift&&r.lineId){ try{ e=shiftWindow(r.date,r.shift,r.lineId)[1]; }catch(_){} } if(!isFinite(e)) e=tms(r.endAt); if(isFinite(e)&&e>x.end) x.end=e; }); return _factMap=m; }
 // Позиция: наладка → работа → паузы. Когда есть подтверждённый факт — план до последнего отчёта
 // остаётся как был, а ОСТАТОК (кол-во − факт) планируется заново с момента окончания последней отчётной смены.
 function sched(it,ctx){
@@ -708,12 +735,12 @@ function sched(it,ctx){
   if(done>0&&dT>start){
     // если после последнего отчёта по этой позиции линия уже работала по другой — остаток сам не планируется (не добрали; доделать — отдельной позицией)
     let nx=Infinity; DB.output.forEach(r=>{ if(r.lineId!==it.lineId||!r.planItemId||r.planItemId===it.id) return; const o2=byId(DB.plan,r.planItemId); if(!o2||seqOf(o2)<=seqOf(it)) return; const s2=tms(r.startAt); if(s2>start&&s2<nx) nx=s2; });
-    const closed=isFinite(nx), cutT=closed?Math.min(dT,nx):dT;
+    const closed=isFinite(nx), cutT=dT; // план отчитанных смен не трогаем — факт показывается отдельной полосой
     const orig=schedCore(it,ctx,start,+it.qty||0,!it.noSetup,false), rest=closed?0:Math.max(0,(+it.qty||0)-done);
     const segs=orig.segs.filter(s=>s[0]<cutT).map(s=>[s[0],Math.min(s[1],cutT),s[2],s[3]]);
     const tail=rest>0?schedCore(it,ctx,dT,rest,false,true):null;
     if(tail) segs.push(...tail.segs);
-    res={start:segs.length?segs[0][0]:start,end:segs.length?Math.max(segs[segs.length-1][1],tail?0:cutT):cutT,segs,setup:0,run:0,pause:0,restarts:0,hours:0,ok:tail?tail.ok:true,done,doneAt:dT,rest,closed,short:closed?Math.max(0,(+it.qty||0)-done):0};
+    res={start:segs.length?segs[0][0]:start,end:segs.length?segs[segs.length-1][1]:cutT,segs,setup:0,run:0,pause:0,restarts:0,hours:0,ok:tail?tail.ok:true,done,doneAt:dT,rest,closed,short:closed?Math.max(0,(+it.qty||0)-done):0};
     segs.forEach(([a,b,k])=>{ const m=(b-a)/60e3; if(k==='s') res.setup+=m; else if(k==='r') res.run+=m; else res.pause+=m; });
     res.hours=(res.end-res.start)/H;
   } else { res=schedCore(it,ctx,start,+it.qty||0,!it.noSetup,true); res.done=done; res.rest=Math.max(0,(+it.qty||0)-done); }
@@ -931,6 +958,8 @@ function renderDashboard(){
 // ═════════════════════════════════════════════
 //  OUTPUT JOURNAL — отчёт за смену: сменное задание, хронометраж по часам, выпуск
 // ═════════════════════════════════════════════
+const QUALS=['Junior','Operator','Senior'], qRank=q=>QUALS.indexOf(q)+1, AREAS={coating:'Coating',printing:'Printing'};
+const lineArea = l => (l&&l.area)||((/принт|print|шелк|стемп|stamp/i.test(l?.name||'')||/печат|тиснен/i.test(l?.type||''))?'printing':'coating');
 const ACAT={work:{n:'Работа',c:'#1fa971'},setup:{n:'Наладка',c:'#3b7cf6'},down:{n:'Простой',c:'#e5484d'},break:{n:'Перерыв',c:'#98a1b1'}};
 function acts(){ const a=A(DB.settings.activities); return a.length?a:DEFAULT_SETTINGS.activities; }
 const actById = id => acts().find(a=>a.id===id)||{id,name:id||'—',cat:'down'};
@@ -1320,7 +1349,7 @@ function renderProjects(){
   const list=DB.projects.filter(p=>!q||(p.name+' '+(p.client||'')).toLowerCase().includes(q)).sort((a,b)=>(a.status==='Архив')-(b.status==='Архив')||a.name.localeCompare(b.name));
   $('#content').innerHTML=`<div class="toolbar">${searchBox('Поиск проекта или клиента')}<span class="muted" style="font-weight:600">${DB.projects.filter(p=>p.status==='Активный').length} активных · ${DB.projects.length} всего</span><div class="sp"></div>${can('edit')?`<button class="btn btn-p" onclick="openProject()">+ Новый проект</button>`:''}</div>
   <div class="card">${list.length?`<div class="tw flush"><table><tr><th>Проект</th><th>Линия</th><th>Станции (последовательность)</th><th class="num">Скорость</th><th class="num">Наладка</th><th class="num">Себест. / 1000 шт</th><th>Последняя наработка</th><th>Статус</th></tr>
-  ${list.map(p=>{ const lr=lastRun(p.id); return `<tr class="click" onclick="openProject('${p.id}')"><td><b>${esc(p.name)}</b><div class="muted" style="font-size:12px">${esc(p.client||'')}${p.tareId?' · '+esc(rawName(p.tareId)):''}</div></td>
+  ${list.map(p=>{ const lr=lastRun(p.id); return `<tr class="click" onclick="openProject('${p.id}')"><td><div style="display:flex;gap:10px;align-items:center">${projThumb(p,38)}<div><b>${esc(p.name)}</b><div class="muted" style="font-size:12px">${esc(p.client||'')}${p.tareId?' · '+esc(rawName(p.tareId)):''}</div></div></div></td>
     <td>${esc(lineName(p.lineId))}</td><td>${stationDots(p)} <span class="muted" style="font-size:12px">${A(p.stations).length}</span></td><td class="num">${N(p.speed)} шт/мин</td><td class="num">${N(p.setupMin)} мин</td><td class="num">${money(projectCost1000(p))}</td>
     <td>${lr?fdate(lr.dateTo||lr.dateFrom)+' · '+esc(lineName(lr.lineId)):'<span class="muted">—</span>'}</td><td><span class="tag ${p.status==='Активный'?'t-green':p.status==='Архив'?'t-gray':'t-blue'}">${esc(p.status||'')}</span></td></tr>`; }).join('')}
   </table></div>`:'<div class="empty">Проектов пока нет</div>'}</div>`;
@@ -1373,6 +1402,9 @@ function renderProjectEdit(){
       <div class="frow3"><div class="fg"><label class="fl">План: скорость, шт/мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="1" value="${d.speed}" ${ro?'disabled':''} onchange="D('speed',+this.value);renderProjectEdit()"></div>
       <div class="fg"><label class="fl">План: наладка, мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" value="${d.setupMin}" ${ro?'disabled':''} onchange="D('setupMin',+this.value);renderProjectEdit()"></div>
       <div class="fg"><div class="hint" style="margin-top:22px">Обед, уборку, пересменку технолог добавляет в самом плане — у каждого проекта отдельно</div></div></div>
+      <div class="frow"><div class="fg"><label class="fl">Квалификация: настройка линии</label><select class="fi" ${ro?'disabled':''} onchange="D('qualSetup',this.value)"><option value="">— не важно —</option>${QUALS.map(q=>`<option ${q===d.qualSetup?'selected':''}>${q}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">Квалификация: массовое производство</label><select class="fi" ${ro?'disabled':''} onchange="D('qualRun',this.value)"><option value="">— не важно —</option>${QUALS.map(q=>`<option ${q===d.qualRun?'selected':''}>${q}</option>`).join('')}</select></div></div>
+      <div class="hint" style="margin-top:-4px">Уровень сравнивается с квалификацией персонала по участку линии (${esc(Object.values(AREAS).join(' / '))}). Если в смене нет человека нужного уровня — в плане появится красное предупреждение.</div>
     </div>
     <div class="card"><div class="card-h"><div class="card-t">Расчёт</div></div>
       <div class="stat"><span>Выработка в час / смену</span><b>${N(d.speed*60)} / ${N(d.speed*60*sh)} шт</b></div>
@@ -1382,6 +1414,7 @@ function renderProjectEdit(){
       <div class="stat"><span>Станций задействовано</span><b>${d.stations.filter(s=>s.semiId).length}${line?.stations?' из '+line.stations:''}</b></div>
     </div>
   </div>
+  ${projVisualCard(d)}
   <div class="card row-gap"><div class="card-h"><div class="card-t">Станции нанесения — последовательность</div><div class="card-s">№1 — первый пистолет по ходу линии</div><div class="sp"></div>${ro?'':`<button class="btn btn-s btn-sm" onclick="stAdd()">+ Станция</button>`}</div>
     <div class="tw ed"><table><tr><th>№</th><th>Рецептура</th><th>Норма, г / 1000 шт</th><th>Вязкость</th><th>Давление</th><th>Сопло</th><th>Примечание</th><th class="num">${esc(DB.settings.currency||'€')} / 1000</th><th></th></tr>${stRows||'<tr><td colspan="9" class="empty">Добавьте станции</td></tr>'}</table></div></div>
   <div class="grid g11 row-gap">
@@ -1393,6 +1426,94 @@ function renderProjectEdit(){
   ${d.id?`<div class="card"><div class="card-h"><div class="card-t">Наработки: тех. отчёты и настройки машины</div><div class="sp"></div>${can('edit')?`<button class="btn btn-p btn-sm" onclick="openRun('${d.id}')">+ Тех. отчёт</button>`:''}</div>
     ${runRows?`<div class="tw"><table><tr><th>Даты</th><th>Линия</th><th class="num">Годные</th><th class="num">Наладка факт / план</th><th class="num">Скорость факт / план</th><th class="num">Материалы факт / план</th><th>Склад</th></tr>${runRows}</table></div>`:'<div class="empty">Тех. отчётов пока нет</div>'}</div>`:''}`;
 }
+// ═════════════════════════════════════════════
+//  ВИЗУАЛЫ ПРОЕКТОВ: в программе — сжатое превью, оригинал — по ссылке в хранилище компании
+// ═════════════════════════════════════════════
+const IMG_MAX=1200, IMG_THUMB=160;
+function projImages(pid){
+  if(!pid) return [];
+  if(state.mode!=='fb') return A((DB.images||{})[pid]).slice().sort((a,b)=>(a.ts||0)-(b.ts||0));
+  state._img=state._img||{}; const c=state._img[pid];
+  if(c===undefined){ state._img[pid]=null; fdb.ref(`${ROOT}/images/${pid}`).once('value').then(s=>{ const v=s.val()||{}; state._img[pid]=Object.entries(v).filter(([,x])=>x).map(([id,x])=>({...x,id})).sort((a,b)=>(a.ts||0)-(b.ts||0)); if(state.sec==='projectEdit') renderProjectEdit(); })
+    .catch(()=>{ state._img[pid]=[]; }); return null; }
+  return c;
+}
+function toJpeg(src,max,q){ return new Promise((res,rej)=>{ const im=new Image(); im.onerror=()=>rej(new Error('Не удалось открыть изображение (поддерживаются JPG, PNG, WebP)'));
+  im.onload=()=>{ const k=Math.min(1,max/Math.max(im.width,im.height)), w=Math.max(1,Math.round(im.width*k)), h=Math.max(1,Math.round(im.height*k)), c=document.createElement('canvas'); c.width=w; c.height=h;
+    const x=c.getContext('2d'); if(!x) return rej(new Error('Браузер не поддерживает обработку изображений')); x.fillStyle='#fff'; x.fillRect(0,0,w,h); x.drawImage(im,0,0,w,h); res({data:c.toDataURL('image/jpeg',q),w,h,ow:im.width,oh:im.height}); };
+  im.src=src; }); }
+const readFile=f=>new Promise((res,rej)=>{ const r=new FileReader(); r.onerror=()=>rej(new Error('Не удалось прочитать файл')); r.onload=()=>res(r.result); r.readAsDataURL(f); });
+async function imgWrite(pid,put,delIds){
+  const list=A(put), dels=A(delIds);
+  if(state.mode==='fb'){ const up={}; list.forEach(r=>{ const o={...r}; delete o.id; up[`${pid}/${r.id}`]=o; }); dels.forEach(id=>up[`${pid}/${id}`]=null);
+    await fdb.ref(`${ROOT}/images`).update(up);
+    state._img=state._img||{}; let cur=A(state._img[pid]).filter(x=>!dels.includes(x.id)); list.forEach(r=>{ const i=cur.findIndex(x=>x.id===r.id); if(i>=0) cur[i]=r; else cur.push(r); }); state._img[pid]=cur;
+  } else { DB.images=DB.images||{}; let cur=A(DB.images[pid]).filter(x=>!dels.includes(x.id)); list.forEach(r=>{ const i=cur.findIndex(x=>x.id===r.id); if(i>=0) cur[i]=r; else cur.push(r); }); DB.images[pid]=cur; demoSave(); }
+}
+async function setCover(pid,img){ // миниатюра хранится в карточке проекта — для списков и плана
+  const p=byId(DB.projects,pid); if(!p) return; const th=img?(await toJpeg(img.data,IMG_THUMB,.72)).data:'';
+  if(state.draft&&state.draft.id===pid){ state.draft.thumb=th; state.draft.coverId=img?.id||''; }
+  await Store.put('projects',{...clone(p),thumb:th,coverId:img?.id||''});
+}
+async function addProjImages(pid,files){
+  if(!can('edit')||!pid) return; const fs=[...(files||[])].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|gif|bmp)$/i.test(f.name)); if(!fs.length) return toast('Выберите файлы изображений');
+  toast(`Обработка: ${fs.length} шт…`); const add=[];
+  for(const f of fs){ try{ const src=await readFile(f), big=await toJpeg(src,IMG_MAX,.82);
+    add.push({id:uid(),title:f.name.replace(/\.[^.]+$/,''),data:big.data,w:big.w,h:big.h,orig:`${big.ow}×${big.oh}`,file:f.name,fileKb:Math.round(f.size/1024),kb:Math.round(big.data.length*.75/1024),link:'',ts:Date.now()+add.length,by:state.me?.name||''}); }
+    catch(e){ toast(`${f.name}: ${e.message}`); } }
+  if(!add.length) return;
+  try{ await imgWrite(pid,add,[]); }catch(e){ return toast('Не удалось сохранить: '+e.message); }
+  audit(add.map(r=>({col:'images',op:'add',name:`${projName(pid)} · ${r.title}`})));
+  const p=byId(DB.projects,pid); if(p&&!p.thumb) await setCover(pid,add[0]);
+  toast(`Добавлено изображений: ${add.length}`); if(state.sec==='projectEdit') renderProjectEdit();
+}
+function openProjImage(pid,id){
+  const im=A(projImages(pid)).find(x=>x.id===id); if(!im) return; const p=byId(DB.projects,pid), ce=can('edit'), cover=p?.coverId===id;
+  modal(esc(im.title||'Визуал'),`<div style="text-align:center;background:var(--card2);border-radius:12px;padding:8px;margin-bottom:12px"><img src="${im.data}" style="max-width:100%;max-height:62vh;border-radius:8px" alt=""></div>
+    <div class="frow"><div class="fg"><label class="fl">Подпись</label><input class="fi" name="title" value="${esc(im.title||'')}" ${ce?'':'disabled'} placeholder="эскиз, утверждённый образец, фото с линии…"></div>
+    <div class="fg"><label class="fl">Ссылка на оригинал (Google Drive / OneDrive / SharePoint)</label><input class="fi" name="link" value="${esc(im.link||'')}" ${ce?'':'disabled'} placeholder="https://…"></div></div>
+    <div class="hint">${im.link?`<a href="${esc(im.link)}" target="_blank" rel="noopener">↗ Открыть оригинал в полном качестве</a> · `:''}превью ${im.w}×${im.h}, ${N(im.kb)} КБ · исходный файл ${esc(im.file||'')} ${im.orig||''}${im.fileKb?`, ${N(im.fileKb)} КБ`:''} · добавил ${esc(im.by||'')} ${im.ts?fts(im.ts):''}${cover?' · <b>главное фото</b>':''}</div>`,
+  async f=>{ if(!ce) return; const link=(f.link||'').trim(); if(link&&!/^https?:\/\//i.test(link)){ toast('Ссылка должна начинаться с http:// или https://'); return false; }
+    const r={...im,title:(f.title||'').trim()||im.title,link}; if(r.title===im.title&&r.link===(im.link||'')) return;
+    try{ await imgWrite(pid,[r],[]); }catch(e){ toast(e.message); return false; }
+    audit([{col:'images',op:'upd',name:`${projName(pid)} · ${r.title}`,ch:audDiff({title:im.title,link:im.link||''},{title:r.title,link:r.link})}]); if(state.sec==='projectEdit') setTimeout(renderProjectEdit,0); },
+  ce?'Сохранить':'Закрыть', ce?`<button class="btn btn-d" type="button" onclick="delProjImage('${pid}','${id}')">Удалить</button>${cover?'':` <button class="btn btn-s" type="button" onclick="closeModal();setCover('${pid}',A(projImages('${pid}')).find(x=>x.id==='${id}')).then(()=>renderProjectEdit())">★ Сделать главным</button>`}`:'');
+  $('#modalC').classList.add('wide');
+}
+async function delProjImage(pid,id){
+  const im=A(projImages(pid)).find(x=>x.id===id); if(!im||!confirm('Удалить изображение из программы? Оригинал в вашем хранилище не затрагивается.')) return; closeModal();
+  try{ await imgWrite(pid,[],[id]); }catch(e){ return toast(e.message); }
+  audit([{col:'images',op:'del',name:`${projName(pid)} · ${im.title}`}]);
+  const p=byId(DB.projects,pid); if(p&&p.coverId===id) await setCover(pid,A(projImages(pid))[0]||null);
+  toast('Изображение удалено'); if(state.sec==='projectEdit') renderProjectEdit();
+}
+function projVisualCard(d){
+  const ce=can('edit');
+  if(!d.id) return `<div class="card row-gap"><div class="card-h"><div class="card-t">Визуал проекта</div></div><div class="hint">Сохраните проект — после этого можно будет добавить визуал.</div></div>`;
+  const ims=projImages(d.id);
+  return `<div class="card row-gap" ${ce?`ondragover="event.preventDefault();this.classList.add('drop')" ondragleave="this.classList.remove('drop')" ondrop="event.preventDefault();this.classList.remove('drop');addProjImages('${d.id}',event.dataTransfer.files)"`:''}>
+    <div class="card-h"><div class="card-t">Визуал проекта</div><div class="card-s">${ims?`${ims.length} шт`:'загрузка…'}${ce?' · можно перетащить файлы сюда':''}</div><div class="sp"></div>
+    ${ce?`<label class="btn btn-s btn-sm" style="cursor:pointer">＋ Загрузить<input type="file" accept="image/*" multiple style="display:none" onchange="addProjImages('${d.id}',this.files);this.value=''"></label>`:''}</div>
+    ${ims==null?'<div class="empty">Загрузка изображений…</div>':ims.length?`<div class="pv-grid">${ims.map(im=>`<div class="pv" onclick="openProjImage('${d.id}','${im.id}')"><img src="${im.data}" alt="" loading="lazy">${d.coverId===im.id?'<span class="pv-star" title="Главное фото">★</span>':''}<div class="pv-t">${esc(im.title||'')}${im.link?' <span title="Есть ссылка на оригинал">↗</span>':''}</div></div>`).join('')}</div>`
+      :`<div class="empty" style="padding:22px">Изображений пока нет${ce?' — нажмите «Загрузить» или перетащите файлы':''}</div>`}
+    <div class="hint" style="margin-top:8px">В программе хранится сжатое превью (до ${IMG_MAX} px). Оригинал в полном качестве держите в папке компании (Google Drive / OneDrive / SharePoint) и вставьте ссылку — нажмите на изображение.</div></div>`;
+}
+const projThumb=(p,s=34)=>p?.thumb?`<img src="${p.thumb}" alt="" style="width:${s}px;height:${s}px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid var(--line)">`:'';
+// демо: нарисованные визуалы бутылок в цвете проекта
+function demoBottle(p,variant){
+  try{ const c=document.createElement('canvas'); c.width=600; c.height=800; const x=c.getContext('2d'); if(!x) return null;
+    const g=x.createLinearGradient(0,0,0,800); g.addColorStop(0,'#f4f5f8'); g.addColorStop(1,'#dfe3ea'); x.fillStyle=g; x.fillRect(0,0,600,800);
+    x.fillStyle='rgba(0,0,0,.08)'; x.beginPath(); x.ellipse(300,742,150,18,0,0,7); x.fill();
+    const col=p.color||'#888', body=x.createLinearGradient(160,0,440,0); body.addColorStop(0,col); body.addColorStop(.35,'#ffffff'); body.addColorStop(.42,col); body.addColorStop(1,'#111');
+    x.fillStyle=body; x.beginPath(); x.moveTo(265,60); x.lineTo(335,60); x.lineTo(338,200); x.bezierCurveTo(340,270,440,280,440,360); x.lineTo(440,700); x.quadraticCurveTo(440,735,405,735); x.lineTo(195,735); x.quadraticCurveTo(160,735,160,700); x.lineTo(160,360); x.bezierCurveTo(160,280,260,270,262,200); x.closePath(); x.fill();
+    x.globalAlpha=.85; x.fillStyle='#fff'; x.fillRect(185,430,230,170); x.globalAlpha=1; x.strokeStyle=col; x.lineWidth=3; x.strokeRect(195,440,210,150);
+    x.fillStyle='#222'; x.font='bold 30px sans-serif'; x.textAlign='center'; const nm=String(p.name).split(/[«»—]/).filter(s=>s.trim()); x.fillText((nm[1]||nm[0]||'').trim().slice(0,14),300,505); x.font='18px sans-serif'; x.fillText((p.client||'').slice(0,22),300,545);
+    x.fillStyle='#333'; x.fillRect(262,40,76,34);
+    x.font='bold 22px sans-serif'; x.fillStyle='rgba(0,0,0,.45)'; x.textAlign='left'; x.fillText(variant===1?'Утверждённый образец':'Эскиз',24,40);
+    const t=document.createElement('canvas'); t.width=120; t.height=160; t.getContext('2d').drawImage(c,0,0,120,160);
+    return {data:c.toDataURL('image/jpeg',.8),thumb:t.toDataURL('image/jpeg',.72)}; }catch(e){ return null; }
+}
+
 async function saveProject(){
   const d=state.draft; if(!d.name.trim()) return toast('Введите название проекта');
   const rec={...d,id:d.id||uid(),name:d.name.trim(),speed:+d.speed||1,setupMin:+d.setupMin||0,restartMin:d.restartMin===''||d.restartMin==null?'':+d.restartMin,
@@ -1699,6 +1820,7 @@ function printProject(id){
   const nested=[]; semis.forEach(s=>A(s.items).forEach(it=>{ if(it.kind==='semi'&&!semis.some(x=>x.id===it.id)&&!nested.some(x=>x.id===it.id)){ const n=byId(DB.semis,it.id); if(n) nested.push(n); } }));
   const lrs=A(lr?.stations);
   printDoc('Рецептура · '+p.name,`<div class="head"><div><div class="sub">${esc(DB.settings.orgName||'')} · Технологическая карта проекта</div><h1>${esc(p.name)}</h1><div>${esc(p.client||'')}</div></div><div style="text-align:right;font-size:11px">Распечатано: ${fdt(Date.now())}<br>${esc(state.me.name)}</div></div>
+  ${(()=>{ const ims=A(state.mode==='fb'?(state._img||{})[id]:(DB.images||{})[id]), im=ims.find(x=>x.id===p.coverId)||ims[0]; return im?`<div style="text-align:center;margin:6px 0 10px"><img src="${im.data}" style="max-height:260px;max-width:100%;border:1px solid #ccc;border-radius:6px"></div>`:p.thumb?`<div style="text-align:center"><img src="${p.thumb}" style="max-height:120px"></div>`:''; })()}
   <div class="grid"><div><b>Линия</b>${esc(lineName(p.lineId))}</div><div><b>Тара</b>${esc(p.tareId?rawName(p.tareId):'—')}</div><div><b>Скорость (план)</b>${N(p.speed)} шт/мин</div><div><b>Наладка (план)</b>${N(p.setupMin)} мин</div>
   <div><b>Станций</b>${sts.length}</div><div><b>Материалы на 1000 шт</b>${Q(projectKg1000(p),3)} кг</div><div><b>Себестоимость / 1000 шт</b>${money(projectCost1000(p))}</div><div><b>Статус</b>${esc(p.status||'')}</div></div>
   <h2>Последовательность станций нанесения</h2>
@@ -1742,11 +1864,12 @@ function openLineModal(id){
     <div class="frow"><div class="fg"><label class="fl">Схема смен <button type="button" class="link" onclick="closeModal();go('settings')">(конструктор)</button></label><select class="fi" name="scheme" onchange="document.getElementById('lnSh').innerHTML=lineShiftChips(this.value)">${shiftSchemes().map(s=>`<option value="${esc(s.id)}" ${s.id===scId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
     <div class="fg"><label class="fl">Работающие смены</label><div id="lnSh" style="display:flex;gap:6px;flex-wrap:wrap">${lineShiftChips(scId,ws)}</div></div></div>
     <div class="fg"><label class="fl">Рабочие дни</label><div style="display:flex;gap:6px;flex-wrap:wrap">${[1,2,3,4,5,6,0].map(x=>`<label class="chip ${wd.includes(x)?'on':''}" style="cursor:pointer"><input type="checkbox" name="d_${x}" style="display:none" ${wd.includes(x)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${DAYN[x]}</label>`).join('')}</div></div>
-    <div class="fg"><label class="fl">Мощность, шт/смену</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="cap" value="${l.cap}"><div class="hint" style="margin-top:4px">Для плана по умолчанию, пока месяц не утверждён.</div></div>`,
+    <div class="frow"><div class="fg"><label class="fl">Мощность, шт/смену</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="cap" value="${l.cap}"><div class="hint" style="margin-top:4px">Для плана по умолчанию, пока месяц не утверждён.</div></div>
+    <div class="fg"><label class="fl">Участок (для квалификации персонала)</label><select class="fi" name="area">${Object.entries(AREAS).map(([k,v])=>`<option value="${k}" ${lineArea(l)===k?'selected':''}>${v}</option>`).join('')}</select></div></div>`,
   async f=>{ if(!f.name.trim()) return false;
     const sc=shiftSchemes().find(x=>x.id===f.scheme)||shiftSchemes()[0], workShifts=A(sc.shifts).map((_,i)=>i+1).filter(n=>f['sh_'+n]), workDays=[0,1,2,3,4,5,6].filter(x=>f['d_'+x]);
     if(!workShifts.length||!workDays.length){ toast('Выберите хотя бы одну смену и один день'); return false; }
-    await Store.put('lines',{...(id?l:{}),id:id||uid(),name:f.name.trim(),type:f.type,stations:+f.stations||1,cap:+f.cap||0,shifts:workShifts.length,scheme:sc.id,workShifts,workDays}); });
+    await Store.put('lines',{...(id?l:{}),id:id||uid(),name:f.name.trim(),type:f.type,stations:+f.stations||1,cap:+f.cap||0,shifts:workShifts.length,scheme:sc.id,workShifts,workDays,area:f.area}); });
 }
 function lineShiftChips(schemeId,active){ const sc=shiftSchemes().find(x=>x.id===schemeId)||shiftSchemes()[0];
   return A(sc.shifts).map((s,i)=>{ const n=i+1, on=!active||active.includes(n); return `<label class="chip ${on?'on':''}" style="cursor:pointer"><input type="checkbox" name="sh_${n}" style="display:none" ${on?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${n}-я · ${s.from}–${s.to}</label>`; }).join('');
@@ -1836,7 +1959,7 @@ function planQueue(chk){
       const f=itemFact(it), q=+it.qty||0, risk=itemRisk(it,chk[it.id]), s=sched(it,LIVE);
       return `<tr class="${ce?'click':''} ${started&&e>now?'q-run':''} ${e<=now?'q-done':''}" onclick="if(!event.target.closest('button'))openQItem('${it.id}')">
         <td class="q-arr">${ce?`<button class="btn btn-s btn-sm" ${canUp?'':'disabled'} onclick="qMove('${it.id}',-1)" title="Выше в очереди">↑</button><button class="btn btn-s btn-sm" ${canDn?'':'disabled'} onclick="qMove('${it.id}',1)" title="Ниже в очереди">↓</button><div style="margin-top:3px">${e>now?`<button class="btn btn-s btn-sm" onclick="openQSplit('${it.id}')" title="Остановить / разделить: доделать остаток позже или на другой линии">⏸</button>`:''}<button class="btn btn-d btn-sm" onclick="delPlanItem('${it.id}')" title="Удалить из плана">🗑</button></div>`:''}</td>
-        <td><div style="display:flex;gap:8px;align-items:center"><span class="sw" style="background:${pColor(p)};flex-shrink:0"></span><div><b>${esc(p?.name||'—')}</b><small class="muted" style="display:block">${esc(p?.client||'')}${s.pause?` · паузы ${minTxt(s.pause)}`:''}${started&&e>now?' · <b style="color:var(--blue)">в работе</b>':''}</small></div></div></td>
+        <td><div style="display:flex;gap:8px;align-items:center"><span class="sw" style="background:${pColor(p)};flex-shrink:0"></span>${projThumb(p,30)}<div><b>${esc(p?.name||'—')}</b><small class="muted" style="display:block">${esc(p?.client||'')}${s.pause?` · паузы ${minTxt(s.pause)}`:''}${started&&e>now?' · <b style="color:var(--blue)">в работе</b>':''}</small></div></div></td>
         <td>${o?`${esc(o.no)}<small class="muted" style="display:block">сделано ${short(ob.done)} из ${short(ob.qty)}${ob.lines>1?` · ${ob.lines} линии`:''}</small>`:'<span class="muted">—</span>'}</td>
         <td class="num"><b>${N(q)}</b><small class="muted" style="display:block">факт ${N(f.good)}${q?' · '+P(f.good/q*100,0):''}${f.pending?` · ⏳ ${N(f.pending)}`:''}${f.good&&s.rest>0?`<br>осталось ${N(s.rest)}`:''}</small></td>
         <td>${ce?`<input class="fi q-st ${it.notBefore&&!started?'fix':''}" type="datetime-local" value="${toDT(a)}" title="${started?'Фактическое начало':'Задать начало вручную (пусто — сразу за предыдущим)'}" onchange="qSetStart('${it.id}',this.value)">`:fdt(a)}${it.notBefore&&!started?'<small class="muted" style="display:block">📌 задано вручную</small>':''}</td>
@@ -2121,24 +2244,43 @@ function factSegs(lineId,a,b){
   });
   return out;
 }
+// персонал смены и проверка квалификации
+function shiftCrew(lineId,d,n){ return DB.roster.filter(r=>r.date===d&&r.lineId===lineId&&+r.shift===+n).map(r=>byId(DB.people,r.staffId)).filter(Boolean); }
+function shiftQual(l,d,n,sa,sb){
+  const pl=shiftPlan(l.id,sa,sb), crew=shiftCrew(l.id,d,n), area=lineArea(l), best=Math.max(0,...crew.map(s=>qRank(s.qual?.[area])));
+  const need=[]; pl.forEach(x=>{ const p=byId(DB.projects,x.it.projectId); if(!p) return; if(x.setup>0&&p.qualSetup) need.push({w:'наладка',p,q:p.qualSetup}); if(x.run>0&&p.qualRun) need.push({w:'массовое пр-во',p,q:p.qualRun}); });
+  const lacks=need.filter(x=>qRank(x.q)>best), empty=pl.length>0&&!crew.length&&DB.roster.some(r=>r.date===d);
+  const tip=`<b>Персонал смены (${AREAS[area]})</b><br>${crew.map(s=>`${esc(s.name)} — ${esc(s.position||'')} · ${s.qual?.[area]||'без квалиф.'}`).join('<br>')||'никого'}${need.length?'<br><b>Требуется</b><br>'+need.map(x=>`${x.w} «${esc(x.p.name)}»: ${x.q}`).join('<br>'):''}`;
+  return {crew,best,need,lacks,empty,tip};
+}
+async function toggleShift(lineId,d,n,on){
+  if(!can('edit')) return;
+  const cur=dayShifts(lineId,d,LIVE), next=[...new Set(on?[...cur,+n]:cur.filter(x=>x!==+n))].sort(), id=fbKey(lineId+'_'+d);
+  const c=lineCfg(lineId,LIVE), def=c.days.includes(pd(d).getDay())?c.shifts:[], same=JSON.stringify(def.slice().sort())===JSON.stringify(next);
+  await Store.batch([same?{col:'shiftCal',id,del:true}:{col:'shiftCal',obj:{id,lineId,date:d,shifts:next.join(','),by:state.me.name,ts:Date.now()}},logEntry(`${lineName(lineId)}, ${fdate(d)}: ${n}-я смена ${on?'работает':'не работает'}`)]);
+  await qCommit(DB.plan.map(clone),[lineId],[],null);
+}
 // итоги смен — полоска над графиком линии, каждая смена на своём месте по времени
 function shiftStrip(l,d,a,b,pct){
-  const cfg=lineCfg(l.id,LIVE), dow=pd(d).getDay(), now=Date.now(), ca=canApprove(), tot=[];
+  const now=Date.now(), ca=canApprove(), tot=[], warn=[];
   const html=lineShiftDefs(l.id).map(s=>{
     const [sa,sb]=shiftWindow(d,s.n,l.id), u=Math.max(a,sa), v=Math.min(b,sb); if(v<=u) return '';
-    const works=cfg.days.includes(dow)&&cfg.shifts.includes(+s.n), outs=DB.output.filter(r=>r.lineId===l.id&&r.date===d&&+r.shift===+s.n);
+    const works=dayShifts(l.id,d,LIVE).includes(+s.n), outs=DB.output.filter(r=>r.lineId===l.id&&r.date===d&&+r.shift===+s.n);
     const pos=`left:${pct(u,a)};width:${pct(v,u)}`, nm=`См. ${s.n} · ${s.from}–${s.to}`;
     if(!works&&!outs.length) return `<div class="dc-sh off" style="${pos}"><b>${nm}</b> не работает</div>`;
     const pl=shiftPlan(l.id,sa,sb), plan=pl.reduce((x,p)=>x+p.qty,0), ok=outs.filter(outOk), fact=ok.reduce((x,r)=>x+(+r.good||0),0), pend=outs.filter(r=>!outOk(r)), pq=pend.reduce((x,r)=>x+(+r.good||0),0);
     tot.push({plan,fact});
+    const qc=works?shiftQual(l,d,s.n,sa,sb):null;
+    if(qc&&(qc.lacks.length||qc.empty)) warn.push({pos,text:qc.empty?'⚠ Нет людей в графике на эту смену':'⚠ Недостаточно квалификации: '+qc.lacks.map(x=>`${x.w} «${esc(x.p.name)}» — нужен ${x.q}`).join('; ')+` · в смене: ${qc.best?QUALS[qc.best-1]:'нет'}`,tip:qc.tip});
+    const crew=qc&&qc.crew.length?`<span class="cr" data-tip="${qc.tip.replace(/"/g,'&quot;')}">👥 ${qc.crew.length}</span>`:'';
     const down=ok.reduce((x,r)=>x+(+r.downtime||0),0), dn=DB.downs.filter(x=>x.lineId===l.id&&tms(x.start)<sb&&tms(x.end)>sa);
     const rids=[...new Set(pend.map(r=>r.reportId||r.id))];
     const cls=!outs.length?(sb<=now&&plan?'miss':''):plan?(fact>=plan*.95?'ok':fact>=plan*.8?'mid':pend.length&&!fact?'':'bad'):'';
     const tip=`<b>${nm}</b><br>План: ${pl.map(x=>`${esc(projName(x.it.projectId))} — ${N(x.qty)} шт (${hhmm(x.x)}–${hhmm(x.y)}${x.setup?', наладка '+minTxt(x.setup):''}${x.pause?', паузы '+minTxt(x.pause):''})`).join('<br>')||'—'}`
       +`<br>Факт: ${ok.map(r=>`${esc(projName(r.projectId))} — ${N(r.good)} шт, брак ${N(r.defect)}`).join('<br>')||'—'}${down?`<br>Простои: ${minTxt(down)}`:''}${pend.length?`<br>⏳ На проверке: ${N(pq)} шт`:''}${dn.length?'<br>⛔ '+dn.map(x=>esc(x.reason)).join(', '):''}`;
-    return `<div class="dc-sh ${cls}" style="${pos}" data-tip="${tip.replace(/"/g,'&quot;')}"><b>${nm}</b><span>план <b>${plan?N(plan):'—'}</b></span><span>факт <b>${fact?N(fact):outs.length?'0':'—'}</b>${plan&&fact?` <em>${P(fact/plan*100,0)}</em>`:''}</span>${down?`<span class="dn">простой ${minTxt(down)}</span>`:''}${pend.length?`<span class="pd">⏳ ${N(pq)}${ca?rids.map(rid=>` <button class="btn btn-g btn-sm" onclick="event.stopPropagation();approveOutput('${rid}')">✔ Подтвердить</button>`).join(''):' на проверке'}</span>`:''}${!outs.length&&sb<=now&&plan?'<span class="ms">нет отчёта</span>':''}${!outs.length&&sa<now&&sb>now&&plan?'<span>идёт смена</span>':''}</div>`;
+    return `<div class="dc-sh ${cls}" style="${pos}" data-tip="${tip.replace(/"/g,'&quot;')}"><b>${nm}</b><span>план <b>${plan?N(plan):'—'}</b>${pl.filter(x=>x.qty).length>1?` <small class="muted">(${pl.filter(x=>x.qty).map(x=>`${esc(projName(x.it.projectId))}: ${N(x.qty)}`).join(' + ')})</small>`:''}</span><span>факт <b>${fact?N(fact):outs.length?'0':'—'}</b>${new Set(ok.map(r=>r.projectId)).size>1?` <small class="muted">(${ok.map(r=>`${esc(projName(r.projectId))}: ${N(r.good)}`).join(' + ')})</small>`:''}${plan&&fact?` <em>${P(fact/plan*100,0)}</em>`:''}</span>${down?`<span class="dn">простой ${minTxt(down)}</span>`:''}${pend.length?`<span class="pd">⏳ ${N(pq)}${ca?rids.map(rid=>` <button class="btn btn-g btn-sm" onclick="event.stopPropagation();approveOutput('${rid}')">✔ Подтвердить</button>`).join(''):' на проверке'}</span>`:''}${!outs.length&&sb<=now&&plan?'<span class="ms">нет отчёта</span>':''}${!outs.length&&sa<now&&sb>now&&plan?'<span>идёт смена</span>':''}${crew}</div>`;
   }).join('');
-  return {html,tot};
+  return {html,tot,warn};
 }
 function planDayChart(days){
   const D0=dayStartMin(), now=Date.now(), W=864e5, pct=(t,a)=>((t-a)/W*100).toFixed(3)+'%';
@@ -2154,7 +2296,7 @@ function planDayChart(days){
         return itemSegs(it,LIVE).filter(([x,y])=>y>a&&x<b).map(([x,y,k,lb])=>{ const u=Math.max(a,x), v=Math.min(b,y), wd=(v-u)/W*100, q=k==='r'?Math.round((v-u)/60e3*itemSpeed(it)):0;
           const nm=k==='r'?`${esc(p?.name||'—')} · ${N(q)} шт`:k==='s'?'Наладка':esc(lb||'Пауза');
           const tip=`<b>${esc(p?.name||'—')}</b><br>${k==='r'?'Работа · '+N(q)+' шт':k==='s'?'Наладка':'Пауза: '+esc(lb||'')}<br>${fdt(u)} → ${fdt(v)} (${minTxt((v-u)/60e3)})<br>Весь проект: ${N(it.qty)} шт, ${fdt(s.start)} → ${fdt(s.end)}`;
-          return `<div class="dc-seg ${k}" style="left:${pct(u,a)};width:${wd.toFixed(3)}%;${k==='p'?'':`background-color:${col}`}" data-tip="${tip.replace(/"/g,'&quot;')}" onclick="openQItem('${it.id}')">${wd>(k==='r'?4:1.6)?nm:''}</div>`; }).join(''); }).join('');
+          return `<div class="dc-seg ${k}" style="left:${pct(u,a)};width:${wd.toFixed(3)}%;${k==='p'?'':`background-color:${col}`}" data-tip="${tip.replace(/"/g,'&quot;')}" onclick="openQItem('${it.id}')">${wd>(k==='r'?4:1.6)?nm:k==='r'&&wd>1.2?N(q):''}</div>`; }).join(''); }).join('');
       const fs=factSegs(l.id,a,b);
       const fact=fs.map(f=>{ const u=Math.max(a,f.x), v=Math.min(b,f.y), wd=(v-u)/W*100, p=byId(DB.projects,f.pid), ac=actById(f.act), col=actColor(f.act,pColor(p));
         const fq=f.qty!=null?f.qty:(f.rec&&f.rec.projectId===f.pid?+f.rec.good||0:null), lab=ac.cat==='work'?`${esc(p?.name||'—')}${fq!=null?' · '+N(fq)+' шт':''}`:esc(ac.name);
@@ -2163,7 +2305,9 @@ function planDayChart(days){
         return `<div class="dc-seg f ${ac.cat==='setup'?'s':''} ${f.ok?'':'pend'}" style="left:${pct(u,a)};width:${wd.toFixed(3)}%;background-color:${col}" data-tip="${tip.replace(/"/g,'&quot;')}" onclick="openOutputModal('${f.rec?.id}')">${wd>(ac.cat==='work'?4:1.6)?lab:''}</div>`; }).join('');
       const nowX=now>a&&now<b?`<div class="dc-now" style="left:${pct(now,a)}"></div>`:'';
       const sm=shiftStrip(l,d,a,b,pct); let dPlan=0, dFact=0; sm.tot.forEach(t=>{ dPlan+=t.plan; dFact+=t.fact; });
-      return `<div class="dc-line"><div class="dc-lab"><div class="dc-lab-s"><span>${esc(l.name)}</span><small>${dPlan||dFact?`${short(dPlan)} / ${short(dFact)}${dPlan?' · '+P(dFact/dPlan*100,0):''}`:''}</small></div><div><i>план</i></div><div><i>факт</i></div></div><div class="dc-tracks"><div class="dc-sum">${sm.html}${nowX}</div><div class="dc-tr" style="${grid}">${off}${downs}${plan}${nowX}</div><div class="dc-tr" style="${grid}">${off}${fact}${nowX}</div></div></div>`;
+      const ws=dayShifts(l.id,d,LIVE), ce=can('edit'), chks=lineShiftDefs(l.id).map(s=>`<label class="dc-chk ${ws.includes(+s.n)?'on':''}" title="${s.n}-я смена ${s.from}–${s.to}: ${ws.includes(+s.n)?'работает':'не работает'}"><input type="checkbox" ${ws.includes(+s.n)?'checked':''} ${ce?'':'disabled'} onchange="toggleShift('${l.id}','${d}',${s.n},this.checked)">${s.n}</label>`).join('');
+      const qrow=sm.warn.length?`<div class="dc-q">${sm.warn.map(w=>`<div class="dc-qw" style="${w.pos}" data-tip="${(w.tip||'').replace(/"/g,'&quot;')}">${w.text}</div>`).join('')}</div>`:'';
+      return `<div class="dc-line"><div class="dc-lab"><div class="dc-lab-s"><div class="dc-ln"><span>${esc(l.name)}</span><span class="dc-chks">${chks}</span></div><small>${dPlan||dFact?`${short(dPlan)} / ${short(dFact)}${dPlan?' · '+P(dFact/dPlan*100,0):''}`:''}</small></div>${qrow?'<div class="dc-qlab"></div>':''}<div><i>план</i></div><div><i>факт</i></div></div><div class="dc-tracks"><div class="dc-sum">${sm.html}${nowX}</div>${qrow}<div class="dc-tr" style="${grid}">${off}${downs}${plan}${nowX}</div><div class="dc-tr" style="${grid}">${off}${fact}${nowX}</div></div></div>`;
     }).join('');
     return `<div class="dc-day ${isT?'today':''}"><div class="dc-dh"><b>${WD[(dt.getDay()+6)%7]}, ${fdate(d)}</b>${isT?' <span class="tag t-blue">сегодня</span>':''}</div><div class="dc-ticks">${ticks}</div>${rows}</div>`;
   }).join('');
@@ -2750,38 +2894,177 @@ function exportCSV(){
 }
 
 // ═════════════════════════════════════════════
+//  PEOPLE — персонал, квалификация и график работы
+// ═════════════════════════════════════════════
+const teamRank=t=>{ if(!t) return 999; const i=DB.lines.findIndex(l=>lineShort(l)===String(t).split('-')[0]); return i>=0?i:500; };
+const pBest=p=>Math.max(qRank(p.qual?.coating),qRank(p.qual?.printing));
+const personSort=(a,b)=>teamRank(a.team)-teamRank(b.team)||String(a.team||'').localeCompare(String(b.team||''),'ru',{numeric:true})||pBest(b)-pBest(a)||a.name.localeCompare(b.name);
+const POSITIONS=['Оператор линии','Наладчик','Мастер смены','Контролёр ОТК','Технолог','Подсобный рабочий'];
+const lineShort = l => { if(!l) return '?'; if(l.code) return l.code; const nm=String(l.name||''), d=(nm.match(/\d+/)||[''])[0];
+  return d?(lineArea(l)==='printing'?'P':'C')+d:nm.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join(''); };
+const qTag = q => q?`<span class="tag ${q==='Senior'?'t-green':q==='Operator'?'t-blue':'t-gray'}">${q}</span>`:'<span class="muted">—</span>';
+function renderPeople(){
+  const tab=state.peopleTab||'roster', ce=can('edit');
+  const tabs=`<div class="seg">${[['roster','График работы'],['list','Сотрудники']].map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="state.peopleTab='${k}';render()">${l}</button>`).join('')}</div>`;
+  if(tab==='list'){
+    const ps=DB.people.slice().sort((a,b)=>(a.active===false)-(b.active===false)||personSort(a,b));
+    $('#content').innerHTML=`<div class="toolbar">${tabs}<span class="muted" style="font-weight:600">${ps.filter(p=>p.active!==false).length} работают</span><div class="sp"></div>${ce?`<button class="btn btn-p" onclick="openPerson()">+ Сотрудник</button>`:''}</div>
+    <div class="card">${ps.length?`<div class="tw flush"><table><tr><th>Бригада</th><th>ФИО</th><th>Должность</th><th>Доступ в программу</th><th>Coating</th><th>Printing</th><th class="num">Смен за 30 дней</th><th>Заметка</th></tr>
+    ${ps.map(p=>{ const n=DB.roster.filter(r=>r.staffId===p.id&&r.date<=iso(new Date())&&r.date>iso(addD(new Date(),-30))).length;
+      return `<tr class="${ce?'click':''}" style="${p.active===false?'opacity:.5':''}" ${ce?`onclick="openPerson('${p.id}')"`:''}><td>${p.team?`<span class="tag t-blue">${esc(p.team)}</span>`:'<span class="muted">—</span>'}</td><td><b>${esc(p.name)}</b>${p.active===false?' <span class="tag t-gray">не работает</span>':''}</td><td>${esc(p.position||'')}</td><td>${(()=>{ const m=DB.members.find(x=>x.personId===p.id); return m?`<span class="tag ${m.active===false?'t-gray':'t-blue'}">${esc(m.login)} · ${esc(ROLES[m.role]?.n||m.role)}</span>`:'<span class="muted">—</span>'; })()}</td><td>${qTag(p.qual?.coating)}</td><td>${qTag(p.qual?.printing)}</td><td class="num">${n||'—'}</td><td class="muted">${esc(p.note||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Персонал ещё не заведён</div>'}</div>
+    <div class="hint" style="margin-top:10px">Квалификация (Junior / Operator / Senior) задаётся отдельно для участков Coating и Printing. Участок линии указывается в разделе «Линии», требования — в карточке проекта.</div>`;
+    return;
+  }
+  // график
+  const t=new Date(); if(!state.rsFrom) state.rsFrom=iso(t); if(!state.rsTo) state.rsTo=iso(addD(t,13)); if(state.rsTo<state.rsFrom) state.rsTo=state.rsFrom;
+  const days=[]; for(let d=pd(state.rsFrom); iso(d)<=state.rsTo&&days.length<93; d=addD(d,1)) days.push(iso(d));
+  const ps=DB.people.filter(p=>p.active!==false).sort(personSort);
+  const rmap={}; DB.roster.forEach(r=>rmap[r.date+'|'+r.staffId]=r);
+  const slots=d=>DB.lines.flatMap(l=>dayShifts(l.id,d,LIVE).map(n=>({l,n})));
+  const td=iso(new Date());
+  // колонки: дни + итог в конце каждого месяца (или в конце периода)
+  const cols=[]; days.forEach((d,i)=>{ cols.push({d}); const nx=days[i+1]; if(!nx||nx.slice(0,7)!==d.slice(0,7)){ const mDays=days.filter(x=>x.slice(0,7)===d.slice(0,7)); cols.push({sum:d.slice(0,7),days:mDays}); } });
+  const mName=k=>{ const [y,m]=k.split('-').map(Number); return MON[m-1]; };
+  const sumHead=c=>{ const full=c.days.length===new Date(+c.sum.slice(0,4),+c.sum.slice(5,7),0).getDate(); return `<th class="c rs-sum">Σ ${mName(c.sum)}${full?'':`<br><small>${+c.days[0].slice(8)}–${+c.days[c.days.length-1].slice(8)}</small>`}</th>`; };
+  const head=lab=>`<tr><th style="position:sticky;left:0;z-index:2">${lab}</th>${cols.map(c=>{ if(c.sum) return sumHead(c); const d=c.d, dt=pd(d), we=[0,6].includes(dt.getDay()); return `<th class="c ${d===td?'rs-td':''}" style="${we?'color:var(--red)':''}">${WD[(dt.getDay()+6)%7]}<br>${dt.getDate()}.${String(dt.getMonth()+1).padStart(2,'0')}</th>`; }).join('')}</tr>`;
+  const ABS={'Б':'Больничный','О':'Отпуск','Н':'Неявка'};
+  const rows=ps.map(p=>`<tr><td class="rs-name ${p.team&&ps[ps.indexOf(p)-1]?.team!==p.team?'rs-team':''}"><b>${p.team?`<span class="tag t-blue" style="margin-right:4px">${esc(p.team)}</span>`:''}${esc(p.name)}</b><small>${esc(p.position||'')} · C:${p.qual?.coating||'—'} · P:${p.qual?.printing||'—'}</small></td>${cols.map(c=>{
+      if(c.sum){ const h=rosterHours(p.id,c.days); return `<td class="rs-c rs-sum" data-tip="${esc(p.name)} · ${mName(c.sum)}<br>Смен по графику: ${h.n}<br>Часов к оплате: ${Q(h.paid,1)} (смена минус обед)<br>Из них ночных: ${Q(h.night,1)}">${h.n?`<b>${Q(h.paid,0)} ч</b><small>${h.n} см · ночь ${Q(h.night,0)}</small>`:'<span class="muted">—</span>'}</td>`; }
+      const d=c.d, r=rmap[d+'|'+p.id], v=r?(r.absence?'abs|'+r.absence:r.lineId+'|'+r.shift):'';
+      const lbl=r?(r.absence?r.absence:`${esc(lineShort(byId(DB.lines,r.lineId)))}·${r.shift}`):'—';
+      return `<td class="rs-c ${r?(r.absence?'abs':'on'):''} ${d===td?'rs-td':''}">${ce?`<select onchange="setRoster('${d}','${p.id}',this.value)"><option value="">—</option>${slots(d).map(({l,n})=>`<option value="${l.id}|${n}" ${v===l.id+'|'+n?'selected':''}>${esc(lineShort(l))}·${n}</option>`).join('')}${r&&!r.absence&&!slots(d).some(({l,n})=>v===l.id+'|'+n)?`<option value="${v}" selected>${lbl} ⚠</option>`:''}${Object.entries(ABS).map(([k,n])=>`<option value="abs|${k}" ${v==='abs|'+k?'selected':''}>${k} · ${n}</option>`).join('')}</select>`:lbl}</td>`; }).join('')}</tr>`).join('');
+  // покрытие: по каждой линии/смене — сколько людей и хватает ли квалификации под план
+  const cover=DB.lines.flatMap(l=>lineShiftDefs(l.id).map(s=>`<tr><td class="rs-name"><b>${esc(l.name)}</b><small>${s.n}-я смена · ${s.from}–${s.to}</small></td>${cols.map(c=>{
+      if(c.sum) return '<td class="rs-c rs-sum"></td>'; const d=c.d;
+      if(!dayShifts(l.id,d,LIVE).includes(+s.n)) return `<td class="rs-c rs-off ${d===td?'rs-td':''}"></td>`;
+      const [sa,sb]=shiftWindow(d,s.n,l.id), q=shiftQual(l,d,s.n,sa,sb), bad=q.lacks.length||(q.need.length&&!q.crew.length)||(shiftPlan(l.id,sa,sb).length&&!q.crew.length);
+      return `<td class="rs-c ${bad?'rs-bad':q.crew.length?'rs-ok':''} ${d===td?'rs-td':''}" data-tip="${q.tip.replace(/"/g,'&quot;')}${q.lacks.length?'<br><b style=&quot;color:#e5484d&quot;>Не хватает: '+q.lacks.map(x=>x.q+' ('+x.w+')').join(', ')+'</b>':''}">${q.crew.length}${q.best?' · '+QUALS[q.best-1][0]:''}${bad?' ⚠':''}</td>`; }).join('')}</tr>`)).join('');
+  // факт: закрытые смены (есть подтверждённый отчёт смены по этой линии) за период
+  const fr=ps.map(p=>{ const f=rosterFact(p.id,days); return {p,f}; }).filter(x=>x.f.planN||x.f.abs.length);
+  const tot=fr.reduce((a,{f})=>({n:a.n+f.n,paid:a.paid+f.paid,night:a.night+f.night,open:a.open+f.open,abs:a.abs+f.abs.length}),{n:0,paid:0,night:0,open:0,abs:0});
+  const factT=fr.length?`<div class="tw flush"><table><tr><th>Сотрудник</th><th class="num">Смен по графику</th><th class="num">Закрыто смен</th><th class="num">Часов к оплате</th><th class="num">Из них ночных</th><th class="num">Не закрыто</th><th>Отсутствия</th></tr>
+    ${fr.map(({p,f})=>`<tr><td><b>${esc(p.name)}</b> <span class="muted">${esc(p.position||'')}</span></td><td class="num">${f.planN}</td><td class="num"><b>${f.n}</b></td><td class="num"><b>${Q(f.paid,1)}</b></td><td class="num">${Q(f.night,1)}</td><td class="num">${f.open?`<span class="tag t-amber" data-tip="Смена прошла, но отчёт смены не подтверждён:<br>${f.openList.join('<br>')}">${f.open}</span>`:'—'}</td><td>${f.abs.length?Object.entries(f.abs.reduce((a,x)=>(a[x]=(a[x]||0)+1,a),{})).map(([k,n])=>`<span class="tag t-gray" title="${ABS[k]}">${k} × ${n}</span>`).join(' '):'—'}</td></tr>`).join('')}
+    <tr style="font-weight:800;background:var(--card2)"><td>Итого</td><td class="num">${fr.reduce((a,{f})=>a+f.planN,0)}</td><td class="num">${tot.n}</td><td class="num">${Q(tot.paid,1)}</td><td class="num">${Q(tot.night,1)}</td><td class="num">${tot.open||'—'}</td><td>${tot.abs||'—'}</td></tr></table></div>`:'<div class="empty">За период нет смен по графику</div>';
+  const ph=payHours();
+  $('#content').innerHTML=`<div class="toolbar">${tabs}
+    <div style="display:flex;align-items:center;gap:6px;margin-left:6px"><span class="fl" style="margin:0">Период с</span><input class="fi" type="date" value="${state.rsFrom}" style="width:155px" onchange="state.rsFrom=this.value||state.rsFrom;render()"><span class="fl" style="margin:0">по</span><input class="fi" type="date" value="${state.rsTo}" style="width:155px" onchange="state.rsTo=this.value||state.rsTo;render()"><span class="muted" style="font-size:12px;font-weight:700">${days.length} дн.</span></div>
+    <div class="sp"></div>${ce?`<button class="btn btn-s" onclick="rosterCopyWeek()" title="Каждому сотруднику на пустые дни периода ставится то же, что было ровно неделю назад">⧉ Как неделю назад</button>`:''}</div>
+  <div class="card row-gap" style="min-width:0"><div class="card-h"><div class="card-t">График работы</div><div class="card-s">в ячейке — линия·смена: ${DB.lines.map(l=>`<b>${esc(lineShort(l))}</b> ${esc(l.name)}`).join(' · ')} · Б/О/Н — больничный, отпуск, неявка · Σ — план часов к оплате за месяц</div></div>
+    ${ps.length?`<div class="tw flush rs" style="overflow-x:auto;max-width:100%"><table>${head('Сотрудник')}${rows}</table></div>`:'<div class="empty">Сначала заведите сотрудников на вкладке «Сотрудники»</div>'}</div>
+  <div class="card row-gap" style="min-width:0"><div class="card-h"><div class="card-t">Факт за период — закрытые смены</div><div class="card-s">${fdate(state.rsFrom)} — ${fdate(state.rsTo)} · смена закрыта, когда отчёт смены по линии подтверждён · к оплате: смена минус ${ph.brk} мин обеда · ночные: ${ph.nf}–${ph.nt}</div></div>${factT}</div>
+  <div class="card" style="min-width:0"><div class="card-h"><div class="card-t">Покрытие смен</div><div class="card-s">людей в смене · лучший уровень (J/O/S) по участку линии · ⚠ — не хватает квалификации под план или нет людей</div></div>
+    <div class="tw flush rs" style="overflow-x:auto;max-width:100%"><table>${head('Линия / смена')}${cover}</table></div></div>`;
+}
+// часы смены для оплаты: длина смены минус обед; ночные — пересечение с ночным интервалом
+function payHours(){ const s=DB.settings||{}; return {brk:s.payBreakMin??60, nf:s.nightFrom||'22:00', nt:s.nightTo||'06:00'}; }
+function shiftPay(r){
+  const [a,b]=shiftWindow(r.date,r.shift,r.lineId), ph=payHours(), len=(b-a)/H, paid=Math.max(0,len-(len>6?ph.brk/60:0));
+  let night=0; for(let d=addD(pd(r.date),-1); d.getTime()<b; d=addD(d,1)){ const na=d.getTime()+hm(ph.nf)*60e3; let nb=d.getTime()+hm(ph.nt)*60e3; if(nb<=na) nb+=864e5; night+=Math.max(0,Math.min(b,nb)-Math.max(a,na))/H; }
+  return {len,paid,night:Math.min(night,paid)};
+}
+function rosterHours(sid,days){ const set=new Set(days); let n=0,paid=0,night=0; DB.roster.forEach(r=>{ if(r.staffId!==sid||!set.has(r.date)||r.absence||!r.lineId) return; const x=shiftPay(r); n++; paid+=x.paid; night+=x.night; }); return {n,paid,night}; }
+function shiftClosed(r){ return DB.output.some(o=>o.date===r.date&&o.lineId===r.lineId&&+o.shift===+r.shift&&o.approved!==false); }
+function rosterFact(sid,days){ const set=new Set(days), now=Date.now(); let n=0,paid=0,night=0,open=0,planN=0; const abs=[], openList=[];
+  DB.roster.forEach(r=>{ if(r.staffId!==sid||!set.has(r.date)) return; if(r.absence){ abs.push(r.absence); return; } if(!r.lineId) return; planN++;
+    if(shiftClosed(r)){ const x=shiftPay(r); n++; paid+=x.paid; night+=x.night; } else if(shiftWindow(r.date,r.shift,r.lineId)[1]<=now){ open++; openList.push(`${fdate(r.date)} ${esc(lineShort(byId(DB.lines,r.lineId)))}·${r.shift}`); } });
+  return {n,paid,night,open,openList,planN,abs}; }
+async function setRoster(d,sid,v){
+  const id=fbKey(d+'_'+sid);
+  if(!v){ await Store.batch([{col:'roster',id,del:true}]); return; }
+  const [a,b]=v.split('|');
+  if(a==='abs'){ await Store.batch([{col:'roster',obj:{id,date:d,staffId:sid,lineId:'',shift:0,absence:b,by:state.me.name}}]); return; }
+  await Store.batch([{col:'roster',obj:{id,date:d,staffId:sid,lineId:a,shift:+b,by:state.me.name}}]);
+}
+async function rosterCopyWeek(){
+  const list=[]; const have=new Set(DB.roster.map(r=>r.date+'|'+r.staffId));
+  for(let d=pd(state.rsFrom); iso(d)<=state.rsTo; d=addD(d,1)){ const ds=iso(d), src=iso(addD(d,-7));
+    DB.roster.filter(r=>r.date===src&&r.lineId).forEach(r=>{ if(have.has(ds+'|'+r.staffId)) return; if(!dayShifts(r.lineId,ds,LIVE).includes(+r.shift)) return; const id=fbKey(ds+'_'+r.staffId); list.push({col:'roster',obj:{...r,id,date:ds,by:state.me.name}}); have.add(ds+'|'+r.staffId); }); }
+  if(!list.length) return toast('Нечего копировать — дни уже заполнены или неделю назад было пусто');
+  await Store.batch(list); toast(`Заполнено назначений: ${list.length}`);
+}
+function openPerson(id){
+  const p=id?byId(DB.people,id):{name:'',position:POSITIONS[0],qual:{},active:true,note:''};
+  const qs=(k)=>`<select class="fi" name="q_${k}"><option value="">—</option>${QUALS.map(q=>`<option ${q===p.qual?.[k]?'selected':''}>${q}</option>`).join('')}</select>`;
+  modal(id?'Сотрудник':'Новый сотрудник',`<div class="fg"><label class="fl">ФИО</label><input class="fi" name="name" value="${esc(p.name)}" autofocus></div>
+    <div class="fg"><label class="fl">Должность</label><input class="fi" name="position" list="posList" value="${esc(p.position||'')}"><datalist id="posList">${POSITIONS.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
+    <div class="fg"><label class="fl">Бригада</label><input class="fi" name="team" list="teamList" value="${esc(p.team||'')}" placeholder="например C1-A"><datalist id="teamList">${[...new Set(DB.people.map(x=>x.team).filter(Boolean))].sort().map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
+    <div class="frow"><div class="fg"><label class="fl">Квалификация · Coating</label>${qs('coating')}</div><div class="fg"><label class="fl">Квалификация · Printing</label>${qs('printing')}</div></div>
+    <div class="fg"><label class="fl">Заметка</label><input class="fi" name="note" value="${esc(p.note||'')}" placeholder="Допуски, ограничения…"></div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" name="active" ${p.active!==false?'checked':''}> Работает</label>`,
+  async f=>{ if(!f.name.trim()){ toast('Укажите ФИО'); return false; }
+    await Store.put('people',{...(id?clone(p):{}),id:id||uid(),name:f.name.trim(),position:f.position.trim(),team:(f.team||'').trim(),qual:{coating:f.q_coating||'',printing:f.q_printing||''},note:f.note,active:!!f.active}); },'Сохранить',
+  id?`<button class="btn btn-d" type="button" onclick="if(confirm('Удалить сотрудника? Его смены в графике тоже удалятся.')){ closeModal(); Store.batch([{col:'people',id:'${id}',del:true},...DB.roster.filter(r=>r.staffId==='${id}').map(r=>({col:'roster',id:r.id,del:true}))]); }">Удалить</button>`:'');
+}
+
+// ═════════════════════════════════════════════
 //  STAFF
 // ═════════════════════════════════════════════
 function renderStaff(){
-  $('#content').innerHTML = `<div class="grid g2">
-  <div class="card"><div class="card-h"><div class="card-t">Сотрудники</div><div class="sp"></div><button class="btn btn-p btn-sm" onclick="openUserModal()">+ Сотрудник</button></div>
-    <div class="tw"><table><tr><th>Сотрудник</th><th>Логин</th><th>Роль</th><th></th></tr>
-    ${DB.members.map(u=>`<tr><td><div style="display:flex;align-items:center;gap:10px"><div class="av" style="background:${avColor(u.id)};width:30px;height:30px;font-size:12px">${esc((u.name||'?')[0].toUpperCase())}</div><b>${esc(u.name)}</b>${u.id===state.me.id?'<span class="muted">(вы)</span>':''}</div></td>
-      <td class="muted">${esc(u.login||u.id)}</td><td><span class="tag ${u.role==='admin'?'t-blue':'t-gray'}">${esc(ROLES[u.role]?.n||u.role)}</span></td>
-      <td><button class="btn btn-s btn-sm" onclick="openUserModal('${u.id}')">✎</button> ${u.id!==state.me.id?`<button class="btn btn-d btn-sm" onclick="removeMember('${u.id}')">✕</button>`:''}</td></tr>`).join('')}
-    </table></div></div>
-  <div class="card"><div class="card-h"><div class="card-t">Роли</div></div>${Object.values(ROLES).map(r=>`<div style="padding:9px 0;border-bottom:1px solid var(--line)"><b>${r.n}</b><div class="hint">${r.d}</div></div>`).join('')}
-    <div class="hint" style="margin-top:12px">Сотрудник входит по логину и паролю, которые вы здесь задали.</div></div></div>`;
+  const fb=state.mode==='fb', ms=DB.members.slice().sort((a,b)=>(a.active===false)-(b.active===false)||(ROLES[b.role]?.lvl||0)-(ROLES[a.role]?.lvl||0)||String(a.name).localeCompare(b.name));
+  const perm=[['Просмотр плана, выпуска, склада, отчётов','✔','✔','✔','✔','✔'],['Внесение выпуска за смену','✔','✔','✔','✔','—'],['Подтверждение отчётов смен (факт в плане)','✔','✔','—','—','—'],
+    ['План, проекты, рецептуры, сырьё, склад, тех. отчёты, персонал','✔','✔','✔','—','—'],['Утверждение плана месяца, настройки','✔','—','—','—','—'],['Учётные записи и пароли сотрудников','✔','—','—','—','—']];
+  $('#content').innerHTML = secBanner()+`<div>
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Учётные записи</div><div class="card-s">${ms.filter(u=>u.active!==false).length} активных</div><div class="sp"></div><button class="btn btn-p btn-sm" onclick="openUserModal()">+ Доступ сотруднику</button></div>
+    <div class="tw"><table><tr><th>Сотрудник</th><th>Логин</th><th>Роль</th><th>Персонал</th><th></th></tr>
+    ${ms.map(u=>{ const p=byId(DB.people,u.personId); return `<tr style="${u.active===false?'opacity:.5':''}"><td><div style="display:flex;align-items:center;gap:10px"><div class="av" style="background:${avColor(u.id)};width:30px;height:30px;font-size:12px">${esc((u.name||'?')[0].toUpperCase())}</div><b>${esc(u.name)}</b>${u.id===state.me.id?' <span class="muted">(вы)</span>':''}${u.active===false?' <span class="tag t-gray">отключён</span>':''}</div></td>
+      <td class="muted">${esc(u.login||u.id)}</td><td><span class="tag ${u.role==='admin'?'t-blue':u.role==='technologist'?'t-green':'t-gray'}">${esc(ROLES[u.role]?.n||u.role)}</span></td><td class="muted">${p?esc(p.name):'—'}</td>
+      <td style="white-space:nowrap"><button class="btn btn-s btn-sm" onclick="openUserModal('${u.id}')">✎</button></td></tr>`; }).join('')||'<tr><td colspan="5" class="muted">Нет учётных записей</td></tr>'}
+    </table></div>
+    <div class="hint" style="margin-top:12px">${fb?'Пароли хранятся в Firebase Authentication в зашифрованном виде — в базе их нет, администратор их не видит. Забыл пароль — администратор задаёт новый (кнопка ✎ → «Новый пароль»). Свой пароль каждый меняет сам: кнопка 🔑 внизу меню.':'Демо-режим: пароли не используются, роль можно переключать вверху справа.'}</div></div>
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Роли и права</div></div>
+    <div class="tw"><table><tr><th></th>${['admin','technologist','master','operator','viewer'].map(r=>`<th class="c" style="text-align:center">${ROLES[r].n}</th>`).join('')}</tr>
+    ${perm.map(r=>`<tr><td class="wrap" style="white-space:normal">${r[0]}</td>${r.slice(1).map(x=>`<td style="text-align:center;font-weight:800;color:${x==='✔'?'var(--green)':'var(--text3)'}">${x}</td>`).join('')}</tr>`).join('')}</table></div>
+    <div class="hint" style="margin-top:10px">Права проверяет не только программа, но и сама база (правила Firebase): оператор физически не может изменить план или подтвердить свой отчёт.</div></div></div>
+  ${fb&&can('admin')?`<div class="card" style="margin-top:14px"><div class="card-h"><div class="card-t">Защита базы</div><div class="card-s">${_secure===true?'<span class="tag t-green">✔ база закрыта — читать и писать могут только сотрудники с доступом</span>':_secure===false?'<span class="tag t-red">⚠ база открыта — примените правила</span>':'<span class="tag t-gray">проверка…</span>'}</div></div>
+    <div class="hint">Правила для блока <b>"prod"</b> лежат в файле <b>firebase-prod-rules.json</b> (рядом с index.html). Firebase Console → Realtime Database → Rules: замените только блок <code>"prod": { … }</code>, остальные блоки (finflow, memorydeck…) не трогайте → Publish.</div></div>`:''}`;
 }
 function openUserModal(id){
-  const u=id?byId(DB.members,id):{name:'',login:'',password:'',role:'operator'};
-  modal(id?'Сотрудник':'Новый сотрудник',`
-    <div class="fg"><label class="fl">Имя</label><input class="fi" name="name" value="${esc(u.name)}" autofocus></div>
-    <div class="frow"><div class="fg"><label class="fl">Логин</label><input class="fi" name="login" value="${esc(u.login||u.id||'')}" ${id?'disabled':''} placeholder="olga" autocapitalize="off"></div>
-    <div class="fg"><label class="fl">Пароль</label><input class="fi" name="password" value="${esc(u.password||'')}" placeholder="минимум 4 символа"></div></div>
-    <div class="fg"><label class="fl">Роль</label><select class="fi" name="role" ${id===state.me.id?'disabled':''}>${Object.entries(ROLES).map(([k,v])=>`<option value="${k}" ${u.role===k?'selected':''}>${v.n} — ${v.d}</option>`).join('')}</select></div>`,
+  const fb=state.mode==='fb', u=id?byId(DB.members,id):{name:'',login:'',role:'operator',active:true,personId:''}, self=id===state.me.id;
+  const ppl=DB.people.filter(p=>p.active!==false).sort((a,b)=>a.name.localeCompare(b.name));
+  modal(id?'Доступ сотрудника':'Новый доступ',`
+    <div class="fg"><label class="fl">Сотрудник из персонала (необязательно)</label><select class="fi" name="personId" onchange="const p=byId(DB.people,this.value);const n=document.querySelector('#mForm [name=name]');if(p&&!n.value)n.value=p.name">${opts(ppl,u.personId,p=>p.name+(p.position?' · '+p.position:''),'— не связан —')}</select></div>
+    <div class="fg"><label class="fl">Имя (как будет видно в журналах)</label><input class="fi" name="name" value="${esc(u.name||'')}" autofocus></div>
+    <div class="frow"><div class="fg"><label class="fl">Логин</label><input class="fi" name="login" value="${esc(u.login||'')}" ${id?'disabled':''} placeholder="olga" autocapitalize="off"></div>
+    ${id?`<div class="fg"><label class="fl">Пароль</label>${fb&&!self?`<button type="button" class="btn btn-s" style="width:100%" onclick="resetUserPassword('${id}')">🔑 Задать новый пароль</button>`:`<div class="hint" style="padding-top:10px">${self?'свой пароль — кнопка 🔑 внизу меню':'в демо не используется'}</div>`}</div>`
+      :`<div class="fg"><label class="fl">Пароль (мин. 6)</label><input class="fi" name="password" type="text" autocomplete="off" placeholder="сообщите сотруднику лично"></div>`}</div>
+    <div class="fg"><label class="fl">Роль</label><select class="fi" name="role" ${self?'disabled':''}>${Object.entries(ROLES).map(([k,v])=>`<option value="${k}" ${u.role===k?'selected':''}>${v.n} — ${v.d}</option>`).join('')}</select></div>
+    ${id&&!self?`<label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" name="active" ${u.active!==false?'checked':''}> Доступ включён (снимите галочку — сотрудник больше не сможет войти)</label>`:''}`,
   async f=>{
-    const login=(id||f.login||'').trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
-    if(!(f.name||'').trim()||!login){ toast('Нужны имя и логин (латиница, цифры)'); return false; }
-    if(!id&&byId(DB.members,login)){ toast('Такой логин уже есть'); return false; }
-    if((f.password||'').length<4){ toast('Пароль минимум 4 символа'); return false; }
-    const rec={...(id?u:{}),id:login,login,name:f.name.trim(),password:f.password,role:id===state.me.id?u.role:f.role};
-    await Store.user(rec);
-    if(login===state.me.id){ state.me.name=rec.name; $('#meName').textContent=rec.name; }
-    toast('Сохранено');
-  });
+    const name=(f.name||'').trim(); if(!name){ toast('Укажите имя'); return false; }
+    if(id){ const rec={...clone(u),name,personId:f.personId||'',role:self?u.role:f.role,active:self?true:!!f.active}; delete rec.id; delete rec.password;
+      if(fb){ try{ await fdb.ref(`${ROOT}/users/${id}`).set(fbSafe(rec)); }catch(e){ toast(authErr(e)); return false; } }
+      else { const i=DB.members.findIndex(m=>m.id===id); DB.members[i]={...rec,id}; demoSave(); }
+      { const ch=audDiff(u,{...u,...rec}); if(ch.length) audit([{col:'users',op:'upd',name:u.login,ch}]); }
+      if(self){ state.me.name=name; $('#meName').textContent=name; } toast('Сохранено'); return; }
+    const login=cleanLogin(f.login); if(!login){ toast('Логин: латиница, цифры, - и _'); return false; }
+    if(DB.members.some(m=>m.login===login)){ toast('Такой логин уже есть'); return false; }
+    if(!fb){ DB.members.push({id:login,login,name,role:f.role,active:true,personId:f.personId||''}); audit([{col:'users',op:'add',name:`${login} · ${name} · ${ROLES[f.role]?.n||f.role}`}]); demoSave(); toast('Доступ создан (демо)'); return; }
+    if((f.password||'').length<6){ toast('Пароль минимум 6 символов'); return false; }
+    try{ const ix=(await fdb.ref(`${ROOT}/logins/${login}`).once('value')).val(); if(ix){ toast('Такой логин уже занят'); return false; }
+      let n=0, email=loginEmail(login), uid;
+      for(;;){ try{ uid=await createAuthUser(email,f.password); break; }catch(e){ if(/email-already-in-use/.test(e.code||'')&&n<20){ n++; email=loginEmail(login,n); continue; } throw e; } }
+      await fdb.ref(ROOT).update({[`users/${uid}`]:fbSafe({uid,login,name,role:f.role,active:true,personId:f.personId||'',email,created:Date.now(),by:state.me.name}),[`logins/${login}`]:{email,uid}});
+      audit([{col:'users',op:'add',name:`${login} · ${name} · ${ROLES[f.role]?.n||f.role}`}]); toast(`Доступ создан: логин «${login}»`);
+    }catch(e){ toast(authErr(e)); return false; }
+  },id?'Сохранить':'Создать доступ',id&&!self?`<button class="btn btn-d" type="button" onclick="removeMember('${id}')">Удалить доступ</button>`:'');
 }
-async function removeMember(id){ if(!confirm('Удалить сотрудника?')) return; await Store.user(null,id); toast('Сотрудник удалён'); }
+async function resetUserPassword(id){
+  const u=byId(DB.members,id); if(!u) return;
+  const p=prompt(`Новый пароль для «${u.name}» (логин ${u.login}), минимум 6 символов:`); if(p==null) return;
+  if(p.length<6) return toast('Минимум 6 символов');
+  try{ let n=1, email, uid; for(;;){ email=loginEmail(u.login,Date.now().toString(36)+n); try{ uid=await createAuthUser(email,p); break; }catch(e){ if(/email-already-in-use/.test(e.code||'')&&n<5){ n++; continue; } throw e; } }
+    const rec={...clone(u),uid,email}; delete rec.id;
+    await fdb.ref(ROOT).update({[`users/${uid}`]:fbSafe(rec),[`users/${id}`]:null,[`logins/${u.login}`]:{email,uid}});
+    audit([{col:'users',op:'pwd',name:`${u.login} · ${u.name} (задал администратор)`}]); closeModal(); toast(`Новый пароль задан. Сообщите его сотруднику лично.`);
+  }catch(e){ toast(authErr(e)); }
+}
+async function removeMember(id){
+  const u=byId(DB.members,id); if(!u||id===state.me.id) return;
+  if(!confirm(`Удалить доступ «${u.name}»? Сотрудник не сможет войти. Записи в журналах останутся.`)) return; closeModal();
+  if(state.mode==='fb'){ try{ await fdb.ref(ROOT).update({[`users/${id}`]:null,[`logins/${u.login}`]:null}); }catch(e){ return toast(authErr(e)); } }
+  else { DB.members=DB.members.filter(m=>m.id!==id); demoSave(); render(); }
+  audit([{col:'users',op:'del',name:`${u.login} · ${u.name}`}]); toast('Доступ удалён');
+}
 
 // ═════════════════════════════════════════════
 //  SETTINGS
@@ -2797,7 +3080,7 @@ function schemeDel(btn){ const s=btn.closest('.scheme'), id=s.dataset.id; if(DB.
 const actRow = a => `<div class="act-row" data-id="${esc(a.id||'')}"><span class="sw" style="background:${ACAT[a.cat||'down'].c};width:10px;height:26px;border-radius:3px;margin:0"></span><input class="fi act-n" value="${esc(a.name||'')}" placeholder="Название"><select class="fi act-c" onchange="this.parentNode.querySelector('.sw').style.background=ACAT[this.value].c">${Object.entries(ACAT).map(([k,v])=>`<option value="${k}" ${k===(a.cat||'down')?'selected':''}>${v.n}</option>`).join('')}</select><button type="button" class="btn btn-s btn-sm" onclick="this.parentNode.remove()">✕</button></div>`;
 function renderSettings(){
   const s=DB.settings, wd=s.workDays||[1,2,3,4,5];
-  $('#content').innerHTML = `<div class="grid g11">
+  $('#content').innerHTML = secBanner()+`<div class="grid g11">
   <div>
   <div class="card row-gap"><div class="card-h"><div class="card-t">Конструктор смен</div><div class="card-s">схему назначаете линии в разделе «Линии»</div><div class="sp"></div><button class="btn btn-s btn-sm" onclick="document.getElementById('schemes').insertAdjacentHTML('beforeend',schemeBlock({id:'sc'+uid(),name:'Новая схема',shifts:[{from:'07:00',to:'19:00'},{from:'19:00',to:'07:00'}]}));scRenumAll()">+ Схема смен</button></div>
     <div id="schemes">${shiftSchemes().map(schemeBlock).join('')}</div></div>
@@ -2811,6 +3094,8 @@ function renderSettings(){
     <div class="fg"><label class="fl">Валюта</label><select class="fi" id="sCur">${['€','₴','$','zł','Kč','₸','₽'].map(c=>`<option ${c===(s.currency||'€')?'selected':''}>${c}</option>`).join('')}</select></div></div>
     <div class="frow"><div class="fg"><label class="fl">Цель по переналадке, %</label><input class="fi" id="sSet" type="text" inputmode="decimal" data-num="1" step="0.5" value="${s.setupTarget??5}"></div>
     <div class="fg"><label class="fl">Цель по браку, %</label><input class="fi" id="sDef" type="text" inputmode="decimal" data-num="1" step="0.1" value="${s.defectTarget??2}"></div></div>
+    <div class="frow3"><div class="fg"><label class="fl">Обед в смене (не оплачивается), мин</label><input class="fi" id="sPayBrk" type="text" inputmode="decimal" data-num="1" value="${s.payBreakMin??60}"></div>
+    <div class="fg"><label class="fl">Ночные часы с</label><input class="fi" id="sNf" type="time" value="${s.nightFrom||'22:00'}"></div><div class="fg"><label class="fl">по</label><input class="fi" id="sNt" type="time" value="${s.nightTo||'06:00'}"></div></div>
     <div class="frow"><div class="fg"><label class="fl">Коэфф. плана от мощности</label><input class="fi" id="sK" type="text" inputmode="decimal" data-num="1" step="0.01" min="0.1" max="1.2" value="${s.planFactor??.85}"></div>
     <div class="fg"><label class="fl">Рабочие дни (план по мощности)</label><div style="display:flex;gap:4px;flex-wrap:wrap">${WD.map((d,i)=>{ const n=(i+1)%7; return `<label class="chip ${wd.includes(n)?'on':''}" style="cursor:pointer;padding:6px 8px"><input type="checkbox" value="${n}" ${wd.includes(n)?'checked':''} style="display:none" class="sWD" onchange="this.parentNode.classList.toggle('on',this.checked)">${d}</label>`; }).join('')}</div></div></div>
     <div class="frow"><div class="fg"><label class="fl">Причины брака</label><textarea class="fi" id="sR" rows="7">${esc((s.defectReasons||[]).join('\n'))}</textarea></div>
@@ -2832,7 +3117,7 @@ async function saveSettings(){
   const activities=[...document.querySelectorAll('.act-row')].map(r=>({id:r.dataset.id||('a'+uid()),name:r.querySelector('.act-n').value.trim(),cat:r.querySelector('.act-c').value})).filter(a=>a.name);
   if(!activities.some(a=>a.cat==='work')) return toast('Нужен хотя бы один вид с категорией «Работа»');
   const s={...DB.settings,orgName:$('#sOrg').value.trim(),currency:$('#sCur').value,planFactor:+$('#sK').value||.85,setupTarget:+$('#sSet').value||5,defectTarget:+$('#sDef').value||2,
-    workDays:[...document.querySelectorAll('.sWD:checked')].map(x=>+x.value),defectReasons:lines('#sR'),downReasons:lines('#sDR'),machineParams:lines('#sM'),shiftSchemes:schemes,activities};
+    workDays:[...document.querySelectorAll('.sWD:checked')].map(x=>+x.value),payBreakMin:+String($('#sPayBrk').value).replace(',','.')||0,nightFrom:$('#sNf').value||'22:00',nightTo:$('#sNt').value||'06:00',defectReasons:lines('#sR'),downReasons:lines('#sDR'),machineParams:lines('#sM'),shiftSchemes:schemes,activities};
   delete s.shifts;
   await Store.settings(s); toast('Настройки сохранены');
 }
@@ -2864,7 +3149,7 @@ function buildNav(){
 function go(sec){ if(!SECTIONS.find(s=>s.id===sec)?.hidden){ state.draft=null; state.back=null; } state.q=''; state.sec=sec; toggleSide(false); render(); scrollTo(0,0); }
 function render(){
   const tp=$('#tip'); if(tp) tp.style.display='none'; const tpp=$('#tipPin'); if(tpp) tpp.style.display='none';
-  _sch.clear(); _res=null; _wo=null; _factMap=null;
+  _sch.clear(); _res=null; _wo=null; _factMap=null; _calMap=null;
   let s=SECTIONS.find(x=>x.id===state.sec);
   if(!s||(s.admin&&!can('admin'))){ s=SECTIONS[1]; state.sec=s.id; }
   $('#pageTitle').textContent=s.t; buildNav(); $('#app').classList.toggle('full',s.id==='plan');
@@ -2877,6 +3162,7 @@ function enterApp(){
   $('#meName').textContent=state.me.name; $('#meRole').textContent=ROLES[state.me.role]?.n||'';
   $('#meAv').textContent=(state.me.name||'?')[0].toUpperCase(); $('#meAv').style.background=avColor(state.me.id||state.me.name);
   $('#orgName').textContent=DB.settings.orgName||'';
+  { const dl=$('#demoLink'); if(dl){ if(state.mode==='demo'){ dl.textContent='↩ Выйти из демо'; dl.href=location.pathname; dl.removeAttribute('target'); dl.title='Вернуться к рабочей базе'; } else { dl.textContent='🧪 Демо-песочница'; dl.href='?demo'; dl.target='_blank'; } } }
   $('#modeTag').className='mode '+(state.mode==='demo'?'demo':'live'); $('#modeTag').textContent=state.mode==='demo'?'ДЕМО':'ONLINE';
   const rs=$('#roleSwitch'); if(state.mode==='demo'){ rs.style.display=''; rs.innerHTML=Object.entries(ROLES).map(([k,v])=>`<option value="${k}" ${state.me.role===k?'selected':''}>Роль: ${v.n}</option>`).join(''); } else rs.style.display='none';
   if(!state.from) setPreset('month'); else render();
@@ -2887,7 +3173,7 @@ function demoRole(r){ state.me.role=r; $('#meRole').textContent=ROLES[r].n; rend
 //  STORE
 // ═════════════════════════════════════════════
 function normalize(db){
-  COLS.forEach(c=>db[c]=A(db[c]));
+  COLS.forEach(c=>db[c]=A(db[c])); db.images=db.images&&typeof db.images==='object'?db.images:{}; db.audit=A(db.audit).map(e=>({...e,items:A(e.items).map(i=>({...i,ch:A(i.ch)}))}));
   db.projects.forEach(p=>p.stations=A(p.stations));
   db.semis.forEach(s=>{ s.items=A(s.items); s.history=A(s.history); });
   db.runs.forEach(r=>{ r.stations=A(r.stations); r.settings=A(r.settings); r.rawFact=r.rawFact||{}; r.writtenMap=r.writtenMap||{}; r.log=A(r.log); r.outputIds=A(r.outputIds); r.sec=r.sec||{}; });
@@ -2906,23 +3192,80 @@ function applyLocal(list){
     else if(x.del) DB[x.col]=DB[x.col].filter(o=>o.id!==x.id);
     else { const obj=clone(x.obj), i=DB[x.col].findIndex(o=>o.id===obj.id); if(i>=0) DB[x.col][i]=obj; else DB[x.col].push(obj); }
   });
-  normalize(DB); _factMap=null; _sch.clear();
+  normalize(DB); _factMap=null; _calMap=null; _sch.clear();
 }
+// ═════════════════════════════════════════════
+//  ЖУРНАЛ ИЗМЕНЕНИЙ (аудит): кто, что, когда — запись только добавляется, изменить или удалить нельзя
+// ═════════════════════════════════════════════
+const AUD_COL={images:'Визуалы проектов',lines:'Линии',projects:'Проекты',raw:'Сырьё',semis:'Полуфабрикаты',orders:'Заказы',output:'Отчёты смен',runs:'Тех. отчёты',plan:'План',supplies:'Поставки',moves:'Склад',downs:'Простои',scenarios:'Моделирование',shiftCal:'Календарь смен',people:'Персонал',roster:'График работы',settings:'Настройки',approved:'Утверждение плана',users:'Доступы',session:'Вход',products:'Проекты',stock:'Склад'};
+const AUD_OP={add:['Добавил','t-green'],upd:['Изменил','t-blue'],del:['Удалил','t-red'],set:['Записал','t-blue'],login:['Вошёл','t-gray'],pwd:['Сменил пароль','t-amber']};
+const AUD_F={noSetup:'Без наладки',name:'Название',qty:'Кол-во',start:'Начало',notBefore:'Начало вручную',speedPlan:'Скорость',setupPlan:'Наладка',extras:'Паузы',lineId:'Линия',projectId:'Проект',orderId:'Заказ',status:'Статус',good:'Годные',defect:'Брак',approved:'Подтверждено',role:'Роль',active:'Доступ включён',cost:'Цена',due:'Срок',shift:'Смена',date:'Дата',shifts:'Смены',seq:'Место в очереди',note:'Комментарий',speed:'Скорость',setupMin:'Наладка, мин',stations:'Станции',items:'Состав',qual:'Квалификация',team:'Бригада',position:'Должность',min:'Мин. остаток',supplier:'Поставщик',reason:'Причина',end:'Окончание',client:'Клиент',color:'Цвет',qualSetup:'Квалиф. наладка',qualRun:'Квалиф. производство',rawFact:'Факт сырья',writtenOff:'Списано',settings:'Параметры машины',timeline:'Хронометраж',workMin:'Работа, мин',downtime:'Простои, мин',staffId:'Сотрудник',absence:'Отсутствие',workShifts:'Рабочие смены',workDays:'Рабочие дни',scheme:'Схема смен',area:'Участок',type:'Тип',unit:'Ед.',cat:'Категория',login:'Логин',personId:'Связь с персоналом',orgName:'Название предприятия',shiftSchemes:'Схемы смен',activities:'Виды работ',defectReasons:'Причины брака',machineParams:'Параметры машины'};
+const AUD_SKIP=new Set(['thumb','coverId','ts','by','updated','log','approvedAt','approvedBy','sec','id','uid','email','created','writtenMap','outputIds','history','ver']);
+const audVal=v=>{ if(v==null||v==='') return '—'; if(typeof v==='boolean') return v?'да':'нет'; const s=typeof v==='object'?JSON.stringify(v):String(v); return s.length>70?s.slice(0,67)+'…':s; };
+function audName(col,o){ if(!o) return ''; if(col==='roster') return `${byId(DB.people,o.staffId)?.name||''} · ${o.date||''}`; if(col==='shiftCal') return `${lineName(o.lineId)} · ${o.date||''}`;
+  return o.name||o.no||(o.projectId?projName(o.projectId):'')||(o.rawId?rawName(o.rawId):'')||o.login||o.date||o.id||''; }
+function audDiff(a,b){ const ch=[]; new Set([...Object.keys(a||{}),...Object.keys(b||{})]).forEach(k=>{ if(AUD_SKIP.has(k)) return; const x=JSON.stringify(a?.[k]??null), y=JSON.stringify(b?.[k]??null); if(x!==y&&!((a?.[k]??'')===''&&(b?.[k]??'')==='')) ch.push({f:k,a:audVal(a?.[k]),b:audVal(b?.[k])}); }); return ch.slice(0,25); }
+function audItems(list){
+  return list.filter(x=>x.col!=='planLog').map(x=>{
+    if(x.path) return {col:x.path[0],op:x.val==null?'del':'set',name:x.path.slice(1).join(' / ')};
+    const id=x.obj?x.obj.id:x.id, old=byId(A(DB[x.col]),id);
+    if(x.del) return old?{col:x.col,op:'del',name:audName(x.col,old)}:null;
+    if(!old) return {col:x.col,op:'add',name:audName(x.col,x.obj)};
+    const ch=audDiff(old,x.obj); return ch.length?{col:x.col,op:'upd',name:audName(x.col,x.obj),ch}:null;
+  }).filter(Boolean);
+}
+function audit(items){
+  if(!items||!items.length||!state.me) return; const ts=Date.now(), id=ts.toString(36).padStart(9,'0')+'_'+Math.random().toString(36).slice(2,6);
+  const e={ts,uid:state.me.id||'',by:state.me.name||'',role:state.me.role||'',sec:state.sec||'',items:items.slice(0,40),n:items.length};
+  if(state.mode==='fb'&&fdb){ fdb.ref(`${ROOT}/audit/${id}`).set(fbSafe(clone(e))).catch(()=>{}); }
+  else { DB.audit=A(DB.audit); DB.audit.push({...e,id}); if(DB.audit.length>3000) DB.audit=DB.audit.slice(-3000); }
+}
+function renderAudit(){
+  const t=new Date(); if(!state.auFrom) state.auFrom=iso(addD(t,-6)); if(!state.auTo) state.auTo=iso(t); if(state.auTo<state.auFrom) state.auTo=state.auFrom;
+  const a=pd(state.auFrom).getTime(), b=pd(state.auTo).getTime()+864e5, rk=state.auFrom+'|'+state.auTo;
+  let list;
+  if(state.mode==='fb'){
+    if(!state._aud||state._aud.k!==rk){ state._aud={k:rk,list:null}; const k0=a.toString(36).padStart(9,'0'), k1=b.toString(36).padStart(9,'0');
+      fdb.ref(`${ROOT}/audit`).orderByKey().startAt(k0).endAt(k1+'~').once('value').then(s=>{ const v=s.val()||{}; state._aud={k:rk,list:Object.entries(v).map(([id,x])=>({...x,id,items:A(x.items).map(it=>({...it,ch:A(it.ch)}))}))}; if(state.sec==='audit') render(); })
+        .catch(e=>{ state._aud={k:rk,list:[],err:e.message}; if(state.sec==='audit') render(); }); }
+    list=state._aud.list;
+  } else list=A(DB.audit).filter(e=>e.ts>=a&&e.ts<b);
+  const who=state.auWho||'', col=state.auCol||'', q=(state.auQ||'').toLowerCase();
+  const rows=[]; (list||[]).slice().sort((x,y)=>y.ts-x.ts).forEach(e=>{ if(who&&e.by!==who) return;
+    A(e.items).forEach(it=>{ if(col&&it.col!==col) return; const txt=(it.name+' '+A(it.ch).map(c=>c.f+' '+c.a+' '+c.b).join(' ')).toLowerCase(); if(q&&!txt.includes(q)) return; rows.push({e,it}); }); });
+  const people=[...new Set((list||[]).map(e=>e.by).filter(Boolean))].sort();
+  const cols=[...new Set((list||[]).flatMap(e=>A(e.items).map(i=>i.col)))].sort((x,y)=>(AUD_COL[x]||x).localeCompare(AUD_COL[y]||y));
+  const shown=rows.slice(0,600);
+  $('#content').innerHTML=`<div class="toolbar">
+    <div style="display:flex;align-items:center;gap:6px"><span class="fl" style="margin:0">Период с</span><input class="fi" type="date" value="${state.auFrom}" style="width:155px" onchange="state.auFrom=this.value||state.auFrom;render()"><span class="fl" style="margin:0">по</span><input class="fi" type="date" value="${state.auTo}" style="width:155px" onchange="state.auTo=this.value||state.auTo;render()"></div>
+    <select class="sel" onchange="state.auWho=this.value;render()"><option value="">Все сотрудники</option>${people.map(p=>`<option ${p===who?'selected':''}>${esc(p)}</option>`).join('')}</select>
+    <select class="sel" onchange="state.auCol=this.value;render()"><option value="">Все разделы</option>${cols.map(c=>`<option value="${c}" ${c===col?'selected':''}>${esc(AUD_COL[c]||c)}</option>`).join('')}</select>
+    <input class="sel" id="auQ" placeholder="Поиск: проект, поле, значение" value="${esc(state.auQ||'')}" style="min-width:220px" oninput="state.auQ=this.value;const p=this.selectionStart;render();const e=$('#auQ');e.focus();e.setSelectionRange(p,p)">
+    <div class="sp"></div><span class="muted" style="font-weight:600">${list?`${rows.length} изменений`:''}</span></div>
+  <div class="card">${list==null?'<div class="empty">Загрузка журнала…</div>':state._aud?.err?`<div class="empty">Не удалось загрузить журнал: ${esc(state._aud.err)}</div>`:shown.length?`<div class="tw flush"><table class="au"><tr><th>Когда</th><th>Кто</th><th>Раздел</th><th>Действие</th><th>Что</th><th>Изменения</th></tr>
+    ${shown.map(({e,it})=>{ const op=AUD_OP[it.op]||[it.op,'t-gray']; return `<tr><td style="white-space:nowrap">${fts(e.ts)}</td><td style="white-space:nowrap"><b>${esc(e.by||'—')}</b><small class="muted" style="display:block">${esc(ROLES[e.role]?.n||e.role||'')}</small></td>
+      <td style="white-space:nowrap">${esc(AUD_COL[it.col]||it.col)}</td><td><span class="tag ${op[1]}">${op[0]}</span></td><td class="wrap" style="max-width:260px">${esc(it.name||'')}</td>
+      <td class="wrap">${A(it.ch).length?A(it.ch).map(c=>`<div class="au-ch"><span>${esc(AUD_F[c.f]||c.f)}:</span> <s>${esc(c.a)}</s> → <b>${esc(c.b)}</b></div>`).join(''):'<span class="muted">—</span>'}</td></tr>`; }).join('')}
+  </table></div>${rows.length>600?'<div class="hint" style="padding-top:10px">Показаны последние 600 — сузьте период или фильтр.</div>':''}`:'<div class="empty">За период изменений нет</div>'}</div>
+  <div class="hint" style="margin-top:10px">Журнал пишется автоматически при каждом сохранении. Запись нельзя изменить или удалить — даже администратору. Видит журнал только администратор.</div>`;
+}
+
 const Store = {
   async put(col,obj){ return this.batch([{col,obj}]); },
   async del(col,id){ return this.batch([{col,id,del:true}]); },
   async batch(list){
+    const aud=audItems(list);
     applyLocal(list);
     if(state.mode==='fb'){ const up={}; list.forEach(x=>{ if(x.path) up[x.path.map(fbKey).join('/')]=x.val==null?null:fbSafe(clone(x.val)); else up[`${x.col}/${fbKey(x.obj?x.obj.id:x.id)}`]=x.del?null:fbSafe(clone(x.obj)); });
-      if(!$('#modal').classList.contains('open')) render(); return fdb.ref(`${ROOT}/data`).update(up); }
-    demoSave(); render();
+      if(!$('#modal').classList.contains('open')) render(); return fdb.ref(`${ROOT}/data`).update(up).then(()=>audit(aud)).catch(e=>{ toast(/permission/i.test(e.message||'')?'Нет прав на это действие — изменение отменено':'Ошибка записи: '+e.message); throw e; }); }
+    audit(aud); demoSave(); render();
   },
   async settings(s){
-    if(state.mode==='fb'){ DB.settings=clone(s); return fdb.ref(`${ROOT}/data/settings`).set(fbSafe(clone(s))); }
-    DB.settings=s; demoSave(); $('#orgName').textContent=s.orgName; render();
+    const ch=audDiff(DB.settings,s), aud=ch.length?[{col:'settings',op:'upd',name:'Настройки',ch}]:[];
+    if(state.mode==='fb'){ DB.settings=clone(s); return fdb.ref(`${ROOT}/data/settings`).set(fbSafe(clone(s))).then(()=>audit(aud)).catch(e=>{ toast(authErr(e)); throw e; }); }
+    DB.settings=s; audit(aud); demoSave(); $('#orgName').textContent=s.orgName; render();
   },
   async user(u,delId){
-    if(state.mode==='fb') return u?fdb.ref(`${ROOT}/users/${u.id}`).set(u):fdb.ref(`${ROOT}/users/${delId}`).remove();
     if(u){ const i=DB.members.findIndex(m=>m.id===u.id); if(i>=0) DB.members[i]=u; else DB.members.push(u); } else DB.members=DB.members.filter(m=>m.id!==delId);
     demoSave(); render();
   },
@@ -2943,11 +3286,11 @@ function genDemo(){
   let seed=11; const rnd=()=>(seed=seed*16807%2147483647)/2147483647, pick=a=>a[Math.floor(rnd()*a.length)];
   const now=new Date(), NOW=now.getTime(), T=iso(now), R3=v=>Math.round(v*1000)/1000;
   const lines=[
-    {id:'L1',name:'Линия 1 (coat)',type:'Пистолетная покраска + УФ-сушка',stations:7,cap:60000,shifts:2,scheme:'s12',workShifts:[1,2],workDays:[0,1,2,3,4,5,6]},
-    {id:'L2',name:'Линия 2 (coat)',type:'Пистолетная покраска + печь',stations:9,cap:70000,shifts:2,scheme:'s12',workShifts:[1,2],workDays:[1,2,3,4,5,6]},
-    {id:'L3',name:'Линия 1 принтинг',type:'Трафаретная печать',stations:4,cap:40000,shifts:1,scheme:'s12',workShifts:[1],workDays:[1,2,3,4,5]},
-    {id:'L4',name:'Линия 2 принтинг',type:'Трафаретная печать',stations:4,cap:42000,shifts:1,scheme:'s12',workShifts:[1],workDays:[1,2,3,4,5]},
-    {id:'L5',name:'Хот стемпинг',type:'Горячее тиснение фольгой',stations:2,cap:30000,shifts:1,scheme:'s12',workShifts:[1],workDays:[1,2,3,4,5]}];
+    {id:'L1',name:'Линия 1 (coat)',type:'Пистолетная покраска + УФ-сушка',stations:7,cap:60000,shifts:2,scheme:'s12',workShifts:[1,2],workDays:[0,1,2,3,4,5,6],area:'coating'},
+    {id:'L2',name:'Линия 2 (coat)',type:'Пистолетная покраска + печь',stations:9,cap:70000,shifts:2,scheme:'s12',workShifts:[1,2],workDays:[1,2,3,4,5,6],area:'coating'},
+    {id:'L3',name:'Линия 1 принтинг',type:'Трафаретная печать',stations:4,cap:40000,shifts:1,scheme:'s12',workShifts:[1],workDays:[1,2,3,4,5],area:'printing'},
+    {id:'L4',name:'Линия 2 принтинг',type:'Трафаретная печать',stations:4,cap:42000,shifts:1,scheme:'s12',workShifts:[1],workDays:[1,2,3,4,5],area:'printing'},
+    {id:'L5',name:'Хот стемпинг',type:'Горячее тиснение фольгой',stations:2,cap:30000,shifts:1,scheme:'s12',workShifts:[1],workDays:[1,2,3,4,5],area:'printing'}];
   const raw=[
     ['R1','Лак-связующее УФ, прозрачный','Основы и лаки','кг',8.4,900,300,'ChemCoat',10],
     ['R2','Паста пигментная белая TiO2','Пигменты','кг',12.5,160,80,'PigmentPro',14],
@@ -2981,27 +3324,27 @@ function genDemo(){
   ].map(s=>({unit:'кг',ver:1,history:[],updated:iso(addD(now,-40)),by:'Марина Коваль',note:'',...s}));
   const st=(semiId,norm,visc,press,nozzle,note='')=>({semiId,norm,visc,press,nozzle,note});
   const projects=[
-    {id:'P1',name:'Водка «Премиум» 0,5 — матовое золото',client:'Spirits Co',tareId:'R14',lineId:'L1',speed:90,setupMin:120,restartMin:45,color:'#b8860b',status:'Активный',
+    {id:'P1',qualSetup:'Senior',qualRun:'Operator',name:'Водка «Премиум» 0,5 — матовое золото',client:'Spirits Co',tareId:'R14',lineId:'L1',speed:90,setupMin:120,restartMin:45,color:'#b8860b',status:'Активный',
       stations:[st('S1',32,'19 с','2,2','1,0','грунт по всей поверхности'),st('S2',46,'22 с','2,5','1,2','1-й слой'),st('S2',40,'22 с','2,5','1,2','2-й слой'),st('S9',28,'21 с','2,3','1,0','низ, градиент'),st('S6',22,'24 с','2,0','0,8','плечо и горло'),st('S8',38,'20 с','2,4','1,2'),st('S8',32,'20 с','2,4','1,2','финиш')],
       quality:'Золото на плече: не допускать потёков — давление не выше 2,1 бар.\nПроверять адгезию тестом скотча в начале каждой смены.\nГрадиент розового — сверять с эталоном при каждой смене партии краски.'},
-    {id:'P2',name:'Джин «Лондон» 0,7 — синий градиент',client:'Botanica',tareId:'R15',lineId:'L1',speed:75,setupMin:150,restartMin:50,color:'#1f5fa8',status:'Активный',
+    {id:'P2',qualSetup:'Senior',qualRun:'Operator',name:'Джин «Лондон» 0,7 — синий градиент',client:'Botanica',tareId:'R15',lineId:'L1',speed:75,setupMin:150,restartMin:50,color:'#1f5fa8',status:'Активный',
       stations:[st('S1',35,'19 с','2,2','1,0'),st('S2',44,'22 с','2,5','1,2','подложка'),st('S5',40,'23 с','2,6','1,2','низ'),st('S5',26,'23 с','2,2','1,0','переход'),st('S7',18,'24 с','2,0','0,8','ободок'),st('S10',42,'18 с','2,4','1,2'),st('S10',30,'18 с','2,4','1,2')],
       quality:'Градиент: переход без «ступеньки» — расстояние пистолета ст.4 строго 220 мм.\nСиний 300C чувствителен к толщине слоя — контроль цвета спектрофотометром раз в 2 часа.'},
-    {id:'P3',name:'Ликёр «Ягодный» 0,5 — розовый',client:'Berry Drinks',tareId:'R14',lineId:'L2',speed:110,setupMin:90,restartMin:'',color:'#d9577b',status:'Активный',
+    {id:'P3',qualSetup:'Operator',qualRun:'Junior',name:'Ликёр «Ягодный» 0,5 — розовый',client:'Berry Drinks',tareId:'R14',lineId:'L2',speed:110,setupMin:90,restartMin:'',color:'#d9577b',status:'Активный',
       stations:[st('S1',33,'19 с','2,2','1,0'),st('S2',42,'22 с','2,5','1,2'),st('S2',36,'22 с','2,5','1,2'),st('S9',34,'21 с','2,4','1,2'),st('S9',28,'21 с','2,4','1,2'),st('S4',10,'22 с','1,9','0,8','точки-ягоды'),st('S6',9,'24 с','1,8','0,8','логотип'),st('S10',38,'18 с','2,4','1,2'),st('S10',28,'18 с','2,4','1,2')],
       quality:'Розовый пастель легко даёт разнотон — одна партия П/Ф на весь заказ.\nТочки-ягоды: следить за засорением сопла 0,8 — продувка каждые 2 ч.'},
-    {id:'P4',name:'Виски «Oak» 0,7 — чёрный глянец',client:'Highland Import',tareId:'R15',lineId:'L2',speed:85,setupMin:100,restartMin:'',color:'#333333',status:'Активный',
+    {id:'P4',qualSetup:'Senior',qualRun:'Operator',name:'Виски «Oak» 0,7 — чёрный глянец',client:'Highland Import',tareId:'R15',lineId:'L2',speed:85,setupMin:100,restartMin:'',color:'#333333',status:'Активный',
       stations:[st('S1',35,'19 с','2,2','1,0'),st('S3',50,'21 с','2,6','1,2'),st('S3',44,'21 с','2,6','1,2'),st('S3',30,'21 с','2,4','1,2'),st('S7',15,'24 с','2,0','0,8','надпись по кругу'),st('S10',40,'18 с','2,4','1,2'),st('S10',34,'18 с','2,4','1,2')],
       quality:'На чёрном видна любая пыль — перед сменой влажная уборка камеры, фильтры проверить.\nГлянец: печь не ниже 180 °C, иначе «апельсиновая корка».'},
-    {id:'P5',name:'Коньяк «Резерв» 0,5 — золотая шелкография',client:'Spirits Co',tareId:'R14',lineId:'L3',speed:60,setupMin:70,restartMin:'',color:'#8a6d1f',status:'Активный',
+    {id:'P5',qualSetup:'Senior',qualRun:'Operator',name:'Коньяк «Резерв» 0,5 — золотая шелкография',client:'Spirits Co',tareId:'R14',lineId:'L3',speed:60,setupMin:70,restartMin:'',color:'#8a6d1f',status:'Активный',
       stations:[st('S2',12,'—','—','сетка 120','подложка под логотип'),st('S6',8,'—','—','сетка 100','логотип'),st('S3',6,'—','—','сетка 140','мелкий текст')],
       quality:'Совмещение цветов ±0,2 мм — проверять лупой каждые 500 шт.\nЗолото — только свежий замес, срок жизни 6 ч.'},
-    {id:'P6',name:'Вино «Розе» 0,7 — красный и серебро',client:'Vinoteka',tareId:'R15',lineId:'L4',speed:65,setupMin:80,restartMin:'',color:'#b0303a',status:'Активный',
+    {id:'P6',qualSetup:'Operator',qualRun:'Junior',name:'Вино «Розе» 0,7 — красный и серебро',client:'Vinoteka',tareId:'R15',lineId:'L4',speed:65,setupMin:80,restartMin:'',color:'#b0303a',status:'Активный',
       stations:[st('S4',10,'—','—','сетка 120'),st('S7',7,'—','—','сетка 100'),st('S2',6,'—','—','сетка 140')],quality:'Новый проект: первая наработка — пробная партия 5 000 шт, согласование образца с клиентом.'},
-    {id:'P7',name:'Бренди «Гранд» 0,7 — золотое тиснение',client:'Spirits Co',tareId:'R15',lineId:'L5',speed:45,setupMin:60,restartMin:'',color:'#c28a14',status:'Активный',
+    {id:'P7',qualSetup:'Senior',qualRun:'Operator',name:'Бренди «Гранд» 0,7 — золотое тиснение',client:'Spirits Co',tareId:'R15',lineId:'L5',speed:45,setupMin:60,restartMin:'',color:'#c28a14',status:'Активный',
       stations:[st('S6',4,'—','—','штамп 170 °C','фольга «золото», логотип')],quality:'Температура штампа 165–175 °C, давление по эталону.\nПроверять адгезию фольги скотч-тестом каждый час.'},
   ];
-  const settings={...DEFAULT_SETTINGS}, m0=new Date(now.getFullYear(),now.getMonth(),1), mEnd=new Date(now.getFullYear(),now.getMonth()+1,1), mk=monthKey(now);
+  const settings={...DEFAULT_SETTINGS}, m0=new Date(now.getFullYear(),now.getMonth(),1), mEnd=new Date(now.getFullYear(),now.getMonth()+1,1), nEnd=new Date(now.getFullYear(),now.getMonth()+2,1), mk=monthKey(now), mkN=monthKey(mEnd);
   const orders=[]; let on=101;
   projects.forEach((p,i)=>{ [0,1,2].forEach(k=>orders.push({id:'O'+on,no:'З-'+(on++),projectId:p.id,qty:0,due:iso(addD(m0,9+k*13+i*2)),note:''})); });
   const nextWork=(lid,from)=>{ const l=lines.find(x=>x.id===lid); let d=new Date(from); for(let i=0;i<14&&!l.workDays.includes(d.getDay());i++) d=addD(d,1); return iso(d); };
@@ -3010,13 +3353,18 @@ function genDemo(){
   const downs=[
     {id:'DN1',lineId:'L1',start:at(dn1,7),end:at(dn1,19),reason:'Нет персонала',note:'Два оператора на больничном',by:'Ольга Петренко'},
     {id:'DN2',lineId:'L2',start:at(dn2,19),end:at(iso(addD(pd(dn2),1)),7),reason:'Нет персонала',note:'Ночная смена не укомплектована',by:'Ольга Петренко'},
-    {id:'DN3',lineId:'L3',start:at(dn3,7),end:at(dn3,19),reason:'Плановый ремонт (ППР)',note:'Замена ракельного узла',by:'Марина Коваль'}];
-  const keep=DB; DB=normalize({...emptyDB(),lines,projects,raw,semis,settings,downs,orders}); _sch.clear();
+    {id:'DN3',lineId:'L3',start:at(dn3,7),end:at(dn3,19),reason:'Плановый ремонт (ППР)',note:'Замена ракельного узла',by:'Марина Коваль'},
+    {id:'DN4',lineId:'L1',start:at(nextWork('L1',addD(mEnd,11)),7),end:at(iso(addD(pd(nextWork('L1',addD(mEnd,11))),1)),7),reason:'Плановый ремонт (ППР)',note:'Ноябрь: чистка камеры и замена фильтров, сутки',by:'Марина Коваль'},
+    {id:'DN5',lineId:'L2',start:at(nextWork('L2',addD(mEnd,19)),7),end:at(nextWork('L2',addD(mEnd,19)),19),reason:'Плановый ремонт (ППР)',note:'Ноябрь: калибровка печи',by:'Марина Коваль'}];
+  // календарь смен: Линия 1 принтинг на следующей неделе работает и во 2-ю смену; ближайшая суббота — Линия 2 (coat) только днём
+  const shiftCal=[]; { let d=addD(now,7); while(d.getDay()!==1) d=addD(d,1); for(let i=0;i<5;i++){ const ds=iso(addD(d,i)); shiftCal.push({id:'L3_'+ds,lineId:'L3',date:ds,shifts:'1,2',by:'Марина Коваль',ts:NOW-5*H}); }
+    let s=addD(now,1); while(s.getDay()!==6) s=addD(s,1); shiftCal.push({id:'L2_'+iso(s),lineId:'L2',date:iso(s),shifts:'1',by:'Ольга Петренко',ts:NOW-4*H}); }
+  const keep=DB; DB=normalize({...emptyDB(),lines,projects,raw,semis,settings,downs,orders,shiftCal}); _sch.clear(); _calMap=null;
   // план: позиции подряд по календарю каждой линии
   const plan=[]; let pn=0;
   lines.forEach(l=>{
     const ps=projects.filter(p=>p.lineId===l.id); let t=m0.getTime(), k=0;
-    while(t<mEnd.getTime()+10*864e5){
+    while(t<nEnd.getTime()+3*864e5){
       const p=ps[k%ps.length], hrs=['L1','L2'].includes(l.id)?26+rnd()*40:12+rnd()*16, qty=Math.round(p.speed*60*hrs/1000)*1000;
       const o=orders.filter(o=>o.projectId===p.id).find(o=>!plan.some(a=>a.orderId===o.id));
       const two=l.workShifts.length>1, item={id:'PL'+(pn++),projectId:p.id,lineId:l.id,orderId:o?.id||'',qty,start:toDT(t),note:'',seq:k,
@@ -3035,6 +3383,7 @@ function genDemo(){
   const l2=byLine('L2'); if(l2.length>2){ const x=l2[1], old=x.qty; x.qty=Math.round(old*1.2/1000)*1000; logAt(pd(x.start.slice(0,10)),9,'Марина Коваль',`«${projects.find(p=>p.id===x.projectId).name}»: кол-во ${N(old)} → ${N(x.qty)} (клиент увеличил заказ)`); }
   logAt(pd(dn1),8,'Ольга Петренко',`Добавил простой ${lines[0].name}: ${fdate(dn1)} 07:00–19:00, Нет персонала (два оператора на больничном)`);
   _sch.clear(); lines.forEach(l=>pushOverlaps(plan,l.id,LIVE)); lines.forEach(l=>relineChain(plan,l.id,LIVE)); _sch.clear();
+  logAt(addD(now,-1),15,'Марина Коваль',`Сформирован план на ${monthLabel(mkN)}: ${plan.filter(x=>monthKey(new Date(tms(x.start)))===mkN).length} позиций, ППР ${lines[0].name} и ${lines[1].name} заложены простоями`);
   logAt(now,9,'Ольга Петренко',`Оперативка: ${fdate(dn2)} на Линии 2 не будет ночной смены — нет людей, поставили простой, план сдвинулся. Золото Au-7 заканчивается — снабжению ускорить поставку.`,'meeting');
   logAt(now,9,'Ольга Петренко',`Добавил простой ${lines[1].name}: ${fdate(dn2)} 19:00 → 07:00, Нет персонала`);
   plan.filter(x=>!x.orderId&&sched(x,LIVE).end>NOW).forEach(x=>{ const o={id:'O'+on,no:'З-'+(on++),projectId:x.projectId,qty:0,due:iso(addD(new Date(sched(x,LIVE).end),2+Math.floor(rnd()*5))),note:''}; orders.push(o); x.orderId=o.id; });
@@ -3111,41 +3460,100 @@ function genDemo(){
     {id:'SP9',rawId:'R15',qty:450000,date:iso(addD(now,6)),supplier:'GlassWorks',status:'ordered',note:'3 фуры'},
     {id:'SP4',rawId:'R1',qty:400,date:iso(addD(now,-12)),supplier:'ChemCoat',status:'received',receivedQty:400,receivedDate:iso(addD(now,-12)),note:''},
     {id:'SP5',rawId:'R14',qty:300000,date:iso(addD(now,-8)),supplier:'GlassWorks',status:'received',receivedQty:300000,receivedDate:iso(addD(now,-8)),note:''}];
+  { // поставки до конца следующего месяца — под потребность плана (золото Au-7 намеренно с запасом впритык)
+    const need={}; plan.filter(x=>sched(x,LIVE).end>NOW).forEach(x=>{ const p=projects.find(q=>q.id===x.projectId); Object.entries(projectReq(p,x.qty)).forEach(([rid,q])=>need[rid]=(need[rid]||0)+q); });
+    const have=rid=>(raw.find(r=>r.id===rid)?.qty||0)+supplies.filter(s=>s.rawId===rid&&s.status!=='received').reduce((a,s)=>a+s.qty,0);
+    const weeks=[]; for(let d=addD(now,10); d<nEnd; d=addD(d,7)) weeks.push(iso(d)); let sn=20;
+    Object.entries(need).forEach(([rid,q])=>{ const r=raw.find(x=>x.id===rid); if(!r) return; let lack=q*(rid==='R7'?.92:1.12)-have(rid); if(lack<=0||!weeks.length) return;
+      const part=lack/weeks.length, unit=r.unit==='шт'?50000:r.unit==='кг'||r.unit==='л'?5:1;
+      weeks.forEach((d,i)=>{ const qq=Math.max(unit,Math.ceil(part/unit)*unit); supplies.push({id:'SP'+(sn++),rawId:rid,qty:qq,date:d,supplier:r.supplier||'',status:'ordered',note:i===0?'по плану на '+monthLabel(mkN):''}); }); });
+  }
   moves.push({id:'MV1',date:iso(addD(now,-12)),type:'in',rawId:'R1',qty:400,cost:8.4,doc:'ТН-4411',note:'Приёмка поставки · ChemCoat',by:'Администратор',ts:1});
   moves.push({id:'MV2',date:iso(addD(now,-8)),type:'in',rawId:'R14',qty:300000,cost:.18,doc:'ТН-9020',note:'Приёмка поставки · GlassWorks',by:'Администратор',ts:2});
   moves.push({id:'MV3',date:iso(addD(now,-5)),type:'inv',rawId:'R10',qty:-6,note:'было 266, стало 260',by:'Ольга Петренко',ts:3});
   orders.filter(o=>o.due<T).forEach((o,i)=>{ const made=output.filter(r=>r.orderId===o.id).reduce((a,r)=>a+r.good,0); if(made>0) moves.push({id:'MV'+(10+i),date:o.due,type:'ship',projectId:o.projectId,orderId:o.id,qty:Math.min(o.qty,made),doc:'ТТН-'+(500+i),by:'Администратор',ts:10+i}); });
   const members=[{id:'admin',login:'admin',name:'Администратор',password:'1234',role:'admin'},{id:'olga',login:'olga',name:'Ольга Петренко',password:'1234',role:'master'},{id:'andriy',login:'andriy',name:'Андрей Иванов',password:'1234',role:'operator'},{id:'marina',login:'marina',name:'Марина Коваль',password:'1234',role:'technologist'}];
   const scenarios=[{id:'SC1',name:'Линия 1 принтинг во 2 смены',created:NOW-3*H,by:'Администратор',items:plan.map(clone),downs:[],lineShifts:{L3:[1,2]},note:'Что если набрать людей на 2-ю смену шелкографии?'}];
-  const db={lines,projects,raw,semis,orders,output,runs,plan,planLog,supplies,moves,downs,scenarios,members,approved:{[mk]:{at:addD(m0,-2).getTime()+15*H,by:'Администратор',items:approvedItems}},settings};
+  const db={lines,projects,raw,semis,orders,output,runs,plan,planLog,supplies,moves,downs,scenarios,members,shiftCal,approved:{[mk]:{at:addD(m0,-2).getTime()+15*H,by:'Администратор',items:approvedItems}},settings};
   DB.output=output; DB.plan=plan; _factMap=null; _sch.clear(); lines.forEach(l=>relineChain(plan,l.id,LIVE)); _factMap=null; _sch.clear();
-  DB=keep; _sch.clear(); _factMap=null;
+  // персонал: бригады по 2 человека (ведущий Senior/Operator + второй Operator/Junior), постоянные бригады на линиях
+  const CR={ // [ФИО, должность, Coating, Printing]
+    L1:[[['Іваненко Андрій','Наладчик','Senior','Operator'],['Ткаченко Ірина','Оператор линии','Junior','']],[['Kovář Petr','Наладчик','Senior',''],['Dvořák Tomáš','Оператор линии','Junior','']],
+        [['Сидорук Василь','Наладчик','Senior',''],['Бойко Дмитро','Оператор линии','Junior','Junior']],[['Novák Jan','Оператор линии','Operator',''],['Svoboda Lukáš','Оператор линии','Operator','Junior']]],
+    L2:[[['Коваль Марина','Мастер смены','Senior','Senior'],['Мельник Тарас','Оператор линии','Operator','']],[['Петренко Ольга','Мастер смены','Senior','Operator'],['Бондар Роман','Оператор линии','Operator','']],
+        [['Pokorný Jiří','Оператор линии','Operator',''],['Zeman Ondřej','Оператор линии','Junior','']],[['Šimek Pavel','Наладчик','Senior',''],['Шевчук Леся','Оператор линии','Operator','Operator']]],
+    L3:[[['Кравець Олег','Наладчик','','Senior'],['Мороз Наталія','Оператор линии','','Operator']],[['Horák Martin','Наладчик','Junior','Senior'],['Lukáš Eva','Оператор линии','','Junior']]],
+    L4:[[['Савчук Михайло','Наладчик','Operator','Senior'],['Гнатюк Юлія','Оператор линии','','Operator']],[['Veselá Tereza','Оператор линии','','Operator'],['Поліщук Ігор','Оператор линии','','Operator']]],
+    L5:[[['Ruml David','Наладчик','','Senior'],['Kučera Adam','Оператор линии','','Junior']],[['Гончар Павло','Оператор линии','','Operator'],['Krejčí Hana','Оператор линии','','Junior']]]};
+  const people=[], crews={}; let sn=1; const LET='ABCD';
+  Object.entries(CR).forEach(([lid,cs])=>{ crews[lid]=cs.map((c,ci)=>c.map(([name,position,cq,pq],k)=>{ const p={id:'ST'+(sn++),name,position,qual:{coating:cq,printing:pq},active:true,team:`${lineShort(lines.find(l=>l.id===lid))}-${LET[ci]}`,note:k?'второй в бригаде':'ведущий бригады'}; people.push(p); return p.id; })); });
+  const FLOAT={id:'ST'+(sn++),name:'Пономаренко Сергій',position:'Наладчик',qual:{coating:'Senior',printing:'Operator'},active:true,team:'Подмена',note:'подмена отпусков и больничных'};
+  const PN=[{id:'ST'+(sn++),name:'Sedláček Filip',position:'Наладчик',qual:{coating:'',printing:'Senior'},active:true,team:'Подмена',note:'принтинг: подмена и вторые смены'},{id:'ST'+(sn++),name:'Fiala Jakub',position:'Оператор линии',qual:{coating:'',printing:'Junior'},active:true,team:'Подмена',note:'принтинг: подмена и вторые смены'}];
+  people.push(FLOAT,...PN,{id:'ST'+(sn++),name:'Černá Lucie',position:'Контролёр ОТК',qual:{coating:'',printing:''},active:true,note:''});
+  DB.people=people; const roster=[];
+  const REF=new Date(2026,0,5).getTime(); // понедельник — точка отсчёта циклов
+  const dIdx=ds=>Math.round((pd(ds).getTime()-REF)/864e5);
+  // какая бригада работает: L1 24/7 — «день-ночь-отсыпной-выходной»; L2 Пн–Сб — 4 бригады, цикл 4 недели; принтинг — 2 бригады, чередование по неделям
+  const crewFor=(lid,ds,n)=>{ const t=dIdx(ds), dow=(pd(ds).getDay()+6)%7, w=Math.floor(t/7);
+    if(lid==='L1'){ const off=[0,3,2,1]; return off.findIndex(o=>((t+o)%4+4)%4===(n===1?0:1)); }
+    if(lid==='L2'){ if(dow>5) return -1; const X=(((w%2)+2)%2)===0, swap=(((Math.floor(w/2)%2)+2)%2)===1, pat=[0,0,1,1,0,0][dow]^(X?0:1); const dayPair=swap?[2,3]:[0,1], nightPair=swap?[0,1]:[2,3]; return (n===1?dayPair:nightPair)[pat]; }
+    if(dow>4) return -1; const X=(((w%2)+2)%2)===0, pat=[0,0,1,1,0][dow]^(X?0:1); return n===1?pat:1-pat; };
+  for(let d=addD(now,-30); d<nEnd; d=addD(d,1)){ const ds=iso(d);
+    lines.forEach(l=>dayShifts(l.id,ds,LIVE).forEach(n=>{ const ci=crewFor(l.id,ds,n); let cr=crews[l.id]?.[ci]; if(lineArea(l)==='printing'&&n===2) cr=PN.map(p=>p.id); if(!cr) return;
+      cr.forEach(sid=>{ if(!roster.some(r=>r.date===ds&&r.staffId===sid)) roster.push({id:ds+'_'+sid,date:ds,staffId:sid,lineId:l.id,shift:n}); }); })); }
+  // отсутствия: больничный на прошлой неделе, отпуск на следующей, неявка; на смену ставим подменного, если он свободен
+  const pid=name=>people.find(p=>p.name===name).id;
+  [[pid('Бондар Роман'),-8,3,'Б'],[pid('Lukáš Eva'),6,5,'О'],[pid('Мороз Наталія'),-3,1,'Н']].forEach(([sid,off,n,k])=>{ for(let i=0;i<n;i++){ const ds=iso(addD(now,off+i));
+    const j=roster.findIndex(r=>r.date===ds&&r.staffId===sid); const was=j>=0?roster.splice(j,1)[0]:null;
+    roster.push({id:ds+'_'+sid,date:ds,staffId:sid,lineId:'',shift:0,absence:k});
+    if(was&&!roster.some(r=>r.date===ds&&r.staffId===FLOAT.id)) roster.push({id:ds+'_'+FLOAT.id,date:ds,staffId:FLOAT.id,lineId:was.lineId,shift:was.shift}); } });
+  DB.roster=roster;
+  db.people=DB.people; db.roster=DB.roster;
+  db.images={}; projects.forEach((p,i)=>{ const A1=demoBottle(p,0), B1=i<3?demoBottle(p,1):null, a=A1&&A1.data, b=B1&&B1.data; if(A1){ p.thumb=(B1||A1).thumb; p.coverId='IM'+p.id+(B1?'b':'a'); } const ims=[a&&{id:'IM'+p.id+'a',title:'Эскиз',data:a,w:600,h:800,orig:'4000×5333',file:'эскиз_'+p.id+'.png',kb:Math.round(a.length*.75/1024),link:'https://drive.google.com/…/'+p.id,ts:NOW-40*864e5,by:'Марина Коваль'},
+    b&&{id:'IM'+p.id+'b',title:'Утверждённый образец',data:b,w:600,h:800,orig:'6000×8000',file:'образец_'+p.id+'.jpg',kb:Math.round(b.length*.75/1024),link:'',ts:NOW-20*864e5,by:'Марина Коваль'}].filter(Boolean);
+    if(ims.length){ db.images[p.id]=ims; } });
+  { // журнал изменений для демо: из журнала плана, отчётов смен и подтверждений за последние дни
+    const roleOf=n=>({'Ольга Петренко':'master','Марина Коваль':'technologist','Андрей Иванов':'operator'})[n]||'admin', au=[]; let k=0;
+    const add=(ts,by,col,op,name,ch)=>au.push({id:Math.round(ts).toString(36).padStart(9,'0')+'_d'+(k++),ts,uid:'',by,role:roleOf(by),sec:col,items:[{col,op,name,...(ch?{ch}:{})}],n:1});
+    planLog.forEach(l=>add(l.ts,l.by,'plan','upd',l.text.length>150?l.text.slice(0,147)+'…':l.text));
+    output.filter(r=>r.date>=iso(addD(now,-3))).forEach(r=>{ const e=tms(r.endAt)||NOW; add(Math.min(NOW-60e3,e+20*60e3),'Андрей Иванов','output','add',`${projName(r.projectId)} · ${lineName(r.lineId)} · ${fdate(r.date)} см. ${r.shift}`);
+      if(r.approved!==false) add(Math.min(NOW-30e3,e+3*H),'Марина Коваль','output','upd',`${projName(r.projectId)} · ${lineName(r.lineId)} · ${fdate(r.date)} см. ${r.shift}`,[{f:'approved',a:'нет',b:'да'}]); });
+    add(NOW-26*H,'Марина Коваль','projects','upd',projects[0].name,[{f:'speed',a:'85',b:String(projects[0].speed)},{f:'setupMin',a:'100',b:String(projects[0].setupMin)}]);
+    add(NOW-5*H,'Ольга Петренко','roster','upd','Бондар Роман · больничный',[{f:'absence',a:'—',b:'Б'}]);
+    add(NOW-2*H,'Администратор','users','add','andriy · Андрей Иванов · Оператор');
+    db.audit=au.filter(e=>e.ts<=NOW).sort((a,b)=>a.ts-b.ts);
+  }
+  DB=keep; _sch.clear(); _factMap=null; _calMap=null;
   return db;
 }
-function demoSave(){ if(state.mode!=='demo') return; try{ localStorage.setItem('pdd_demo_v4',JSON.stringify(DB)); }catch(e){} }
-function resetDemo(){ if(!confirm('Сбросить демо-данные к исходным?')) return; try{ localStorage.removeItem('pdd_demo_v4'); }catch(e){} DB=normalize(genDemo()); render(); toast('Демо-данные сброшены'); }
+let _quotaWarn=false;
+function demoSave(){ if(state.mode!=='demo') return; try{ localStorage.setItem('pdd_demo_v11',JSON.stringify(DB)); }catch(e){ if(!_quotaWarn){ _quotaWarn=true; toast('Демо: место в браузере закончилось — последние изменения (например, картинки) не сохранятся после перезагрузки'); } } }
+function resetDemo(){ if(!confirm('Сбросить демо-данные к исходным?')) return; try{ localStorage.removeItem('pdd_demo_v11'); }catch(e){} DB=normalize(genDemo()); render(); toast('Демо-данные сброшены'); }
 function startDemo(){
   state.mode='demo';
-  let saved=null; try{ saved=JSON.parse(localStorage.getItem('pdd_demo_v4')||'null'); }catch(e){}
+  let saved=null; try{ saved=JSON.parse(localStorage.getItem('pdd_demo_v11')||'null'); }catch(e){}
   DB=normalize(saved&&saved.plan?saved:genDemo());
   state.me={...DB.members[0]}; enterApp();
 }
 
 // ═════════════════════════════════════════════
-//  FIREBASE — открытый режим (как FinFlow): логин/пароль
+//  FIREBASE — защищённый вход: Firebase Authentication (логин+пароль) + правила базы по ролям
 // ═════════════════════════════════════════════
-let _users={};
+const EMAIL_DOMAIN='pdd.example.com';
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const loginEmail=(login,n)=>`${login}${n?'.r'+n:''}@${EMAIL_DOMAIN}`;
+let _setupBusy=false, _dataRef=null, _usersRef=null, _secure=null;
 function authScreen(kind,info){
   const b=$('#authBody'); $('#auth').style.display='flex'; $('#app').style.display='none';
   const demoLink=`<div style="text-align:center;margin-top:14px"><button class="link" onclick="startDemo()">Открыть локальное демо без базы</button></div>`;
   if(kind==='loading') b.innerHTML=`<p class="sub" style="margin-top:26px">Подключение к базе…</p>`;
   if(kind==='demo') b.innerHTML=`<h2>Добро пожаловать</h2><p class="sub">Откроется демо-режим с тестовыми данными — можно всё потрогать, ничего не сломается.</p><button class="btn btn-p btn-w" onclick="startDemo()">Открыть демо →</button>`;
   if(kind==='offline') b.innerHTML=`<h2>Нет связи с базой</h2><p class="sub">${esc(info||'')}<br>Проверьте интернет и попробуйте ещё раз.</p><button class="btn btn-p btn-w" onclick="connect()">Повторить</button>${demoLink}`;
-  if(kind==='setup') b.innerHTML=`<h2>Первый запуск</h2><p class="sub">В базе ещё нет пользователей. Создайте администратора — он заведёт остальных сотрудников.</p><div class="msg" id="aMsg"></div>
+  if(kind==='denied') b.innerHTML=`<h2>Нет доступа</h2><p class="sub">${esc(info||'Ваш доступ отключён. Обратитесь к администратору.')}</p><button class="btn btn-p btn-w" onclick="logout()">Войти под другим логином</button>${demoLink}`;
+  if(kind==='setup') b.innerHTML=`<h2>Первый запуск</h2><p class="sub">Аккаунтов ещё нет. Создайте главного администратора — он заведёт остальных сотрудников и выдаст им логины и пароли.</p><div class="msg" id="aMsg"></div>
     <div class="fg"><label class="fl">Название предприятия</label><input class="fi" id="sOrgN" placeholder="Моё производство"></div>
     <div class="fg"><label class="fl">Ваше имя</label><input class="fi" id="sName"></div>
-    <div class="frow"><div class="fg"><label class="fl">Логин</label><input class="fi" id="sLogin" placeholder="admin" autocapitalize="off"></div><div class="fg"><label class="fl">Пароль</label><input class="fi" id="sPass" type="password"></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Логин</label><input class="fi" id="sLogin" placeholder="admin" autocapitalize="off"></div><div class="fg"><label class="fl">Пароль (мин. 6)</label><input class="fi" id="sPass" type="password" autocomplete="new-password"></div></div>
     <button class="btn btn-p btn-w" onclick="doSetup()" id="aBtn">Создать и войти →</button>${demoLink}`;
   if(kind==='login') b.innerHTML=`<h2>Вход</h2><p class="sub">Логин и пароль выдаёт администратор.</p><div class="msg" id="aMsg"></div>
     <div class="fg"><label class="fl">Логин</label><input class="fi" id="aLogin" autocapitalize="off" autocomplete="username"></div>
@@ -3155,77 +3563,134 @@ function authScreen(kind,info){
 }
 const amsg=t=>{ const m=$('#aMsg'); if(m){ m.textContent=t; m.className='msg err'; } };
 const cleanLogin=v=>String(v||'').trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
-function doLogin(){
-  const l=cleanLogin($('#aLogin').value), u=_users[l];
-  if(!u||String(u.password)!==$('#aPass').value) return amsg('Неверный логин или пароль');
-  try{ localStorage.setItem('pdd_session',l); }catch(e){}
-  openData(l);
+function authErr(e){ const c=e&&e.code||'';
+  if(/wrong-password|user-not-found|invalid-credential|invalid-login|invalid-email/.test(c)) return 'Неверный логин или пароль';
+  if(/weak-password/.test(c)) return 'Пароль слишком простой — минимум 6 символов';
+  if(/email-already-in-use/.test(c)) return 'Такой логин уже занят';
+  if(/too-many-requests/.test(c)) return 'Слишком много попыток. Подождите несколько минут.';
+  if(/operation-not-allowed|configuration-not-found/.test(c)) return 'В Firebase не включён вход по Email/паролю (Authentication → Sign-in method → Email/Password → Enable).';
+  if(/network/.test(c)) return 'Нет связи с сервером';
+  if(/PERMISSION_DENIED|permission/i.test(String(e&&e.message||c))) return 'Нет прав на запись — проверьте правила базы (блок "prod").';
+  return (e&&e.message)||String(e); }
+async function doLogin(){
+  const l=cleanLogin($('#aLogin').value), p=$('#aPass').value; if(!l||!p) return amsg('Введите логин и пароль');
+  $('#aBtn').disabled=true;
+  try{ const ix=(await fdb.ref(`${ROOT}/logins/${l}`).once('value')).val(); if(!ix||!ix.email){ $('#aBtn').disabled=false; return amsg('Неверный логин или пароль'); }
+    await auth.signInWithEmailAndPassword(ix.email,p); // дальше — onAuthStateChanged
+  }catch(e){ amsg(authErr(e)); $('#aBtn').disabled=false; }
 }
 async function doSetup(){
   const orgName=$('#sOrgN').value.trim()||'Моё производство', name=$('#sName').value.trim(), login=cleanLogin($('#sLogin').value), pass=$('#sPass').value;
   if(!name||!login) return amsg('Заполните имя и логин (латиница, цифры)');
-  if(pass.length<4) return amsg('Пароль минимум 4 символа');
-  try{ $('#aBtn').disabled=true;
-    await fdb.ref(`${ROOT}/users/${login}`).set({id:login,login,name,password:pass,role:'admin'});
-    await fdb.ref(`${ROOT}/data/settings`).set({...DEFAULT_SETTINGS,orgName});
-    try{ localStorage.setItem('pdd_session',login); }catch(e){}
-    openData(login);
-  }catch(e){ amsg('Ошибка записи: '+e.message); $('#aBtn').disabled=false; }
+  if(pass.length<6) return amsg('Пароль минимум 6 символов');
+  _setupBusy=true; $('#aBtn').disabled=true;
+  try{
+    const email=loginEmail(login); let cred;
+    try{ cred=await auth.createUserWithEmailAndPassword(email,pass); }
+    catch(e){ if(/email-already-in-use/.test(e.code||'')) cred=await auth.signInWithEmailAndPassword(email,pass); else throw e; }
+    const uid=cred.user.uid;
+    const own=(await fdb.ref(`${ROOT}/owner`).once('value')).val();
+    if(own&&own!==uid) throw new Error('Администратор уже создан. Войдите под своим логином.');
+    if(!own) await fdb.ref(`${ROOT}/owner`).set(uid);
+    const me={uid,login,name,role:'admin',active:true,email,created:Date.now(),by:'setup'};
+    await fdb.ref(ROOT).update({[`users/${uid}`]:me,[`logins/${login}`]:{email,uid}});
+    // старые записи открытого режима (с паролями в базе) — удаляем
+    const old=(await fdb.ref(`${ROOT}/users`).once('value')).val()||{}, rm={};
+    Object.entries(old).forEach(([k,v])=>{ if(k!==uid&&v&&v.password!==undefined) rm[`users/${k}`]=null; });
+    if(Object.keys(rm).length) await fdb.ref(ROOT).update(rm);
+    const st=(await fdb.ref(`${ROOT}/data/settings`).once('value')).val();
+    if(!st) await fdb.ref(`${ROOT}/data/settings`).set(fbSafe({...DEFAULT_SETTINGS,orgName})); else if(!st.orgName) await fdb.ref(`${ROOT}/data/settings/orgName`).set(orgName);
+    try{ localStorage.removeItem('pdd_session'); }catch(e){}
+    _setupBusy=false; openData(uid);
+  }catch(e){ _setupBusy=false; amsg(authErr(e)); $('#aBtn').disabled=false; }
 }
-function openData(login){
-  state.mode='fb'; let first=true;
-  if(orgRef) orgRef.off();
-  orgRef=fdb.ref(ROOT);
-  orgRef.on('value',snap=>{
-    const v=snap.val()||{}, d=v.data||{}, arr=o=>Object.entries(o||{}).filter(([,x])=>x).map(([id,x])=>({...x,id}));
-    const me=v.users?.[login]; if(!me){ toast('Пользователь удалён'); logout(); return; }
-    const db={members:arr(v.users),settings:{...DEFAULT_SETTINGS,...(d.settings||{})},approved:d.approved||{}};
+async function onAuth(u){
+  if(_setupBusy) return;
+  if(!u||u.isAnonymous){ if(u) await auth.signOut().catch(()=>{});
+    let has=true; try{ has=(await fdb.ref(`${ROOT}/logins`).limitToFirst(1).once('value')).exists(); }catch(e){}
+    return authScreen(has?'login':'setup'); }
+  let me=null; try{ me=(await fdb.ref(`${ROOT}/users/${u.uid}`).once('value')).val(); }catch(e){}
+  if(!me) return authScreen('denied','Для этого аккаунта нет доступа к производству. Обратитесь к администратору.');
+  if(me.active===false) return authScreen('denied','Ваш доступ отключён администратором.');
+  openData(u.uid);
+}
+function openData(uid){
+  state.mode='fb'; let first=true, data=null, users=null;
+  if(_dataRef) _dataRef.off(); if(_usersRef) _usersRef.off();
+  const arr=o=>Object.entries(o||{}).filter(([,x])=>x).map(([id,x])=>({...x,id}));
+  const apply=()=>{
+    if(!data||!users) return;
+    const me=users[uid]; if(!me||me.active===false){ toast('Доступ отключён'); logout(); return; }
+    const d=data, db={members:arr(users).filter(u=>u.login),settings:{...DEFAULT_SETTINGS,...(d.settings||{})},approved:d.approved||{}};
     COLS.forEach(c=>db[c]=arr(d[c]));
-    // совместимость с первой версией (продукция → проекты, склад → сырьё)
     if(!db.projects.length&&d.products) db.projects=arr(d.products).map(p=>({...p,speed:80,setupMin:+p.setupNorm||60,stations:[],status:'Активный'}));
     if(!db.raw.length&&d.stock) db.raw=arr(d.stock).map(s=>({...s,cost:0}));
     db.output.forEach(r=>{ if(!r.projectId&&r.productId) r.projectId=r.productId; });
     db.orders.forEach(o=>{ if(!o.projectId&&o.productId) o.projectId=o.productId; });
     DB=normalize(db);
-    state.me={id:login,name:me.name,role:me.role};
-    if(first){ first=false; enterApp(); }
+    state.me={id:uid,name:me.name,role:me.role,login:me.login,email:me.email,personId:me.personId||''};
+    if(first){ first=false; enterApp(); probeSecurity(); audit([{col:'session',op:'login',name:'вход в программу'}]); }
     else { $('#meName').textContent=me.name; $('#meRole').textContent=ROLES[me.role]?.n||''; $('#orgName').textContent=DB.settings.orgName; if(!$('#modal').classList.contains('open')) render(); }
-  },err=>{ authScreen('offline','Нет доступа к базе: '+err.message); });
+  };
+  const fail=err=>authScreen('offline','Нет доступа к базе: '+err.message);
+  _dataRef=fdb.ref(`${ROOT}/data`); _dataRef.on('value',s=>{ data=s.val()||{}; apply(); },fail);
+  _usersRef=fdb.ref(`${ROOT}/users`); _usersRef.on('value',s=>{ users=s.val()||{}; apply(); },fail);
+}
+// проверка: закрыта ли база для посторонних (читаем без входа через отдельное подключение)
+async function probeSecurity(){
+  try{ const app=firebase.apps.find(a=>a.name==='probe')||firebase.initializeApp(FB_CONFIG,'probe');
+    await Promise.race([app.database().ref(`${ROOT}/data/settings`).once('value'),wait(8000).then(()=>{ throw new Error('timeout'); })]); _secure=false;
+  }catch(e){ _secure=/permission/i.test(e.message||e.code||'')?true:null; }
+  if(state.sec==='staff'||state.sec==='settings') render(); buildNav();
+}
+const secBanner=()=>state.mode==='fb'&&_secure===false&&can('admin')?`<div class="msg err" style="display:block;margin-bottom:14px"><b>⚠ База открыта для всех.</b> Пароли работают, но данные можно прочитать без входа. Примените правила безопасности для блока <b>"prod"</b> в Firebase (Realtime Database → Rules) — инструкция в разделе «Сотрудники и доступы».</div>`:'';
+// создание учётной записи в Firebase Auth через отдельное подключение (текущий вход не сбрасывается)
+async function createAuthUser(email,pass){
+  const app=firebase.apps.find(a=>a.name==='creator')||firebase.initializeApp(FB_CONFIG,'creator'), a=app.auth();
+  try{ await a.setPersistence(firebase.auth.Auth.Persistence.NONE); }catch(e){}
+  const c=await a.createUserWithEmailAndPassword(email,pass); const uid=c.user.uid; await a.signOut().catch(()=>{}); return uid;
 }
 async function seedLive(){
   if(!confirm('Заполнить базу примером? Текущие данные (кроме пользователей и настроек) будут заменены.')) return;
   const g=genDemo(), up={}, o=x=>Object.fromEntries(x.map(i=>[i.id,i]));
   COLS.forEach(c=>up[c]=o(g[c])); up.approved=g.approved; up.products=null; up.stock=null;
-  await fdb.ref(`${ROOT}/data`).update(fbSafe(clone(up))); toast("Пример загружен");
+  try{ await fdb.ref(`${ROOT}/data`).update(fbSafe(clone(up))); toast("Пример загружен"); }catch(e){ toast(authErr(e)); }
 }
 async function clearLive(){
-  if(!confirm('Удалить ВСЕ данные: выпуск, план, проекты, рецептуры, сырьё, склад? Пользователи и настройки останутся.')) return;
+  if(!confirm('Удалить ВСЕ данные: выпуск, план, проекты, рецептуры, сырьё, склад, персонал, график? Учётные записи и настройки останутся.')) return;
   if(prompt('Для подтверждения напишите: УДАЛИТЬ')!=='УДАЛИТЬ') return;
   const up={approved:null,products:null,stock:null}; COLS.forEach(c=>up[c]=null);
-  await fdb.ref(`${ROOT}/data`).update(up); toast('Данные очищены');
+  try{ await fdb.ref(`${ROOT}/data`).update(up); toast('Данные очищены'); }catch(e){ toast(authErr(e)); }
 }
-function logout(){
+async function logout(){
   try{ localStorage.removeItem('pdd_session'); }catch(e){}
-  if(orgRef){ orgRef.off(); orgRef=null; }
+  if(_dataRef){ _dataRef.off(); _dataRef=null; } if(_usersRef){ _usersRef.off(); _usersRef=null; }
   $('#app').style.display='none';
-  if(fdb) authScreen(Object.keys(_users).length?'login':'setup'); else authScreen('demo');
+  if(state.mode==='demo'&&!fdb){ authScreen('demo'); return; }
+  if(auth&&auth.currentUser){ await auth.signOut().catch(()=>{}); return; } // onAuth покажет вход
+  if(fdb) onAuth(null); else authScreen('demo');
 }
+let _authSub=null;
 async function connect(){
   authScreen('loading');
   try{
-    if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+    if(!firebase.apps.find(a=>a.name==='[DEFAULT]')) firebase.initializeApp(FB_CONFIG);
     fdb=firebase.database(); auth=firebase.auth();
-    if(!auth.currentUser) await Promise.race([auth.signInAnonymously().catch(e=>console.warn('anon auth:',e.message)),wait(6000)]);
-    const snap=await Promise.race([fdb.ref(ROOT+'/users').once('value'),wait(9000).then(()=>{ throw new Error('База не ответила за 9 секунд.'); })]);
-    _users=snap.val()||{};
-    fdb.ref(ROOT+'/users').on('value',x=>{ _users=x.val()||{}; });
-    if(!Object.keys(_users).length) return authScreen('setup');
-    let sess=null; try{ sess=localStorage.getItem('pdd_session'); }catch(e){}
-    if(sess&&_users[sess]) return openData(sess);
-    authScreen('login');
+    if(_authSub) _authSub();
+    _authSub=auth.onAuthStateChanged(u=>{ onAuth(u).catch(e=>authScreen('offline',e.message)); });
   }catch(e){ fdb=null; authScreen('offline',e.message); }
 }
+// смена своего пароля
+function openMyPassword(){
+  if(state.mode!=='fb') return toast('В демо пароли не используются');
+  modal('Сменить пароль',`<div class="fg"><label class="fl">Текущий пароль</label><input class="fi" name="cur" type="password" autocomplete="current-password" autofocus></div>
+    <div class="frow"><div class="fg"><label class="fl">Новый пароль (мин. 6)</label><input class="fi" name="n1" type="password" autocomplete="new-password"></div><div class="fg"><label class="fl">Повторите</label><input class="fi" name="n2" type="password" autocomplete="new-password"></div></div>`,
+  async f=>{ if((f.n1||'').length<6){ toast('Минимум 6 символов'); return false; } if(f.n1!==f.n2){ toast('Пароли не совпадают'); return false; }
+    try{ const u=auth.currentUser; await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,f.cur)); await u.updatePassword(f.n1); audit([{col:'users',op:'pwd',name:`${state.me.login} · сам себе`}]); toast('Пароль изменён'); }
+    catch(e){ toast(authErr(e)); return false; } },'Сменить');
+}
 (function boot(){
+  if(/[?&#]demo\b/.test(location.search+location.hash)){ startDemo(); return; }
   if(!window.firebase||!FB_CONFIG.apiKey){ authScreen('demo'); return; }
   connect();
 })();
