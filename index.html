@@ -251,6 +251,16 @@ tfoot td{font-weight:800;background:var(--card2)}
 .cv-s b{display:block;font-size:10.5px;font-weight:700;white-space:nowrap;max-width:78px;overflow:hidden;text-overflow:ellipsis} .cv-s em{display:block;font-style:normal;font-size:9.5px;font-weight:800;opacity:.75}
 .rs-grp td{background:var(--card2);font-size:12.5px;padding:7px 10px!important;position:sticky;left:0} .cv-s{min-width:64px;padding:2px 4px}
 .rs .rs-d0{border-left:1px solid var(--line2)} .rs .rs-dn{border-left:1px dashed var(--line);background-color:rgba(70,90,140,.05)} .rs tr.rs-sub th{font-size:10px;padding:1px 2px;color:var(--text3)} .rs td.rs-c select{width:48px} .rs td.rs-c.abs select{width:100%;max-width:120px} .rs td.rs-c.rs-d0,.rs th.rs-d0{border-left:2px solid var(--line2)}
+.ptabs button{padding:8px 14px;font-size:13px}
+.ck td{padding:6px 10px;vertical-align:middle} .ck-n{font-weight:700;white-space:nowrap} .ck-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--line2);margin-right:8px;vertical-align:middle}
+.ck-dot.ok{background:var(--green)} .ck-dot.bad{background:var(--red)} .ck-dot.warn{background:var(--amber)}
+.ck-seg{display:inline-flex;gap:3px;flex-wrap:wrap} .ck-seg button{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:5px 10px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer}
+.ck-seg button:disabled{cursor:default} .ck-seg button.on.ok{background:var(--greenBg);color:var(--green);border-color:var(--green)} .ck-seg button.on.bad{background:var(--redBg);color:var(--red);border-color:var(--red)} .ck-seg button.on.warn{background:var(--amberBg);color:var(--amber);border-color:var(--amber)}
+.ck-note{min-width:180px;padding:6px 8px;font-size:12.5px}
+.route{display:flex;flex-wrap:wrap;align-items:center;gap:6px} .route-a{color:var(--text3);font-weight:800} .route-op{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card2);border-radius:9px;padding:6px 10px;font-size:12.5px;font-weight:700}
+.route-op b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--card);border:1px solid var(--line2);font-size:10.5px} .route-op small{color:var(--blue);font-weight:800} .route-op em{font-style:normal;font-size:11px;color:var(--text3)}
+.route-op.rmain{border-color:var(--blue);background:var(--blueBg)} tr.op-main td{background:var(--blueBg)}
+.ptm td,.ptm th{padding:5px 6px;font-size:12px} .ptm-s{padding:5px 6px;font-size:12px;min-width:104px} .ptm-s.ptm-edit{color:var(--green);font-weight:700} .ptm-s.ptm-none{color:var(--text3)}
 .dc-now{position:absolute;top:0;bottom:0;width:2px;background:var(--red);z-index:3;pointer-events:none}
 .ex-head,.ex-row{display:grid;grid-template-columns:1fr 80px 124px 130px 36px;gap:6px;align-items:center} .ex-row{margin-bottom:6px} .ex-head{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
 .ex-row .fi{padding:7px 9px} .ex-e-l{display:flex;gap:6px;align-items:center;font-size:12.5px;white-space:nowrap}
@@ -382,7 +392,7 @@ const FB_CONFIG = {
   appId: "1:1001892488299:web:6aa3b532924b1d80e2fd2e"
 };
 const ROOT = 'prod';
-const COLS = ['lines','projects','raw','semis','orders','output','runs','plan','planLog','supplies','moves','downs','scenarios','shiftCal','people','roster'];
+const COLS = ['lines','projects','raw','semis','orders','output','runs','plan','planLog','supplies','moves','downs','scenarios','shiftCal','people','roster','ptab'];
 
 // ═════════════════════════════════════════════
 //  ROLES
@@ -391,6 +401,9 @@ const ROLES = {
   admin:        {n:'Администратор',  lvl:4, d:'Всё + сотрудники, настройки, утверждение плана'},
   technologist: {n:'Технолог',       lvl:3, d:'Рецептуры, проекты, план, склад, выпуск, подтверждение отчётов смен'},
   master:       {n:'Мастер смены',   lvl:3, d:'План, выпуск, тех. отчёты, склад'},
+  quality:      {n:'Качество',       lvl:0, d:'Вкладка «Качество» и чек-лист проекта, остальное — просмотр'},
+  sales:        {n:'Продажи',        lvl:0, d:'Вкладка «Продажи» проекта, остальное — просмотр'},
+  designer:     {n:'Дизайнер',       lvl:0, d:'Вкладка «Дизайн» и визуалы проекта, остальное — просмотр'},
   operator:     {n:'Оператор',       lvl:1, d:'Внесение выпуска за смену, просмотр плана'},
   viewer:       {n:'Наблюдатель',    lvl:0, d:'Только просмотр'},
 };
@@ -922,7 +935,7 @@ function renderDashboard(){
   const d0=new Date(); d0.setHours(0,0,0,0); const t0=d0.getTime(), t1=t0+864e5, now=Date.now();
   const today=DB.plan.filter(it=>itemStart(it)<t1&&endMs(it)>t0).sort((a,b)=>itemStart(a)-itemStart(b));
   const todayRows=today.map(it=>{ const p=byId(DB.projects,it.projectId), a=itemStart(it), b=endMs(it), pr=Math.max(0,Math.min(1,(now-a)/(b-a)));
-    return `<div class="hb"><div class="hb-top"><b><span class="sw" style="background:${pColor(p)}"></span>${esc(p?.name||'—')}${p?.quality?` <span class="tag t-amber" data-tip="${esc(p.quality).replace(/\n/g,'<br>')}">⚠ качество</span>`:''}</b><span>${esc(lineName(it.lineId))} · ${fdt(a)} → ${fdt(b)}</span></div><div class="track"><div class="fill" style="width:${pr*100}%;background:${pColor(p)}"></div></div></div>`; }).join('');
+    return `<div class="hb"><div class="hb-top"><b><span class="sw" style="background:${pColor(p)}"></span>${esc(p?.name||'—')}${projQNotes(p)?` <span class="tag t-amber" data-tip="${esc(projQNotes(p)).replace(/\n/g,'<br>')}">⚠ качество</span>`:''}</b><span>${esc(lineName(it.lineId))} · ${fdt(a)} → ${fdt(b)}</span></div><div class="track"><div class="fill" style="width:${pr*100}%;background:${pColor(p)}"></div></div></div>`; }).join('');
   const wd=Array(7).fill(0).map(()=>({s:0,days:new Set()}));
   recs.forEach(r=>{ const i=(pd(r.date).getDay()+6)%7; wd[i].s+=+r.good||0; wd[i].days.add(r.date); });
   const wavg=wd.map(x=>x.days.size?x.s/x.days.size:0), wmax=Math.max(1,...wavg);
@@ -1358,9 +1371,9 @@ function renderProjects(){
   const q=state.q.toLowerCase();
   const list=DB.projects.filter(p=>!q||(p.name+' '+(p.client||'')).toLowerCase().includes(q)).sort((a,b)=>(a.status==='Архив')-(b.status==='Архив')||a.name.localeCompare(b.name));
   $('#content').innerHTML=`<div class="toolbar">${searchBox('Поиск проекта или клиента')}<span class="muted" style="font-weight:600">${DB.projects.filter(p=>p.status==='Активный').length} активных · ${DB.projects.length} всего</span><div class="sp"></div>${can('edit')?`<button class="btn btn-p" onclick="openProject()">+ Новый проект</button>`:''}</div>
-  <div class="card">${list.length?`<div class="tw flush"><table><tr><th>Проект</th><th>Линия</th><th>Станции (последовательность)</th><th class="num">Скорость</th><th class="num">Наладка</th><th class="num">Себест. / 1000 шт</th><th>Последняя наработка</th><th>Статус</th></tr>
+  <div class="card">${list.length?`<div class="tw flush"><table><tr><th>Проект</th><th>Линия</th><th>Станции (последовательность)</th><th class="num">Скорость</th><th class="num">Наладка</th>${ptView('cost')?'<th class="num">Себест. / 1000 шт</th>':''}<th>Маршрут</th><th>Готовность</th><th>Последняя наработка</th><th>Статус</th></tr>
   ${list.map(p=>{ const lr=lastRun(p.id); return `<tr class="click" onclick="openProject('${p.id}')"><td><div style="display:flex;gap:10px;align-items:center">${projThumb(p,38)}<div><b>${esc(p.name)}</b><div class="muted" style="font-size:12px">${esc(p.client||'')}${p.tareId?' · '+esc(rawName(p.tareId)):''}</div></div></div></td>
-    <td>${esc(lineName(p.lineId))}</td><td>${stationDots(p)} <span class="muted" style="font-size:12px">${A(p.stations).length}</span></td><td class="num">${N(p.speed)} шт/мин</td><td class="num">${N(p.setupMin)} мин</td><td class="num">${money(projectCost1000(p))}</td>
+    <td>${esc(lineName(p.lineId))}</td><td>${stationDots(p)} <span class="muted" style="font-size:12px">${A(p.stations).length}</span></td><td class="num">${N(p.speed)} шт/мин</td><td class="num">${N(p.setupMin)} мин</td>${ptView('cost')?`<td class="num">${money(projectCost1000(p))}</td>`:''}<td style="font-size:12px;max-width:220px">${A(p.ops).length?A(p.ops).map(o=>esc(o.name)).join(' → '):'<span class="muted">—</span>'}</td><td>${readyTag(p)}</td>
     <td>${lr?fdate(lr.dateTo||lr.dateFrom)+' · '+esc(lineName(lr.lineId)):'<span class="muted">—</span>'}</td><td><span class="tag ${p.status==='Активный'?'t-green':p.status==='Архив'?'t-gray':'t-blue'}">${esc(p.status||'')}</span></td></tr>`; }).join('')}
   </table></div>`:'<div class="empty">Проектов пока нет</div>'}</div>`;
 }
@@ -1369,6 +1382,7 @@ function openProject(id){
   const p=id?byId(DB.projects,id):null, l=DB.lines[0];
   state.draft=p?clone(p):{id:null,name:'',client:'',tareId:'',lineId:l?.id||'',status:'Разработка',speed:80,setupMin:90,stations:Array.from({length:+l?.stations||7},blankStation),quality:''};
   state.draft.stations=A(state.draft.stations);
+  state.draft.ops=A(state.draft.ops).map(o=>({...o})); state.ptd={}; if(!p) state.projTab='main';
   state.back=null; state.sec='projectEdit'; render(); scrollTo(0,0);
 }
 function DS(i,k,v){ state.draft.stations[i][k]=v; }
@@ -1376,12 +1390,138 @@ function stAdd(){ state.draft.stations.push(blankStation()); renderProjectEdit()
 function stDel(i){ state.draft.stations.splice(i,1); renderProjectEdit(); }
 function stMove(i,dir){ const s=state.draft.stations, j=i+dir; if(j<0||j>=s.length) return; [s[i],s[j]]=[s[j],s[i]]; renderProjectEdit(); }
 function stPick(i,v){ if(v==='__new'){ state.back={sec:'projectEdit',draft:state.draft,station:i}; openSemi(null,state.back); return; } DS(i,'semiId',v); renderProjectEdit(); }
+// ═════════════════════════════════════════════
+//  ПРОЕКТ: вкладки для разных служб, доступ к вкладкам по ролям, быстрый чек-лист, маршрут операций
+// ═════════════════════════════════════════════
+const projQNotes=p=>{ const r=ptRec(p?.id,'quality'); return r&&r.notes!=null?r.notes:(p?.quality||''); };
+const PTABS=[
+  {id:'main',n:'Главная',d:'основное, быстрый чек-лист, маршрут'},
+  {id:'tech',n:'Технология',d:'скорость, наладка, операции и персонал, станции и рецептуры'},
+  {id:'quality',n:'Качество',d:'предосторожности, входной контроль, критерии приёмки, брак'},
+  {id:'sales',n:'Продажи',d:'клиент, цена, объёмы, заказы'},
+  {id:'design',n:'Дизайн',d:'визуалы, макет, цвета, фильмы и сетки'},
+  {id:'cost',n:'Себестоимость',d:'материалы, доп. затраты, маржа'},
+  {id:'runs',n:'Наработки',d:'тех. отчёты и использованные рецептуры'}];
+const PT_ROLES=['technologist','master','quality','sales','designer','operator','viewer'];
+const PT_DEF={
+  main:   {technologist:'edit',master:'edit',quality:'edit',sales:'view',designer:'view',operator:'view',viewer:'view'},
+  tech:   {technologist:'edit',master:'view',quality:'view',sales:'none',designer:'none',operator:'view',viewer:'view'},
+  quality:{technologist:'edit',master:'view',quality:'edit',sales:'view',designer:'none',operator:'view',viewer:'view'},
+  sales:  {technologist:'view',master:'none',quality:'none',sales:'edit',designer:'view',operator:'none',viewer:'none'},
+  design: {technologist:'edit',master:'view',quality:'view',sales:'edit',designer:'edit',operator:'view',viewer:'view'},
+  cost:   {technologist:'edit',master:'none',quality:'none',sales:'view',designer:'none',operator:'none',viewer:'none'},
+  runs:   {technologist:'edit',master:'edit',quality:'view',sales:'none',designer:'none',operator:'view',viewer:'view'}};
+const PT_LV={none:'— нет',view:'просмотр',edit:'правка'};
+const ptMatrix=()=>Object.fromEntries(PTABS.map(t=>[t.id,Object.fromEntries(PT_ROLES.map(r=>[r,(DB.settings.projTabs||{})[t.id]?.[r]||PT_DEF[t.id][r]]))]));
+function ptAccess(tab,role){ role=role||state.me?.role; if(role==='admin') return 'edit'; const m=(DB.settings.projTabs||{})[tab]; return m?.[role]||PT_DEF[tab]?.[role]||'none'; }
+const ptView=t=>ptAccess(t)!=='none', ptEdit=t=>ptAccess(t)==='edit';
+// «ядро» проекта (название, линия, технология) пишут только роли с правом редактирования данных; вкладки служб — отдельные записи ptab
+const ptCore=t=>ptEdit(t)&&can('edit');
+const ptId=(pid,tab)=>fbKey(pid+'__'+tab);
+const ptRec=(pid,tab)=>pid?(DB.ptab.find(x=>x.id===ptId(pid,tab))||null):null;
+function ptD(tab){ state.ptd=state.ptd||{}; if(!state.ptd[tab]) state.ptd[tab]=clone(ptRec(state.draft?.id,tab)||{}); return state.ptd[tab]; }
+const PTV=(tab,k,v)=>{ ptD(tab)[k]=v; ptD(tab)._dirty=true; };
+
+// быстрый чек-лист готовности к запуску
+const CK_OK={ok:'Есть',part:'Частично',no:'Нет',na:'Не нужно'};
+const CHECK=[
+  {k:'glass',n:'Стекло в наличии',o:{ok:'Есть',part:'Частично',no:'Нет'}},
+  {k:'incoming',n:'Incoming control стекла',o:{ok:'Прошёл',wait:'Ожидает',no:'Не прошёл'}},
+  {k:'firing',n:'Обжиг стекла перед работой',o:{yes:'Требуется',na:'Не требуется'},info:1},
+  {k:'mix',n:'Компоненты для смеси',o:CK_OK},
+  {k:'tooling',n:'Оснастка',o:CK_OK},
+  {k:'films',n:'Фильмы для принтинга',o:CK_OK},
+  {k:'screens',n:'Сетки для принтинга',o:CK_OK},
+  {k:'pack',n:'Упаковка',o:CK_OK},
+  {k:'pallet',n:'Схема паллетирования',o:{ok:'Есть',no:'Нет',na:'Не нужно'}}];
+const ckCls=v=>v==='ok'||v==='na'||v==='yes'?'ok':v==='no'?'bad':v==='part'||v==='wait'?'warn':'';
+function projReady(p){ const c=ptRec(p.id,'main')?.check||{}; const items=CHECK.map(x=>({...x,v:c[x.k]?.v||'',note:c[x.k]?.note||''}));
+  const ok=items.filter(x=>ckCls(x.v)==='ok').length, bad=items.filter(x=>ckCls(x.v)==='bad'), warn=items.filter(x=>ckCls(x.v)==='warn'), empty=items.filter(x=>!x.v);
+  return {items,ok,total:items.length,bad,warn,empty,cls:bad.length?'t-red':ok===items.length?'t-green':warn.length||ok?'t-amber':'t-gray'}; }
+const readyTag=p=>{ const r=projReady(p); return `<span class="tag ${r.cls}" data-tip="${esc(`<b>Готовность к запуску: ${r.ok} из ${r.total}</b><br>`+r.items.map(x=>`${ckCls(x.v)==='ok'?'✓':ckCls(x.v)==='bad'?'✕':ckCls(x.v)==='warn'?'!':'·'} ${x.n}: ${x.v?x.o[x.v]:'не отмечено'}`).join('<br>'))}">${r.ok}/${r.total}</span>`; };
+async function setCheck(pid,k,v){
+  if(!ptEdit('main')||!pid) return; const r=clone(ptRec(pid,'main')||{id:ptId(pid,'main'),pid,tab:'main'}); r.check=r.check||{};
+  const prev=r.check[k]||{}; r.check[k]={...prev,v,by:state.me.name,ts:Date.now()}; r.by=state.me.name; r.ts=Date.now();
+  await Store.put('ptab',r); if(state.sec==='projectEdit') renderProjectEdit();
+}
+async function setCheckNote(pid,k,note){
+  if(!ptEdit('main')||!pid) return; const r=clone(ptRec(pid,'main')||{id:ptId(pid,'main'),pid,tab:'main'}); r.check=r.check||{};
+  if((r.check[k]?.note||'')===note) return; r.check[k]={...(r.check[k]||{}),note,by:state.me.name,ts:Date.now()}; await Store.put('ptab',r);
+}
+
+// маршрут операций
+const OP_DEF=['Обжиг стекла','Коатинг','Охлаждение стекла','Чистка горла','Принтинг','Хот стемпинг','Запекание в печи','Контроль качества','Упаковка','Отгрузка'];
+const ROUTE_DEF=['Обжиг стекла','Коатинг','Охлаждение стекла','Чистка горла','Принтинг','Запекание в печи','Упаковка','Отгрузка'];
+const opNames=()=>A(DB.settings.opNames).length?A(DB.settings.opNames):OP_DEF;
+const blankOp=name=>({id:uid(),name:name||'',lineId:'',qualSetup:'',qualRun:'',operators:'',handlers:'',note:''});
+const opArea=o=>{ const l=byId(DB.lines,o.lineId); if(l) return lineArea(l); const n=(o.name||'').toLowerCase(); return /коат|coat|покрас/.test(n)?'coating':/принт|print|печат|стемп|тиснен/.test(n)?'printing':''; };
+// операция проекта на конкретной линии: из неё берутся требования к квалификации и людям для проверки смены
+function projOpFor(p,lineId){ const ops=A(p?.ops); const o=ops.find(x=>x.lineId===lineId)||ops.find(x=>x.lineId&&x.lineId===p.lineId)||null;
+  if(o) return {qualSetup:o.qualSetup||'',qualRun:o.qualRun||'',operators:+o.operators||0,handlers:+o.handlers||0,name:o.name};
+  return {qualSetup:p?.qualSetup||'',qualRun:p?.qualRun||'',operators:0,handlers:0,name:''}; }
+function ensureOps(d){ d.ops=A(d.ops); if(!d.ops.length&&d.lineId){ const l=byId(DB.lines,d.lineId), ar=lineArea(l);
+  d.ops=[{...blankOp(ar==='coating'?'Коатинг':ar==='printing'?'Принтинг':(l?.name||'Операция')),lineId:d.lineId,qualSetup:d.qualSetup||'',qualRun:d.qualRun||''}]; } }
+function OPV(i,k,v){ state.draft.ops[i][k]=v; }
+function opAdd(name){ state.draft.ops.push(blankOp(name)); renderProjectEdit(); }
+function opDel(i){ state.draft.ops.splice(i,1); renderProjectEdit(); }
+function opMove(i,dir){ const s=state.draft.ops, j=i+dir; if(j<0||j>=s.length) return; [s[i],s[j]]=[s[j],s[i]]; renderProjectEdit(); }
+function opRoute(){ const d=state.draft, have=new Set(d.ops.map(o=>o.name)); if(d.ops.length&&!confirm('Добавить недостающие типовые операции в маршрут? Существующие останутся.')) return;
+  const main=d.ops.find(o=>o.lineId===d.lineId); const out=[]; ROUTE_DEF.forEach(n=>{ const ex=d.ops.find(o=>o.name===n); if(ex) out.push(ex); else if(!(main&&main.name===n)) out.push(blankOp(n)); });
+  d.ops.forEach(o=>{ if(!out.includes(o)) out.splice(Math.min(out.length,d.ops.indexOf(o)),0,o); }); d.ops=out; renderProjectEdit(); }
+const routeChips=d=>A(d.ops).length?`<div class="route">${A(d.ops).map((o,i)=>{ const l=byId(DB.lines,o.lineId), ppl=[o.qualSetup||o.qualRun?`${o.qualSetup?'наладка '+o.qualSetup:''}${o.qualSetup&&o.qualRun?', ':''}${o.qualRun?'пр-во '+o.qualRun:''}`:'',+o.operators?`операторов ${o.operators}`:'',+o.handlers?`Handler ${o.handlers}`:''].filter(Boolean).join(' · ');
+  return `${i?'<span class="route-a">→</span>':''}<span class="route-op ${o.lineId&&o.lineId===d.lineId?'rmain':''}" data-tip="${esc(`<b>${i+1}. ${esc(o.name)}</b>${l?'<br>Линия: '+esc(l.name):''}${ppl?'<br>'+esc(ppl):''}${o.note?'<br>'+esc(o.note):''}`)}"><b>${i+1}</b>${esc(o.name||'—')}${l?`<small>${esc(lineShort(l))}</small>`:''}${+o.handlers?`<em>+${o.handlers} H</em>`:''}</span>`; }).join('')}</div>`:'<div class="empty" style="padding:14px">Маршрут не задан — добавьте операции во вкладке «Технология»</div>';
+
+function projTabBtns(d){ const tab=state.projTab;
+  return `<div class="seg ptabs">${PTABS.filter(t=>ptView(t.id)).map(t=>`<button class="${tab===t.id?'on':''}" onclick="state.projTab='${t.id}';renderProjectEdit()" title="${esc(t.d)}${ptEdit(t.id)?'':' · только просмотр'}">${t.n}${ptEdit(t.id)?'':' <span style="opacity:.55">👁</span>'}</button>`).join('')}</div>`; }
+const fArea=(tab,k,label,ph,rows=4)=>`<div class="fg"><label class="fl">${label}</label><textarea class="fi" rows="${rows}" ${ptEdit(tab)?'':'disabled'} oninput="PTV('${tab}','${k}',this.value)" placeholder="${esc(ph||'')}">${esc(ptD(tab)[k]||'')}</textarea></div>`;
+const fIn=(tab,k,label,ph,num)=>`<div class="fg"><label class="fl">${label}</label><input class="fi" ${num?'type="text" inputmode="decimal" data-num="1"':''} value="${esc(ptD(tab)[k]??'')}" ${ptEdit(tab)?'':'disabled'} oninput="PTV('${tab}','${k}',this.value)" ${num?`onchange="renderProjectEdit()"`:''} placeholder="${esc(ph||'')}"></div>`;
+const fSel=(tab,k,label,list)=>`<div class="fg"><label class="fl">${label}</label><select class="fi" ${ptEdit(tab)?'':'disabled'} onchange="PTV('${tab}','${k}',this.value)"><option value="">—</option>${list.map(x=>`<option ${x===ptD(tab)[k]?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
+const ptStamp=(pid,tab)=>{ const r=ptRec(pid,tab); return r?.ts?`<div class="card-s">изменил ${esc(r.by||'')} · ${fts(r.ts)}</div>`:''; };
+
 function renderProjectEdit(){
   const d=state.draft; if(!d) return go('projects');
-  const ro=!can('edit'), line=byId(DB.lines,d.lineId), s0=lineShiftDefs(d.lineId)[0], sh=(((hm(s0.to)-hm(s0.from)+1440)%1440)||1440)/60;
-  const tares=DB.raw.filter(r=>(r.cat||'').toLowerCase().includes('тара')||r.unit==='шт');
-  const cost=projectCost1000(d), kg=projectKg1000(d);
+  d.stations=A(d.stations); ensureOps(d);
+  if(!state.projTab||!ptView(state.projTab)) state.projTab=(PTABS.find(t=>ptView(t.id))||PTABS[0]).id;
+  const tab=state.projTab, anyEdit=PTABS.some(t=>ptEdit(t.id)&&(['main','tech'].includes(t.id)?ptCore(t.id):!['runs'].includes(t.id)));
+  const body={main:pTabMain,tech:pTabTech,quality:pTabQuality,sales:pTabSales,design:pTabDesign,cost:pTabCost,runs:pTabRuns}[tab](d);
+  $('#content').innerHTML=`<div class="toolbar"><button class="btn btn-s" onclick="state.draft=null;state.ptd=null;go('projects')">← Проекты</button>${projThumb(d,34)}<div class="card-t">${esc(d.name||'Новый проект')}</div>${d.id?`<span class="tag ${d.status==='Активный'?'t-green':'t-blue'}">${esc(d.status)}</span> ${readyTag(d)}`:''}<div class="sp"></div>
+    ${d.id&&ptView('tech')?`<button class="btn btn-s" onclick="printProject('${d.id}')">🖨 Печать рецептуры</button>`:''}
+    ${anyEdit?`<button class="btn btn-p" onclick="saveProject()">Сохранить</button>`:''}</div>
+  <div style="margin-bottom:14px">${projTabBtns(d)}</div>${body}`;
+}
+function pTabMain(d){
+  const ro=!ptCore('main'), tares=DB.raw.filter(r=>(r.cat||'').toLowerCase().includes('тара')||r.unit==='шт'), ce=ptEdit('main')&&d.id, c=ptRec(d.id,'main')?.check||{}, rd=d.id?projReady(d):null;
+  const fire=c.firing?.v==='yes', hasFire=A(d.ops).some(o=>/обжиг/i.test(o.name));
+  const ckRows=CHECK.map(x=>{ const it=c[x.k]||{}, v=it.v||'';
+    return `<tr><td class="ck-n"><span class="ck-dot ${ckCls(v)}"></span>${x.n}</td><td><div class="ck-seg">${Object.entries(x.o).map(([k,lab])=>`<button class="${v===k?'on '+ckCls(k):''}" ${ce?`onclick="setCheck('${d.id}','${x.k}','${v===k?'':k}')"`:'disabled'}>${lab}</button>`).join('')}</div></td>
+      <td><input class="fi ck-note" value="${esc(it.note||'')}" ${ce?'':'disabled'} placeholder="${x.k==='glass'?'кол-во, партия, где лежит…':x.k==='incoming'?'№ протокола, замечания…':'комментарий'}" onchange="setCheckNote('${d.id}','${x.k}',this.value.trim())"></td>
+      <td class="muted" style="font-size:11.5px;white-space:nowrap">${it.ts?`${esc(it.by||'')}<br>${fts(it.ts)}`:''}</td></tr>`; }).join('');
+  return `<div class="grid g2 row-gap">
+    <div class="card"><div class="card-h"><div class="card-t">Основное</div></div>
+      <div class="frow"><div class="fg"><label class="fl">Название проекта</label><input class="fi" value="${esc(d.name)}" ${ro?'disabled':''} oninput="D('name',this.value)"></div>
+      <div class="fg"><label class="fl">Клиент</label><input class="fi" value="${esc(d.client||'')}" ${ro?'disabled':''} oninput="D('client',this.value)"></div></div>
+      <div class="frow"><div class="fg"><label class="fl">Основная линия (для плана)</label><select class="fi" ${ro?'disabled':''} onchange="D('lineId',this.value);renderProjectEdit()">${opts(DB.lines,d.lineId)}</select></div>
+      <div class="fg"><label class="fl">Тара (изделие)</label><select class="fi" ${ro?'disabled':''} onchange="D('tareId',this.value)">${opts(tares,d.tareId,r=>r.name,'— не указана —')}</select></div></div>
+      <div class="frow"><div class="fg"><label class="fl">Статус</label><select class="fi" ${ro?'disabled':''} onchange="D('status',this.value)">${PSTATUS.map(s=>`<option ${s===d.status?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">Цвет в плане</label><input class="fi" type="color" style="height:42px;padding:4px" value="${d.color||pColor(d)}" ${ro?'disabled':''} onchange="D('color',this.value)"></div></div></div>
+    <div class="card"><div class="card-h"><div class="card-t">Коротко</div></div>
+      <div style="display:flex;gap:14px;align-items:flex-start">${d.thumb?`<img src="${d.thumb}" alt="" style="width:96px;height:128px;object-fit:cover;border-radius:10px;border:1px solid var(--line);flex-shrink:0">`:''}
+      <div style="flex:1;min-width:0">
+        <div class="stat"><span>Линия</span><b>${esc(lineName(d.lineId))}</b></div>
+        ${ptView('tech')?`<div class="stat"><span>Скорость / наладка</span><b>${N(d.speed)} шт/мин · ${N(d.setupMin)} мин</b></div>`:''}
+        <div class="stat"><span>Операций в маршруте</span><b>${A(d.ops).length}</b></div>
+        <div class="stat"><span>Готовность к запуску</span><b>${rd?`${rd.ok} из ${rd.total}`:'—'}</b></div>
+        ${rd&&rd.bad.length?`<div class="hint" style="color:var(--red);margin-top:6px"><b>Не готово:</b> ${rd.bad.map(x=>esc(x.n)).join(', ')}</div>`:''}</div></div></div>
+  </div>
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Быстрый чек-лист запуска</div><div class="card-s">${d.id?(ce?'нажмите вариант — сохраняется сразу, с именем и временем':'только просмотр'):'сохраните проект, чтобы заполнять чек-лист'}</div></div>
+    ${fire&&!hasFire?`<div class="msg" style="display:block;margin-bottom:10px;background:var(--amberBg);color:var(--amber)">Отмечено «Обжиг стекла требуется», но в маршруте нет операции обжига${ptCore('tech')?` — <a href="#" onclick="event.preventDefault();state.draft.ops.unshift(blankOp('Обжиг стекла'));state.projTab='tech';renderProjectEdit()">добавить в начало маршрута</a>`:''}</div>`:''}
+    <div class="tw flush"><table class="ck">${ckRows}</table></div></div>
+  <div class="card"><div class="card-h"><div class="card-t">Маршрут операций</div><div class="card-s">редактируется во вкладке «Технология» · выделена операция на основной линии</div></div>${routeChips(d)}</div>`;
+}
+function pTabTech(d){
+  const ro=!ptCore('tech'), line=byId(DB.lines,d.lineId), s0=lineShiftDefs(d.lineId)[0], sh=(((hm(s0.to)-hm(s0.from)+1440)%1440)||1440)/60;
   const semiOpts=sel=>`<option value="">— выберите рецептуру —</option>`+DB.semis.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<option value="${s.id}" ${s.id===sel?'selected':''}>${esc(s.name)}${s.pantone&&s.pantone!=='—'?' · '+esc(s.pantone):''}</option>`).join('')+(ro?'':'<option value="__new">＋ Создать новую рецептуру…</option>');
+  const showCost=ptView('cost');
   const stRows=d.stations.map((st,i)=>`<tr><td><span class="stn">${i+1}</span></td>
     <td><div style="display:flex;align-items:center"><span class="sw" style="background:${semiColor(st.semiId)};width:20px;height:20px"></span><select class="fi" ${ro?'disabled':''} onchange="stPick(${i},this.value)">${semiOpts(st.semiId)}</select></div></td>
     <td><input class="fi" type="text" inputmode="decimal" data-num="1" step="any" min="0" style="width:90px" value="${esc(st.norm)}" ${ro?'disabled':''} onchange="DS(${i},'norm',this.value);renderProjectEdit()"></td>
@@ -1389,52 +1529,111 @@ function renderProjectEdit(){
     <td><input class="fi" style="width:80px" value="${esc(st.press||'')}" ${ro?'disabled':''} oninput="DS(${i},'press',this.value)" placeholder="бар"></td>
     <td><input class="fi" style="width:80px" value="${esc(st.nozzle||'')}" ${ro?'disabled':''} oninput="DS(${i},'nozzle',this.value)" placeholder="мм"></td>
     <td><input class="fi" style="min-width:160px" value="${esc(st.note||'')}" ${ro?'disabled':''} oninput="DS(${i},'note',this.value)" placeholder="слой, зона, маска…"></td>
-    <td class="num muted">${st.semiId&&+st.norm?money(stationKg(st.norm,1000)*unitCost('semi',st.semiId)):'—'}</td>
+    ${showCost?`<td class="num muted">${st.semiId&&+st.norm?money(stationKg(st.norm,1000)*unitCost('semi',st.semiId)):'—'}</td>`:''}
     <td style="white-space:nowrap">${ro?'':`<button class="btn btn-s btn-sm" onclick="stMove(${i},-1)" title="Выше">↑</button> <button class="btn btn-s btn-sm" onclick="stMove(${i},1)" title="Ниже">↓</button> <button class="btn btn-s btn-sm" onclick="stDel(${i})">✕</button>`}</td></tr>`).join('');
-  const runs=d.id?DB.runs.filter(r=>r.projectId===d.id).sort((a,b)=>(b.dateTo||'').localeCompare(a.dateTo||'')):[];
+  const qSel=(i,k,v)=>`<select class="fi" ${ro?'disabled':''} onchange="OPV(${i},'${k}',this.value)"><option value="">—</option>${QUALS.map(q=>`<option ${q===v?'selected':''}>${q}</option>`).join('')}</select>`;
+  const opRows=d.ops.map((o,i)=>{ const main=o.lineId&&o.lineId===d.lineId;
+    return `<tr class="${main?'op-main':''}"><td><span class="stn">${i+1}</span></td>
+    <td><input class="fi" list="opList" style="min-width:150px" value="${esc(o.name)}" ${ro?'disabled':''} oninput="OPV(${i},'name',this.value)" placeholder="операция">${main?'<div class="hint" style="margin:2px 0 0">основная линия → проверка смен в плане</div>':''}</td>
+    <td><select class="fi" ${ro?'disabled':''} onchange="OPV(${i},'lineId',this.value);renderProjectEdit()">${opts(DB.lines,o.lineId,l=>l.name,'— без линии —')}</select></td>
+    <td>${qSel(i,'qualSetup',o.qualSetup)}</td><td>${qSel(i,'qualRun',o.qualRun)}</td>
+    <td><input class="fi" type="text" inputmode="numeric" data-num="1" style="width:64px" value="${esc(o.operators??'')}" ${ro?'disabled':''} oninput="OPV(${i},'operators',this.value)" placeholder="0"></td>
+    <td><input class="fi" type="text" inputmode="numeric" data-num="1" style="width:64px" value="${esc(o.handlers??'')}" ${ro?'disabled':''} oninput="OPV(${i},'handlers',this.value)" placeholder="0"></td>
+    <td><input class="fi" style="min-width:140px" value="${esc(o.note||'')}" ${ro?'disabled':''} oninput="OPV(${i},'note',this.value)" placeholder="время, температура, условия…"></td>
+    <td style="white-space:nowrap">${ro?'':`<button class="btn btn-s btn-sm" onclick="opMove(${i},-1)">↑</button> <button class="btn btn-s btn-sm" onclick="opMove(${i},1)">↓</button> <button class="btn btn-s btn-sm" onclick="opDel(${i})">✕</button>`}</td></tr>`; }).join('');
+  const tot=d.ops.reduce((a,o)=>({op:a.op+(+o.operators||0),h:a.h+(+o.handlers||0)}),{op:0,h:0});
+  return `<div class="grid g2 row-gap">
+    <div class="card"><div class="card-h"><div class="card-t">Планирование на основной линии</div><div class="card-s">${esc(lineName(d.lineId))}</div></div>
+      <div class="frow"><div class="fg"><label class="fl">План: скорость, шт/мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="1" value="${d.speed}" ${ro?'disabled':''} onchange="D('speed',+this.value);renderProjectEdit()"></div>
+      <div class="fg"><label class="fl">План: наладка, мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" value="${d.setupMin}" ${ro?'disabled':''} onchange="D('setupMin',+this.value);renderProjectEdit()"></div></div>
+      <div class="hint">Обед, уборку, пересменку технолог добавляет в самом плане — у каждого проекта отдельно</div></div>
+    <div class="card"><div class="card-h"><div class="card-t">Расчёт</div></div>
+      <div class="stat"><span>Выработка в час / смену</span><b>${N(d.speed*60)} / ${N(d.speed*60*sh)} шт</b></div>
+      <div class="stat"><span>100 000 шт: чистое время + наладка</span><b>${Q(planHours(d,100000),1)} ч</b></div>
+      <div class="stat"><span>Материалы на 1000 шт</span><b>${Q(projectKg1000(d),3)} кг</b></div>
+      <div class="stat"><span>Станций задействовано</span><b>${d.stations.filter(s=>s.semiId).length}${line?.stations?' из '+line.stations:''}</b></div></div>
+  </div>
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Маршрут операций и потребность в людях</div><div class="card-s">по порядку выполнения · ${tot.op} операторов и ${tot.h} Handler по всем операциям</div><div class="sp"></div>
+    ${ro?'':`<button class="btn btn-s btn-sm" onclick="opRoute()" title="${esc(ROUTE_DEF.join(' → '))}">Типовой маршрут</button> <button class="btn btn-s btn-sm" onclick="opAdd('')">+ Операция</button>`}</div>
+    <datalist id="opList">${opNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
+    <div class="tw ed"><table><tr><th>№</th><th>Операция</th><th>Линия</th><th>Наладка: уровень</th><th>Пр-во: уровень</th><th>Операторов</th><th>Handler</th><th>Примечание</th><th></th></tr>${opRows||'<tr><td colspan="9" class="empty">Операций нет — нажмите «Типовой маршрут» или «+ Операция»</td></tr>'}</table></div>
+    <div class="hint" style="margin-top:8px">Операцию можно выбрать из списка или вписать свою (на непредвиденный случай). Для операции на линии уровни и число людей сравниваются с графиком: если в смене не хватает квалификации, операторов или Handler — в «Покрытии смен» и в плане появится ⚠. Справочник операций — в «Настройках».</div></div>
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Станции нанесения — последовательность</div><div class="card-s">№1 — первый пистолет по ходу линии</div><div class="sp"></div>${ro?'':`<button class="btn btn-s btn-sm" onclick="stAdd()">+ Станция</button>`}</div>
+    <div class="tw ed"><table><tr><th>№</th><th>Рецептура</th><th>Норма, г / 1000 шт</th><th>Вязкость</th><th>Давление</th><th>Сопло</th><th>Примечание</th>${showCost?`<th class="num">${esc(DB.settings.currency||'€')} / 1000</th>`:''}<th></th></tr>${stRows||'<tr><td colspan="9" class="empty">Добавьте станции</td></tr>'}</table></div></div>`;
+}
+function pTabQuality(d){
+  const q=ptD('quality'); if(q.notes==null&&d.quality) q.notes=d.quality;
+  const outs=d.id?DB.output.filter(o=>o.projectId===d.id&&o.approved!==false):[], g=outs.reduce((a,o)=>a+(+o.good||0),0), df=outs.reduce((a,o)=>a+(+o.defect||0),0);
+  const byR={}; outs.forEach(o=>{ if(+o.defect&&o.reason) byR[o.reason]=(byR[o.reason]||0)+(+o.defect||0); });
+  return `<div class="grid g2 row-gap">
+    <div class="card"><div class="card-h"><div class="card-t">⚠ Предосторожности и на что обратить внимание</div>${ptStamp(d.id,'quality')}</div>
+      ${fArea('quality','notes','Для мастера и операторов','Например: контроль вязкости каждые 2 часа; не допускать потёков на плече бутылки; адгезия — тест скотча в начале смены…',7)}</div>
+    <div class="card"><div class="card-h"><div class="card-t">Брак по проекту</div><div class="card-s">по подтверждённым отчётам смен</div></div>
+      <div class="stat"><span>Годные / брак</span><b>${N(g)} / ${N(df)} шт</b></div>
+      <div class="stat"><span>Доля брака</span><b>${g+df?P(df/(g+df)*100,2):'—'}</b></div>
+      ${Object.entries(byR).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([r,n])=>`<div class="stat"><span>${esc(r)}</span><b>${N(n)}</b></div>`).join('')||'<div class="hint" style="margin-top:6px">Причины брака появятся, когда будут отчёты смен</div>'}</div>
+  </div>
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Контроль</div></div>
+    <div class="frow">${fArea('quality','incoming','Входной контроль стекла — требования','размеры, дефекты стекла, чистота поверхности, размер выборки…')}${fArea('quality','accept','Критерии приёмки готовой продукции','цвет по эталону, ΔE, допустимые дефекты, зоны осмотра…')}</div>
+    <div class="frow">${fArea('quality','tests','Тесты и периодичность','адгезия (скотч), царапины, моющие средства, термошок, мойка…')}${fArea('quality','samples','Эталоны и образцы','где хранится утверждённый образец, кто подписал, дата…')}</div></div>`;
+}
+function pTabSales(d){
+  const ords=d.id?DB.orders.filter(o=>o.projectId===d.id).sort((a,b)=>(b.due||'').localeCompare(a.due||'')):[], cur=esc(DB.settings.currency||'€');
+  return `<div class="grid g2 row-gap">
+    <div class="card"><div class="card-h"><div class="card-t">Клиент и условия</div>${ptStamp(d.id,'sales')}</div>
+      <div class="frow">${fIn('sales','contact','Контактное лицо','имя, телефон, e-mail')}${fIn('sales','manager','Менеджер проекта','')}</div>
+      <div class="frow3">${fIn('sales','price',`Цена, ${cur} / 1000 шт`,'',1)}${fIn('sales','volume','Объём в год, шт','',1)}${fIn('sales','moq','Мин. партия, шт','',1)}</div>
+      <div class="frow">${fIn('sales','payment','Условия оплаты','напр. 30 дней')}${fIn('sales','lead','Срок поставки','напр. 3 недели от подтверждения')}</div>
+      ${fArea('sales','notes','Заметки по клиенту','пожелания, история, договорённости…',3)}</div>
+    <div class="card"><div class="card-h"><div class="card-t">Заказы по проекту</div></div>
+      ${ords.length?`<div class="tw flush"><table><tr><th>№</th><th class="num">Кол-во</th><th>Срок</th><th>Статус</th></tr>${ords.map(o=>{ const st=OST[orderStatus(o)]; return `<tr><td><b>${esc(o.no)}</b></td><td class="num">${N(o.qty)}</td><td>${fdate(o.due)}</td><td><span class="tag ${st[1]}">${st[0]}</span></td></tr>`; }).join('')}</table></div>`:'<div class="empty">Заказов пока нет</div>'}</div>
+  </div>`;
+}
+function pTabDesign(d){
+  return `${projVisualCard(d)}
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Макет</div>${ptStamp(d.id,'design')}</div>
+    <div class="frow3">${fSel('design','status','Статус макета',['Эскиз','На согласовании у клиента','Утверждён клиентом','Изменения'])}${fIn('design','version','Версия макета','напр. v3')}${fIn('design','approved','Дата утверждения','дд.мм.гггг')}</div>
+    <div class="frow">${fIn('design','colors','Цвета (Pantone / RAL)','напр. Pantone 871 C, 7406 C')}${fIn('design','link','Папка с макетами (ссылка)','https://…')}</div>
+    <div class="frow">${fArea('design','films','Фильмы для принтинга','кол-во, размеры, где хранятся…',3)}${fArea('design','screens','Сетки для принтинга','меш, натяжение, номер рамы…',3)}</div>
+    ${fArea('design','notes','Примечание дизайнера','',3)}</div>`;
+}
+function pTabCost(d){
+  const c=ptD('cost'), cur=esc(DB.settings.currency||'€'), coat=projectCost1000(d), tare=byId(DB.raw,d.tareId), glass=+c.glass||0, glassStock=(+tare?.cost||0)*1000;
+  const extra=['pack','labour','energy','other'].reduce((a,k)=>a+(+c[k]||0),0), total=coat+glass+extra, price=+ptRec(d.id,'sales')?.price||+ptD('sales').price||0, seeP=ptView('sales');
+  return `<div class="grid g2 row-gap">
+    <div class="card"><div class="card-h"><div class="card-t">Себестоимость на 1000 шт</div></div>
+      <div class="stat"><span>Покрытие по рецептурам (станции)</span><b>${money(coat)}</b></div>
+      <div class="stat"><span>Стекло / тара${glass?'':' — стекло клиента'}</span><b>${money(glass)}</b></div>
+      <div class="stat"><span>Доп. затраты</span><b>${money(extra)}</b></div>
+      <div class="stat" style="font-size:15px"><span><b>Итого</b></span><b>${money(total)}</b></div>
+      ${seeP?`<div class="stat"><span>Цена продажи (вкладка «Продажи»)</span><b>${price?money(price):'—'}</b></div>
+      <div class="stat"><span>Маржа</span><b style="color:${price&&price<total?'var(--red)':'var(--green)'}">${price?`${money(price-total)} · ${P((price-total)/price*100,1)}`:'—'}</b></div>`:''}
+      <div class="stat"><span>Материалы на 1000 шт</span><b>${Q(projectKg1000(d),3)} кг</b></div></div>
+    <div class="card"><div class="card-h"><div class="card-t">Доп. затраты, ${cur} / 1000 шт</div>${ptStamp(d.id,'cost')}</div>
+      <div class="frow">${fIn('cost','glass','Стекло / тара — если закупаем сами',glassStock?'по складу '+money(glassStock):'',1)}${fIn('cost','pack','Упаковка','',1)}</div>
+      <div class="frow">${fIn('cost','labour','Работа (персонал)','',1)}${fIn('cost','energy','Энергия (печь, сушка)','',1)}</div>
+      <div class="frow">${fIn('cost','other','Прочее','',1)}<div class="fg"></div></div>
+      ${fArea('cost','notes','Комментарий к расчёту','',2)}</div>
+  </div>`;
+}
+function pTabRuns(d){
+  const runs=d.id?DB.runs.filter(r=>r.projectId===d.id).sort((a,b)=>(b.dateTo||'').localeCompare(a.dateTo||'')):[], ce=ptEdit('runs')&&can('edit');
   const runRows=runs.map(r=>{ const t=runTotals(r); return `<tr class="click" onclick="openRun('${r.projectId}','${r.id}')"><td><b>${r.startAt?fdt(tms(r.startAt)):fdate(r.dateFrom)}</b><div class="muted" style="font-size:12px">→ ${r.endAt?fdt(tms(r.endAt)):fdate(r.dateTo||r.dateFrom)}</div></td><td>${esc(lineName(r.lineId))}</td><td class="num">${N(r.qtyGood)}</td>
     <td class="num">${r.setupFact?N(r.setupFact)+' / '+N(d.setupMin):'—'}</td><td class="num">${r.speedFact?N(r.speedFact)+' / '+N(d.speed):'—'}</td>
     <td class="num">${t.fact?`${Q(t.fact,1)} / ${Q(t.plan,1)} кг <span class="tag ${Math.abs(t.fact/t.plan-1)<=.05?'t-green':'t-amber'}">${t.fact>=t.plan?'+':''}${P((t.fact/t.plan-1)*100,0)}</span>`:'<span class="muted">факт не внесён</span>'}</td>
     <td>${r.writtenOff?'<span class="tag t-green">списано</span>':'<span class="tag t-gray">не списано</span>'}</td></tr>`; }).join('');
   const verUsed={}; runs.forEach(r=>A(r.stations).forEach(st=>{ const k=st.semiId+'|'+st.ver; if(!verUsed[k]) verUsed[k]={name:st.name,ver:st.ver,color:st.color,dates:[]}; verUsed[k].dates.push(r.dateFrom); }));
-  $('#content').innerHTML=`<div class="toolbar"><button class="btn btn-s" onclick="state.draft=null;go('projects')">← Проекты</button><div class="card-t">${esc(d.name||'Новый проект')}</div>${d.id?`<span class="tag ${d.status==='Активный'?'t-green':'t-blue'}">${esc(d.status)}</span>`:''}<div class="sp"></div>
-    ${d.id?`<button class="btn btn-s" onclick="printProject('${d.id}')">🖨 Печать рецептуры</button>`:''}
-    ${d.id&&can('edit')?`<button class="btn btn-s" onclick="openRun('${d.id}')">+ Тех. отчёт</button>`:''}
-    ${ro?'':`<button class="btn btn-p" onclick="saveProject()">Сохранить</button>`}</div>
-  <div class="grid g2 row-gap">
-    <div class="card"><div class="card-h"><div class="card-t">Основное и планирование</div></div>
-      <div class="frow"><div class="fg"><label class="fl">Название проекта</label><input class="fi" value="${esc(d.name)}" ${ro?'disabled':''} oninput="D('name',this.value)"></div>
-      <div class="fg"><label class="fl">Клиент</label><input class="fi" value="${esc(d.client||'')}" ${ro?'disabled':''} oninput="D('client',this.value)"></div></div>
-      <div class="frow4"><div class="fg"><label class="fl">Линия</label><select class="fi" ${ro?'disabled':''} onchange="D('lineId',this.value);renderProjectEdit()">${opts(DB.lines,d.lineId)}</select></div>
-      <div class="fg"><label class="fl">Тара (изделие)</label><select class="fi" ${ro?'disabled':''} onchange="D('tareId',this.value)">${opts(tares,d.tareId,r=>r.name,'— не указана —')}</select></div>
-      <div class="fg"><label class="fl">Статус</label><select class="fi" ${ro?'disabled':''} onchange="D('status',this.value)">${PSTATUS.map(s=>`<option ${s===d.status?'selected':''}>${s}</option>`).join('')}</select></div>
-      <div class="fg"><label class="fl">Цвет в плане</label><input class="fi" type="color" style="height:42px;padding:4px" value="${d.color||pColor(d)}" ${ro?'disabled':''} onchange="D('color',this.value)"></div></div>
-      <div class="frow3"><div class="fg"><label class="fl">План: скорость, шт/мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="1" value="${d.speed}" ${ro?'disabled':''} onchange="D('speed',+this.value);renderProjectEdit()"></div>
-      <div class="fg"><label class="fl">План: наладка, мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="0" value="${d.setupMin}" ${ro?'disabled':''} onchange="D('setupMin',+this.value);renderProjectEdit()"></div>
-      <div class="fg"><div class="hint" style="margin-top:22px">Обед, уборку, пересменку технолог добавляет в самом плане — у каждого проекта отдельно</div></div></div>
-      <div class="frow"><div class="fg"><label class="fl">Квалификация: настройка линии</label><select class="fi" ${ro?'disabled':''} onchange="D('qualSetup',this.value)"><option value="">— не важно —</option>${QUALS.map(q=>`<option ${q===d.qualSetup?'selected':''}>${q}</option>`).join('')}</select></div>
-      <div class="fg"><label class="fl">Квалификация: массовое производство</label><select class="fi" ${ro?'disabled':''} onchange="D('qualRun',this.value)"><option value="">— не важно —</option>${QUALS.map(q=>`<option ${q===d.qualRun?'selected':''}>${q}</option>`).join('')}</select></div></div>
-      <div class="hint" style="margin-top:-4px">Уровень сравнивается с квалификацией персонала по участку линии (${esc(areaName(lineArea(byId(DB.lines,d.lineId))))}). Если в смене нет человека нужного уровня — в плане появится красное предупреждение.</div>
-    </div>
-    <div class="card"><div class="card-h"><div class="card-t">Расчёт</div></div>
-      <div class="stat"><span>Выработка в час / смену</span><b>${N(d.speed*60)} / ${N(d.speed*60*sh)} шт</b></div>
-      <div class="stat"><span>100 000 шт: чистое время + наладка</span><b>${Q(planHours(d,100000),1)} ч</b></div>
-      <div class="stat"><span>Материалы на 1000 шт</span><b>${Q(kg,3)} кг</b></div>
-      <div class="stat"><span>Себестоимость покрытия / 1000 шт</span><b>${money(cost)}</b></div>
-      <div class="stat"><span>Станций задействовано</span><b>${d.stations.filter(s=>s.semiId).length}${line?.stations?' из '+line.stations:''}</b></div>
-    </div>
-  </div>
-  ${projVisualCard(d)}
-  <div class="card row-gap"><div class="card-h"><div class="card-t">Станции нанесения — последовательность</div><div class="card-s">№1 — первый пистолет по ходу линии</div><div class="sp"></div>${ro?'':`<button class="btn btn-s btn-sm" onclick="stAdd()">+ Станция</button>`}</div>
-    <div class="tw ed"><table><tr><th>№</th><th>Рецептура</th><th>Норма, г / 1000 шт</th><th>Вязкость</th><th>Давление</th><th>Сопло</th><th>Примечание</th><th class="num">${esc(DB.settings.currency||'€')} / 1000</th><th></th></tr>${stRows||'<tr><td colspan="9" class="empty">Добавьте станции</td></tr>'}</table></div></div>
-  <div class="grid g11 row-gap">
-    <div class="card"><div class="card-h"><div class="card-t">⚠ Качество: предосторожности и на что обратить внимание</div></div>
-      <textarea class="fi" rows="7" ${ro?'disabled':''} oninput="D('quality',this.value)" placeholder="Например: контроль вязкости каждые 2 часа; не допускать потёков на плече бутылки; проверять адгезию тестом скотча в начале смены…">${esc(d.quality||'')}</textarea></div>
-    <div class="card"><div class="card-h"><div class="card-t">Рецептуры, использованные в наработках</div></div>
-      ${Object.keys(verUsed).length?Object.values(verUsed).map(v=>`<div class="stat"><span><span class="sw" style="background:${v.color}"></span>${esc(v.name)} <span class="tag t-gray">v${v.ver}</span></span><span class="muted">${v.dates.sort().map(fdate).join(', ')}</span></div>`).join(''):'<div class="empty">Наработок ещё не было</div>'}</div>
-  </div>
-  ${d.id?`<div class="card"><div class="card-h"><div class="card-t">Наработки: тех. отчёты и настройки машины</div><div class="sp"></div>${can('edit')?`<button class="btn btn-p btn-sm" onclick="openRun('${d.id}')">+ Тех. отчёт</button>`:''}</div>
-    ${runRows?`<div class="tw"><table><tr><th>Даты</th><th>Линия</th><th class="num">Годные</th><th class="num">Наладка факт / план</th><th class="num">Скорость факт / план</th><th class="num">Материалы факт / план</th><th>Склад</th></tr>${runRows}</table></div>`:'<div class="empty">Тех. отчётов пока нет</div>'}</div>`:''}`;
+  return `${d.id?`<div class="card row-gap"><div class="card-h"><div class="card-t">Наработки: тех. отчёты и настройки машины</div><div class="sp"></div>${ce?`<button class="btn btn-p btn-sm" onclick="openRun('${d.id}')">+ Тех. отчёт</button>`:''}</div>
+    ${runRows?`<div class="tw"><table><tr><th>Даты</th><th>Линия</th><th class="num">Годные</th><th class="num">Наладка факт / план</th><th class="num">Скорость факт / план</th><th class="num">Материалы факт / план</th><th>Склад</th></tr>${runRows}</table></div>`:'<div class="empty">Тех. отчётов пока нет</div>'}</div>`:'<div class="card row-gap"><div class="empty">Сохраните проект</div></div>'}
+  <div class="card"><div class="card-h"><div class="card-t">Рецептуры, использованные в наработках</div></div>
+    ${Object.keys(verUsed).length?Object.values(verUsed).map(v=>`<div class="stat"><span><span class="sw" style="background:${v.color}"></span>${esc(v.name)} <span class="tag t-gray">v${v.ver}</span></span><span class="muted">${v.dates.sort().map(fdate).join(', ')}</span></div>`).join(''):'<div class="empty">Наработок ещё не было</div>'}</div>`;
+}
+// матрица доступа к вкладкам — в «Настройках»
+function ptMatrixCard(){ const m=ptMatrix();
+  return `<div class="card row-gap"><div class="card-h"><div class="card-t">Доступ к вкладкам проекта</div><div class="card-s">кто что видит и заполняет; администратор — всё</div></div>
+    <div class="tw flush"><table class="ptm"><tr><th>Вкладка</th>${PT_ROLES.map(r=>`<th>${esc(ROLES[r]?.n||r)}</th>`).join('')}</tr>
+    ${PTABS.map(t=>`<tr><td><b>${t.n}</b><div class="muted" style="font-size:11px">${esc(t.d)}</div></td>${PT_ROLES.map(r=>`<td><select class="fi ptm-s ptm-${m[t.id][r]}" data-t="${t.id}" data-r="${r}" onchange="this.className='fi ptm-s ptm-'+this.value">${Object.entries(PT_LV).map(([k,n])=>`<option value="${k}" ${m[t.id][r]===k?'selected':''}>${n}</option>`).join('')}</select></td>`).join('')}</tr>`).join('')}</table></div>
+    <div class="hint" style="margin-top:8px">«Главная» и «Технология» могут менять только роли с правом редактирования данных (технолог, мастер) — для остальных там доступен просмотр и чек-лист. Скрытие вкладки убирает её из интерфейса.</div></div>`;
 }
 // ═════════════════════════════════════════════
 //  ВИЗУАЛЫ ПРОЕКТОВ: в программе — сжатое превью, оригинал — по ссылке в хранилище компании
@@ -1463,10 +1662,10 @@ async function imgWrite(pid,put,delIds){
 async function setCover(pid,img){ // миниатюра хранится в карточке проекта — для списков и плана
   const p=byId(DB.projects,pid); if(!p) return; const th=img?(await toJpeg(img.data,IMG_THUMB,.72)).data:'';
   if(state.draft&&state.draft.id===pid){ state.draft.thumb=th; state.draft.coverId=img?.id||''; }
-  await Store.put('projects',{...clone(p),thumb:th,coverId:img?.id||''});
+  if(!can('edit')) return; await Store.put('projects',{...clone(p),thumb:th,coverId:img?.id||''});
 }
 async function addProjImages(pid,files){
-  if(!can('edit')||!pid) return; const fs=[...(files||[])].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|gif|bmp)$/i.test(f.name)); if(!fs.length) return toast('Выберите файлы изображений');
+  if(!ptEdit('design')||!pid) return; const fs=[...(files||[])].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|gif|bmp)$/i.test(f.name)); if(!fs.length) return toast('Выберите файлы изображений');
   toast(`Обработка: ${fs.length} шт…`); const add=[];
   for(const f of fs){ try{ const src=await readFile(f), big=await toJpeg(src,IMG_MAX,.82);
     add.push({id:uid(),title:f.name.replace(/\.[^.]+$/,''),data:big.data,w:big.w,h:big.h,orig:`${big.ow}×${big.oh}`,file:f.name,fileKb:Math.round(f.size/1024),kb:Math.round(big.data.length*.75/1024),link:'',ts:Date.now()+add.length,by:state.me?.name||''}); }
@@ -1478,7 +1677,7 @@ async function addProjImages(pid,files){
   toast(`Добавлено изображений: ${add.length}`); if(state.sec==='projectEdit') renderProjectEdit();
 }
 function openProjImage(pid,id){
-  const im=A(projImages(pid)).find(x=>x.id===id); if(!im) return; const p=byId(DB.projects,pid), ce=can('edit'), cover=p?.coverId===id;
+  const im=A(projImages(pid)).find(x=>x.id===id); if(!im) return; const p=byId(DB.projects,pid), ce=ptEdit('design'), cover=p?.coverId===id;
   modal(esc(im.title||'Визуал'),`<div style="text-align:center;background:var(--card2);border-radius:12px;padding:8px;margin-bottom:12px"><img src="${im.data}" style="max-width:100%;max-height:62vh;border-radius:8px" alt=""></div>
     <div class="frow"><div class="fg"><label class="fl">Подпись</label><input class="fi" name="title" value="${esc(im.title||'')}" ${ce?'':'disabled'} placeholder="эскиз, утверждённый образец, фото с линии…"></div>
     <div class="fg"><label class="fl">Ссылка на оригинал (Google Drive / OneDrive / SharePoint)</label><input class="fi" name="link" value="${esc(im.link||'')}" ${ce?'':'disabled'} placeholder="https://…"></div></div>
@@ -1498,7 +1697,7 @@ async function delProjImage(pid,id){
   toast('Изображение удалено'); if(state.sec==='projectEdit') renderProjectEdit();
 }
 function projVisualCard(d){
-  const ce=can('edit');
+  const ce=ptEdit('design');
   if(!d.id) return `<div class="card row-gap"><div class="card-h"><div class="card-t">Визуал проекта</div></div><div class="hint">Сохраните проект — после этого можно будет добавить визуал.</div></div>`;
   const ims=projImages(d.id);
   return `<div class="card row-gap" ${ce?`ondragover="event.preventDefault();this.classList.add('drop')" ondragleave="this.classList.remove('drop')" ondrop="event.preventDefault();this.classList.remove('drop');addProjImages('${d.id}',event.dataTransfer.files)"`:''}>
@@ -1525,10 +1724,22 @@ function demoBottle(p,variant){
 }
 
 async function saveProject(){
-  const d=state.draft; if(!d.name.trim()) return toast('Введите название проекта');
-  const rec={...d,id:d.id||uid(),name:d.name.trim(),speed:+d.speed||1,setupMin:+d.setupMin||0,restartMin:d.restartMin===''||d.restartMin==null?'':+d.restartMin,
-    stations:d.stations.map(st=>({semiId:st.semiId||'',norm:+st.norm||0,visc:st.visc||'',press:st.press||'',nozzle:st.nozzle||'',note:st.note||''})),updated:iso(new Date())};
-  await Store.put('projects',rec); state.draft=clone(rec); render(); toast('Проект сохранён');
+  const d=state.draft, coreOk=can('edit')&&(ptEdit('main')||ptEdit('tech'));
+  if(coreOk&&!d.name.trim()) return toast('Введите название проекта');
+  if(!d.id&&!coreOk) return toast('Нет прав создавать проекты');
+  const list=[]; let pid=d.id;
+  if(coreOk){
+    const ops=A(d.ops).filter(o=>(o.name||'').trim()).map(o=>({id:o.id||uid(),name:o.name.trim(),lineId:o.lineId||'',qualSetup:o.qualSetup||'',qualRun:o.qualRun||'',operators:o.operators===''||o.operators==null?'':+o.operators||0,handlers:o.handlers===''||o.handlers==null?'':+o.handlers||0,note:o.note||''}));
+    const main=ops.find(o=>o.lineId===d.lineId);
+    const rec={...d,id:d.id||uid(),name:d.name.trim(),speed:+d.speed||1,setupMin:+d.setupMin||0,restartMin:d.restartMin===''||d.restartMin==null?'':+d.restartMin,ops,
+      qualSetup:main?main.qualSetup:(d.qualSetup||''),qualRun:main?main.qualRun:(d.qualRun||''),
+      stations:d.stations.map(st=>({semiId:st.semiId||'',norm:+st.norm||0,visc:st.visc||'',press:st.press||'',nozzle:st.nozzle||'',note:st.note||''})),updated:iso(new Date())};
+    pid=rec.id; list.push({col:'projects',obj:rec}); state.draft=clone(rec);
+  }
+  Object.entries(state.ptd||{}).forEach(([tab,v])=>{ if(!v||!v._dirty||!ptEdit(tab)||['main','tech','runs'].includes(tab)) return; const o={...v}; delete o._dirty;
+    list.push({col:'ptab',obj:{...o,id:ptId(pid,tab),pid,tab,by:state.me.name,ts:Date.now()}}); });
+  if(!list.length) return toast('Изменений нет');
+  await Store.batch(list); state.ptd={}; render(); toast('Проект сохранён');
 }
 
 // ═════════════════════════════════════════════
@@ -1839,7 +2050,7 @@ function printProject(id){
   <h2>Рецептуры</h2>${semis.concat(nested).map(recipeBlock).join('')}
   <h2>Настройки машины ${lr?`(последняя наработка ${fdate(lr.dateFrom)}${lr.dateTo!==lr.dateFrom?' — '+fdate(lr.dateTo):''}, ${esc(lineName(lr.lineId))})`:''}</h2>
   ${A(lr?.settings).length?`<table>${A(lr.settings).map(x=>`<tr><td style="width:55%">${esc(x.k)}</td><td><b>${esc(x.v)}</b></td></tr>`).join('')}</table>`:'<div>Наработок ещё не было — заполните после первой наработки.</div>'}
-  <h2>Качество: предосторожности и на что обратить внимание</h2><div class="box">${esc(p.quality||'—')}</div>
+  <h2>Качество: предосторожности и на что обратить внимание</h2><div class="box">${esc(projQNotes(p)||'—')}</div>
   <div class="sign"><div>Технолог</div><div>Мастер смены</div><div>Начальник производства</div></div>`);
 }
 function printRun(id){
@@ -2261,8 +2472,13 @@ function shiftQual(l,d,n,sa,sb){
   const oTip=others.length?'<br><b>Handler / лаборатория</b><br>'+others.map(s=>esc(s.name)+' — '+esc(s.position||'')).join('<br>'):'';
   if(area==='none') return {crew,best:0,need:[],lacks:[],empty:false,tip:`<b>Персонал смены</b><br>${crew.map(s=>esc(s.name)+' — '+esc(s.position||'')).join('<br>')||'никого'}<br><span style="opacity:.7">участок без проверки квалификации</span>${oTip}`,others};
   const best=Math.max(0,...crew.map(s=>qRank(s.qual?.[area])));
-  const need=[]; pl.forEach(x=>{ const p=byId(DB.projects,x.it.projectId); if(!p) return; if(x.setup>0&&p.qualSetup) need.push({w:'наладка',p,q:p.qualSetup}); if(x.run>0&&p.qualRun) need.push({w:'массовое пр-во',p,q:p.qualRun}); });
-  const lacks=need.filter(x=>qRank(x.q)>best), empty=pl.length>0&&!crew.length&&DB.roster.some(r=>r.date===d);
+  const need=[], hands=others.filter(p=>personCat(p)==='handler').length; let needOp=0, needH=0, hp=null, op_p=null;
+  pl.forEach(x=>{ const p=byId(DB.projects,x.it.projectId); if(!p) return; const o=projOpFor(p,l.id); if(x.setup>0&&o.qualSetup) need.push({w:'наладка',p,q:o.qualSetup}); if(x.run>0&&o.qualRun) need.push({w:'массовое пр-во',p,q:o.qualRun});
+    if(o.handlers>needH){ needH=o.handlers; hp=p; } if(o.operators>needOp){ needOp=o.operators; op_p=p; } });
+  const lacks=need.filter(x=>qRank(x.q)>best);
+  if(needOp&&crew.length<needOp) { need.push({w:'операторов',p:op_p,q:needOp+' чел.'}); lacks.push({w:'операторов',q:needOp+' (есть '+crew.length+')',p:op_p}); }
+  if(needH&&hands<needH) { need.push({w:'Handler',p:hp,q:needH+' чел.'}); lacks.push({w:'Handler',q:needH+' (есть '+hands+')',p:hp}); }
+  const empty=pl.length>0&&!crew.length&&DB.roster.some(r=>r.date===d);
   const tip=`<b>Персонал смены (${esc(areaName(area))})</b><br>${crew.map(s=>`${esc(s.name)} — ${esc(s.position||'')} · ${s.qual?.[area]||'без квалиф.'}`).join('<br>')||'никого'}${oTip}${need.length?'<br><b>Требуется</b><br>'+need.map(x=>`${x.w} «${esc(x.p.name)}»: ${x.q}`).join('<br>'):''}`;
   return {crew,best,need,lacks,empty,tip,others};
 }
@@ -2284,7 +2500,7 @@ function shiftStrip(l,d,a,b,pct){
     const pl=shiftPlan(l.id,sa,sb), plan=pl.reduce((x,p)=>x+p.qty,0), ok=outs.filter(outOk), fact=ok.reduce((x,r)=>x+(+r.good||0),0), pend=outs.filter(r=>!outOk(r)), pq=pend.reduce((x,r)=>x+(+r.good||0),0);
     tot.push({plan,fact});
     const qc=works?shiftQual(l,d,s.n,sa,sb):null;
-    if(qc&&(qc.lacks.length||qc.empty)) warn.push({pos,text:qc.empty?'⚠ Нет людей в графике на эту смену':'⚠ Недостаточно квалификации: '+qc.lacks.map(x=>`${x.w} «${esc(x.p.name)}» — нужен ${x.q}`).join('; ')+` · в смене: ${qc.best?QUALS[qc.best-1]:'нет'}`,tip:qc.tip});
+    if(qc&&(qc.lacks.length||qc.empty)) warn.push({pos,text:qc.empty?'⚠ Нет людей в графике на эту смену':'⚠ Не хватает людей или квалификации: '+qc.lacks.map(x=>`${x.w} «${esc(x.p.name)}» — нужен ${x.q}`).join('; ')+` · в смене: ${qc.best?QUALS[qc.best-1]:'нет'}`,tip:qc.tip});
     const crew=qc&&qc.crew.length?`<span class="cr" data-tip="${qc.tip.replace(/"/g,'&quot;')}">👥 ${qc.crew.length}</span>`:'';
     const down=ok.reduce((x,r)=>x+(+r.downtime||0),0), dn=DB.downs.filter(x=>x.lineId===l.id&&tms(x.start)<sb&&tms(x.end)>sa);
     const rids=[...new Set(pend.map(r=>r.reportId||r.id))];
@@ -2966,7 +3182,7 @@ function renderPeople(){
       return `<td class="rs-c rs-cov ${d===td?'rs-td':''}"><div class="cv">${defs.map(s=>{ const lab=two?(s.n===1?'Д':'Н'):s.n;
         if(!ws.includes(+s.n)) return `<span class="cv-s off" title="${s.n}-я смена ${s.from}–${s.to}: не работает"><i>${lab}</i>—</span>`;
         const [sa,sb]=shiftWindow(d,s.n,l.id), q=shiftQual(l,d,s.n,sa,sb), bad=q.lacks.length||(q.need.length&&!q.crew.length)||(shiftPlan(l.id,sa,sb).length&&!q.crew.length);
-        return `<span class="cv-s ${bad?'bad':q.crew.length?'ok':''}" data-tip="<b>${s.n}-я смена ${s.from}–${s.to}</b><br>${q.tip.replace(/"/g,'&quot;')}${q.lacks.length?'<br><b style=&quot;color:#e5484d&quot;>Не хватает: '+q.lacks.map(x=>x.q+' ('+x.w+')').join(', ')+'</b>':''}"><i>${lab}${q.best?' · '+QUALS[q.best-1][0]:''}${bad?' ⚠':''}</i>${q.crew.length?q.crew.map(p=>`<b>${esc(surname(p))}</b>`).join(''):'<b>—</b>'}${q.others.length?`<em>+${q.others.filter(p=>personCat(p)==='handler').length?q.others.filter(p=>personCat(p)==='handler').length+' H':''}${q.others.filter(p=>personCat(p)==='lab').length?' '+q.others.filter(p=>personCat(p)==='lab').length+' Лаб':''}</em>`:''}</span>`; }).join('')}</div></td>`; }).join('')}</tr>`; }).join('');
+        return `<span class="cv-s ${bad?'bad':q.crew.length?'ok':''}" data-tip="<b>${s.n}-я смена ${s.from}–${s.to}</b><br>${q.tip.replace(/"/g,'&quot;')}${q.lacks.length?'<br><b style=&quot;color:#e5484d&quot;>Не хватает: '+q.lacks.map(x=>x.w+' — '+x.q).join(', ')+'</b>':''}"><i>${lab}${q.best?' · '+QUALS[q.best-1][0]:''}${bad?' ⚠':''}</i>${q.crew.length?q.crew.map(p=>`<b>${esc(surname(p))}</b>`).join(''):'<b>—</b>'}${q.others.length?`<em>+${q.others.filter(p=>personCat(p)==='handler').length?q.others.filter(p=>personCat(p)==='handler').length+' H':''}${q.others.filter(p=>personCat(p)==='lab').length?' '+q.others.filter(p=>personCat(p)==='lab').length+' Лаб':''}</em>`:''}</span>`; }).join('')}</div></td>`; }).join('')}</tr>`; }).join('');
   const gdefs=lineShiftDefs('*'), gtwo=gdefs.length===2;
   const coverShop=DB.roster.some(r=>r.lineId==='*'&&days.includes(r.date))?`<tr><td class="rs-name"><b>Цех (без линии)</b><small>лаборатория, Handler на весь цех</small></td>${cols.map(c=>{ if(c.sum) return '<td class="rs-c rs-sum"></td>'; const d=c.d;
       return `<td class="rs-c rs-cov ${d===td?'rs-td':''}"><div class="cv">${gdefs.map(s=>{ const lab=gtwo?(s.n===1?'Д':'Н'):s.n, all=shiftCrew('*',d,s.n,true), hd=all.filter(p=>personCat(p)==='handler'), lb=all.filter(p=>personCat(p)!=='handler');
@@ -3139,11 +3355,14 @@ function renderSettings(){
     <div class="frow"><div class="fg"><label class="fl">Причины брака</label><textarea class="fi" id="sR" rows="7">${esc((s.defectReasons||[]).join('\n'))}</textarea></div>
     <div class="fg"><label class="fl">Причины простоев линии (для плана)</label><textarea class="fi" id="sDR" rows="7">${esc((s.downReasons||DEFAULT_SETTINGS.downReasons).join('\n'))}</textarea></div></div>
     <div class="fg"><label class="fl">Параметры машины для тех. отчёта</label><textarea class="fi" id="sM" rows="5">${esc((s.machineParams||[]).join('\n'))}</textarea></div></div>
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Операции маршрута — справочник</div><div class="card-s">по одной в строке; в проекте можно вписать и свою</div></div>
+    <textarea class="fi" id="sOps" rows="6">${esc(opNames().join('\n'))}</textarea></div>
   <div class="card"><div class="card-h"><div class="card-t">Подключение и данные</div></div>
     <div class="hint" style="margin-bottom:14px">${state.mode==='demo'?'Сейчас <b>локальный демо-режим</b>: данные тестовые и хранятся только в этом браузере.':'Подключено к общей базе. Все изменения сразу видны всем сотрудникам.'}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-s" onclick="exportJSON()">⬇ Резервная копия (JSON)</button>
       ${state.mode==='demo'?`<button class="btn btn-s" onclick="resetDemo()">↺ Сбросить демо-данные</button>`:`<button class="btn btn-s" onclick="seedLive()">Заполнить примером</button><button class="btn btn-d" onclick="clearLive()">Очистить все данные</button>`}</div></div>
   </div></div>
+  <div style="margin-top:14px">${ptMatrixCard()}</div>
   <div style="position:sticky;bottom:12px;margin-top:14px;display:flex;justify-content:flex-end"><button class="btn btn-p" style="box-shadow:0 6px 20px rgba(226,70,44,.35)" onclick="saveSettings()">Сохранить настройки</button></div>`;
   scRenumAll();
 }
@@ -3157,7 +3376,7 @@ async function saveSettings(){
   const activities=[...document.querySelectorAll('.act-row:not(.area-row)')].map(r=>({id:r.dataset.id||('a'+uid()),name:r.querySelector('.act-n').value.trim(),cat:r.querySelector('.act-c').value})).filter(a=>a.name);
   if(!activities.some(a=>a.cat==='work')) return toast('Нужен хотя бы один вид с категорией «Работа»');
   const s={...DB.settings,orgName:$('#sOrg').value.trim(),currency:$('#sCur').value,planFactor:+$('#sK').value||.85,setupTarget:+$('#sSet').value||5,defectTarget:+$('#sDef').value||2,
-    workDays:[...document.querySelectorAll('.sWD:checked')].map(x=>+x.value),payBreakMin:+String($('#sPayBrk').value).replace(',','.')||0,nightFrom:$('#sNf').value||'22:00',nightTo:$('#sNt').value||'06:00',defectReasons:lines('#sR'),downReasons:lines('#sDR'),machineParams:lines('#sM'),shiftSchemes:schemes,activities,areas:areasL};
+    workDays:[...document.querySelectorAll('.sWD:checked')].map(x=>+x.value),payBreakMin:+String($('#sPayBrk').value).replace(',','.')||0,nightFrom:$('#sNf').value||'22:00',nightTo:$('#sNt').value||'06:00',defectReasons:lines('#sR'),downReasons:lines('#sDR'),machineParams:lines('#sM'),shiftSchemes:schemes,activities,areas:areasL,opNames:lines('#sOps'),projTabs:Object.fromEntries(PTABS.map(t=>[t.id,Object.fromEntries([...document.querySelectorAll('.ptm-s[data-t="'+t.id+'"]')].map(x=>[x.dataset.r,x.value]))]))};
   delete s.shifts;
   await Store.settings(s); toast('Настройки сохранены');
 }
@@ -3237,7 +3456,7 @@ function applyLocal(list){
 // ═════════════════════════════════════════════
 //  ЖУРНАЛ ИЗМЕНЕНИЙ (аудит): кто, что, когда — запись только добавляется, изменить или удалить нельзя
 // ═════════════════════════════════════════════
-const AUD_COL={images:'Визуалы проектов',lines:'Линии',projects:'Проекты',raw:'Сырьё',semis:'Полуфабрикаты',orders:'Заказы',output:'Отчёты смен',runs:'Тех. отчёты',plan:'План',supplies:'Поставки',moves:'Склад',downs:'Простои',scenarios:'Моделирование',shiftCal:'Календарь смен',people:'Персонал',roster:'График работы',settings:'Настройки',approved:'Утверждение плана',users:'Доступы',session:'Вход',products:'Проекты',stock:'Склад'};
+const AUD_COL={ptab:'Проекты: вкладки служб',images:'Визуалы проектов',lines:'Линии',projects:'Проекты',raw:'Сырьё',semis:'Полуфабрикаты',orders:'Заказы',output:'Отчёты смен',runs:'Тех. отчёты',plan:'План',supplies:'Поставки',moves:'Склад',downs:'Простои',scenarios:'Моделирование',shiftCal:'Календарь смен',people:'Персонал',roster:'График работы',settings:'Настройки',approved:'Утверждение плана',users:'Доступы',session:'Вход',products:'Проекты',stock:'Склад'};
 const AUD_OP={add:['Добавил','t-green'],upd:['Изменил','t-blue'],del:['Удалил','t-red'],set:['Записал','t-blue'],login:['Вошёл','t-gray'],pwd:['Сменил пароль','t-amber']};
 const AUD_F={noSetup:'Без наладки',name:'Название',qty:'Кол-во',start:'Начало',notBefore:'Начало вручную',speedPlan:'Скорость',setupPlan:'Наладка',extras:'Паузы',lineId:'Линия',projectId:'Проект',orderId:'Заказ',status:'Статус',good:'Годные',defect:'Брак',approved:'Подтверждено',role:'Роль',active:'Доступ включён',cost:'Цена',due:'Срок',shift:'Смена',date:'Дата',shifts:'Смены',seq:'Место в очереди',note:'Комментарий',speed:'Скорость',setupMin:'Наладка, мин',stations:'Станции',items:'Состав',qual:'Квалификация',team:'Бригада',position:'Должность',min:'Мин. остаток',supplier:'Поставщик',reason:'Причина',end:'Окончание',client:'Клиент',color:'Цвет',qualSetup:'Квалиф. наладка',qualRun:'Квалиф. производство',rawFact:'Факт сырья',writtenOff:'Списано',settings:'Параметры машины',timeline:'Хронометраж',workMin:'Работа, мин',downtime:'Простои, мин',staffId:'Сотрудник',absence:'Отсутствие',workShifts:'Рабочие смены',workDays:'Рабочие дни',scheme:'Схема смен',area:'Участок',type:'Тип',unit:'Ед.',cat:'Категория',login:'Логин',personId:'Связь с персоналом',orgName:'Название предприятия',shiftSchemes:'Схемы смен',activities:'Виды работ',defectReasons:'Причины брака',machineParams:'Параметры машины'};
 const AUD_SKIP=new Set(['thumb','coverId','ts','by','updated','log','approvedAt','approvedBy','sec','id','uid','email','created','writtenMap','outputIds','history','ver']);
@@ -3385,6 +3604,29 @@ function genDemo(){
       stations:[st('S6',4,'—','—','штамп 170 °C','фольга «золото», логотип')],quality:'Температура штампа 165–175 °C, давление по эталону.\nПроверять адгезию фольги скотч-тестом каждый час.'},
   ];
   const settings={...DEFAULT_SETTINGS}, m0=new Date(now.getFullYear(),now.getMonth(),1), mEnd=new Date(now.getFullYear(),now.getMonth()+1,1), nEnd=new Date(now.getFullYear(),now.getMonth()+2,1), mk=monthKey(now), mkN=monthKey(mEnd);
+  // демо: маршруты операций с потребностью в людях, чек-листы и вкладки служб
+  const OPX=(name,lineId,qs,qr,ops,hs,note)=>({id:'OP'+Math.random().toString(36).slice(2,8),name,lineId:lineId||'',qualSetup:qs||'',qualRun:qr||'',operators:ops??'',handlers:hs??'',note:note||''});
+  const coatRoute=(p,fire,print)=>[...(fire?[OPX('Обжиг стекла','','','',1,1,'480 °C, 40 мин — снять влагу и статику')]:[]),OPX('Коатинг',p.lineId,p.qualSetup,p.qualRun,2,p.id==='P3'?'':1,'загрузка / съём — Handler'),OPX('Охлаждение стекла','','','','',0,'не менее 30 мин до чистки'),OPX('Чистка горла','','','Junior',1,0),
+    ...(print?[OPX('Принтинг','L3','Senior','Operator',2,0,'логотип по коатингу'),OPX('Запекание в печи','','','','',0,'180 °C, 20 мин')]:[]),OPX('Контроль качества','','','',1,0,'выборка 1 из 200'),OPX('Упаковка','','','',0,2,'по схеме паллетирования'),OPX('Отгрузка','','','',0,1)];
+  const printRoute=p=>[OPX(/тиснен/i.test(p.name)?'Хот стемпинг':'Принтинг',p.lineId,p.qualSetup,p.qualRun,2,1),OPX('Запекание в печи','','','',1,0,'180 °C, 20 мин'),OPX('Контроль качества','','','',1,0),OPX('Упаковка','','','',0,2),OPX('Отгрузка','','','',0,1)];
+  projects.forEach((p,i)=>{ p.ops=lines.find(l=>l.id===p.lineId)?.area==='coating'?coatRoute(p,i===0||i===3,i===0):printRoute(p); });
+  const ck=(o,ago)=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,{v:Array.isArray(v)?v[0]:v,note:Array.isArray(v)?v[1]:'',by:['Марина Коваль','Ольга Петренко','Černá Lucie'][k.length%3],ts:NOW-(ago+k.length)*H}]));
+  const CKS=[
+    {glass:['ok','12 паллет, склад B'],incoming:['ok','протокол IC-2210'],firing:'yes',mix:'ok',tooling:'ok',films:'ok',screens:'ok',pack:'ok',pallet:'ok'},
+    {glass:'ok',incoming:'ok',firing:'na',mix:['part','нет отвердителя H-12, поставка в среду'],tooling:'ok',films:'na',screens:'na',pack:'ok',pallet:'ok'},
+    {glass:['part','6 из 10 паллет'],incoming:'wait',firing:'na',mix:'ok',tooling:'ok',films:'na',screens:'na',pack:'no',pallet:'ok'},
+    {glass:'ok',incoming:['no','сколы на венчике 2,1 % — ждём решения клиента'],firing:'yes',mix:'ok',tooling:'ok',films:'na',screens:'na',pack:'ok',pallet:'no'},
+    {glass:'ok',incoming:'ok',firing:'na',mix:'ok',tooling:'ok',films:'ok',screens:['part','сетка 140 — одна рама'],pack:'ok',pallet:'ok'},
+    {glass:'no',firing:'na',films:['no','макет на согласовании'],screens:'no'},
+    {glass:'ok',incoming:'ok',firing:'na',mix:'na',tooling:['ok','штамп 170 °C, ящик 3'],films:'na',screens:'na',pack:'ok',pallet:'ok'}];
+  const ptab=[]; const PT=(pid,tab,o,by,ago)=>ptab.push({id:pid+'__'+tab,pid,tab,...o,by,ts:NOW-ago*H});
+  projects.forEach((p,i)=>{ const pr=p.lineId==='L3'||p.lineId==='L4';
+    PT(p.id,'main',{check:ck(CKS[i]||{},3+i*5)},'Ольга Петренко',3+i*5);
+    PT(p.id,'quality',{notes:p.quality||'',incoming:'Выборка 80 шт с паллеты (AQL 1,0). Сколы, посечки, камни, загрязнения — не допускаются.',accept:'Цвет — по утверждённому образцу при D65, ΔE ≤ 1,5. Потёки, непрокрас, точки > 0,3 мм — брак.',tests:'Адгезия (скотч 3M 610) — начало смены и каждые 4 ч. Тест мойки 5 циклов — раз в партию.',samples:'Эталон в лаборатории, шкаф 2, полка '+(i+1)},'Černá Lucie',30+i);
+    PT(p.id,'sales',{contact:['Jan Novotný, +420 601 222 333','Eva Dvořáková','Petr Malý','Anna Horáková','Jan Novotný, +420 601 222 333','Tomáš Beneš','Jan Novotný, +420 601 222 333'][i],manager:'Lenka Svobodová',price:String([128,142,96,118,88,74,110][i]),volume:String([1200000,600000,400000,500000,300000,150000,200000][i]),moq:String([50000,30000,20000,25000,20000,10000,15000][i]),payment:'30 дней',lead:'3–4 недели от утверждения макета'},'Lenka Svobodová',60+i*7);
+    PT(p.id,'design',{status:i===5?'На согласовании у клиента':'Утверждён клиентом',version:'v'+(i%3+2),approved:i===5?'':fdate(iso(addD(now,-40-i*9))),colors:['Pantone 871 C (золото), 7406 C','Pantone 300 C → 2925 C','Pantone 189 C','Чёрный глянец, белый','Pantone 871 C, 4625 C','Pantone 186 C, серебро 877 C','Фольга золото OL-12'][i],films:pr||i===0?'3 фильма, 210×297, архив дизайна, полка F':'',screens:pr?'120 / 100 / 140 меш, натяжение 22 Н/см':''},'Petra Malá',90+i*5);
+    PT(p.id,'cost',{pack:String([9.5,11,8,11,8,9,10][i]),labour:String([22,26,18,24,30,28,34][i]),energy:String([6,6,4,7,3,3,5][i]),other:'2'},'Марина Коваль',100+i);
+  });
   const orders=[]; let on=101;
   projects.forEach((p,i)=>{ [0,1,2].forEach(k=>orders.push({id:'O'+on,no:'З-'+(on++),projectId:p.id,qty:0,due:iso(addD(m0,9+k*13+i*2)),note:''})); });
   const nextWork=(lid,from)=>{ const l=lines.find(x=>x.id===lid); let d=new Date(from); for(let i=0;i<14&&!l.workDays.includes(d.getDay());i++) d=addD(d,1); return iso(d); };
@@ -3547,7 +3789,7 @@ function genDemo(){
       cr.forEach(sid=>{ if(!roster.some(r=>r.date===ds&&r.staffId===sid)) roster.push({id:ds+'_'+sid,date:ds,staffId:sid,lineId:l.id,shift:n}); }); }));
     const put=(sid,lineId,n)=>{ if(sid&&!roster.some(r=>r.date===ds&&r.staffId===sid)) roster.push({id:ds+'_'+sid,date:ds,staffId:sid,lineId,shift:n}); };
     const dow=(d.getDay()+6)%7, l1=lines[0], l2=lines[1], pr=lines.filter(l=>lineArea(l)==='printing');
-    [1,2].forEach(n=>{ const ci=crewFor('L1',ds,n); if(ci>=0){ put(HND[ci]?.id,(dow<6&&ci%2?l2:l1).id,n); put(LAB[ci]?.id,'*',n); } });
+    [1,2].forEach(n=>{ const ci=crewFor('L1',ds,n); if(ci>=0){ put(HND[ci]?.id,l1.id,n); put(LAB[ci]?.id,'*',n); } });
     if(dow<5){ put(people.find(p=>p.name==='Černá Lucie').id,'*',1); pr.slice(0,2).forEach((l,i)=>put(HPR[i]?.id,l.id,1)); } }
   // отсутствия: больничный на прошлой неделе, отпуск на следующей, неявка; на смену ставим подменного, если он свободен
   const pid=name=>people.find(p=>p.name===name).id;
@@ -3557,6 +3799,7 @@ function genDemo(){
     if(was&&!roster.some(r=>r.date===ds&&r.staffId===FLOAT.id)) roster.push({id:ds+'_'+FLOAT.id,date:ds,staffId:FLOAT.id,lineId:was.lineId,shift:was.shift}); } });
   DB.roster=roster;
   db.people=DB.people; db.roster=DB.roster;
+  db.ptab=ptab;
   db.images={}; projects.forEach((p,i)=>{ const A1=demoBottle(p,0), B1=i<3?demoBottle(p,1):null, a=A1&&A1.data, b=B1&&B1.data; if(A1){ p.thumb=(B1||A1).thumb; p.coverId='IM'+p.id+(B1?'b':'a'); } const ims=[a&&{id:'IM'+p.id+'a',title:'Эскиз',data:a,w:600,h:800,orig:'4000×5333',file:'эскиз_'+p.id+'.png',kb:Math.round(a.length*.75/1024),link:'https://drive.google.com/…/'+p.id,ts:NOW-40*864e5,by:'Марина Коваль'},
     b&&{id:'IM'+p.id+'b',title:'Утверждённый образец',data:b,w:600,h:800,orig:'6000×8000',file:'образец_'+p.id+'.jpg',kb:Math.round(b.length*.75/1024),link:'',ts:NOW-20*864e5,by:'Марина Коваль'}].filter(Boolean);
     if(ims.length){ db.images[p.id]=ims; } });
@@ -3575,11 +3818,11 @@ function genDemo(){
   return db;
 }
 let _quotaWarn=false;
-function demoSave(){ if(state.mode!=='demo') return; try{ localStorage.setItem('pdd_demo_v12',JSON.stringify(DB)); }catch(e){ if(!_quotaWarn){ _quotaWarn=true; toast('Демо: место в браузере закончилось — последние изменения (например, картинки) не сохранятся после перезагрузки'); } } }
-function resetDemo(){ if(!confirm('Сбросить демо-данные к исходным?')) return; try{ localStorage.removeItem('pdd_demo_v12'); }catch(e){} DB=normalize(genDemo()); render(); toast('Демо-данные сброшены'); }
+function demoSave(){ if(state.mode!=='demo') return; try{ localStorage.setItem('pdd_demo_v13',JSON.stringify(DB)); }catch(e){ if(!_quotaWarn){ _quotaWarn=true; toast('Демо: место в браузере закончилось — последние изменения (например, картинки) не сохранятся после перезагрузки'); } } }
+function resetDemo(){ if(!confirm('Сбросить демо-данные к исходным?')) return; try{ localStorage.removeItem('pdd_demo_v13'); }catch(e){} DB=normalize(genDemo()); render(); toast('Демо-данные сброшены'); }
 function startDemo(){
   state.mode='demo';
-  let saved=null; try{ saved=JSON.parse(localStorage.getItem('pdd_demo_v12')||'null'); }catch(e){}
+  let saved=null; try{ saved=JSON.parse(localStorage.getItem('pdd_demo_v13')||'null'); }catch(e){}
   DB=normalize(saved&&saved.plan?saved:genDemo());
   state.me={...DB.members[0]}; enterApp();
 }
@@ -3677,6 +3920,7 @@ function openData(uid){
     db.orders.forEach(o=>{ if(!o.projectId&&o.productId) o.projectId=o.productId; });
     DB=normalize(db);
     state.me={id:uid,name:me.name,role:me.role,login:me.login,email:me.email,personId:me.personId||''};
+    if(me.role==='admin'&&!(d.settings&&d.settings.projTabs)&&!state._ptInit){ state._ptInit=1; fdb.ref(`${ROOT}/data/settings/projTabs`).set(ptMatrix()).catch(()=>{}); }
     if(first){ first=false; enterApp(); probeSecurity(); audit([{col:'session',op:'login',name:'вход в программу'}]); }
     else { $('#meName').textContent=me.name; $('#meRole').textContent=ROLES[me.role]?.n||''; $('#orgName').textContent=DB.settings.orgName; if(!$('#modal').classList.contains('open')) render(); }
   };
