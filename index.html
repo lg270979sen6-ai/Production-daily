@@ -261,6 +261,10 @@ tfoot td{font-weight:800;background:var(--card2)}
 .route-op b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--card);border:1px solid var(--line2);font-size:10.5px} .route-op small{color:var(--blue);font-weight:800} .route-op em{font-style:normal;font-size:11px;color:var(--text3)}
 .route-op.rmain{border-color:var(--blue);background:var(--blueBg)} tr.op-main td{background:var(--blueBg)}
 .ptm td,.ptm th{padding:5px 6px;font-size:12px} .ptm-s{padding:5px 6px;font-size:12px;min-width:104px} .ptm-s.ptm-edit{color:var(--green);font-weight:700} .ptm-s.ptm-none{color:var(--text3)}
+.opb-w{display:flex;flex-wrap:wrap;gap:4px 14px;cursor:pointer;padding:0 0 2px} .opb{display:inline-flex;align-items:center;gap:5px;font-size:11px;line-height:1.2;white-space:nowrap}
+.opb span{color:var(--text2);font-weight:700} .opb i{display:block;height:6px;border-radius:3px;background:var(--line);overflow:hidden;width:54px}
+.opb i b{display:block;height:100%;background:var(--blue);border-radius:3px} .opb.full i b{background:var(--green)} .opb em{font-style:normal;font-weight:800;color:var(--text3);font-size:10.5px;min-width:26px} .opb.part em{color:var(--blue)} .opb.full em{color:var(--green)}
+.qt tr.q-ops td{border-top:0!important;padding-top:0!important;padding-bottom:10px!important} .qt tr:has(+ tr.q-ops) td{border-bottom:0!important;padding-bottom:4px!important}
 .dc-now{position:absolute;top:0;bottom:0;width:2px;background:var(--red);z-index:3;pointer-events:none}
 .ex-head,.ex-row{display:grid;grid-template-columns:1fr 80px 124px 130px 36px;gap:6px;align-items:center} .ex-row{margin-bottom:6px} .ex-head{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
 .ex-row .fi{padding:7px 9px} .ex-e-l{display:flex;gap:6px;align-items:center;font-size:12.5px;white-space:nowrap}
@@ -392,7 +396,7 @@ const FB_CONFIG = {
   appId: "1:1001892488299:web:6aa3b532924b1d80e2fd2e"
 };
 const ROOT = 'prod';
-const COLS = ['lines','projects','raw','semis','orders','output','runs','plan','planLog','supplies','moves','downs','scenarios','shiftCal','people','roster','ptab'];
+const COLS = ['lines','projects','raw','semis','orders','output','runs','plan','planLog','supplies','moves','downs','scenarios','shiftCal','people','roster','ptab','opLog'];
 
 // ═════════════════════════════════════════════
 //  ROLES
@@ -403,11 +407,12 @@ const ROLES = {
   master:       {n:'Мастер смены',   lvl:3, d:'План, выпуск, тех. отчёты, склад'},
   quality:      {n:'Качество',       lvl:0, d:'Вкладка «Качество» и чек-лист проекта, остальное — просмотр'},
   sales:        {n:'Продажи',        lvl:0, d:'Вкладка «Продажи» проекта, остальное — просмотр'},
+  warehouse:    {n:'Склад',          lvl:0, d:'Упаковка и отгрузка по заказам, остальное — просмотр'},
   designer:     {n:'Дизайнер',       lvl:0, d:'Вкладка «Дизайн» и визуалы проекта, остальное — просмотр'},
   operator:     {n:'Оператор',       lvl:1, d:'Внесение выпуска за смену, просмотр плана'},
   viewer:       {n:'Наблюдатель',    lvl:0, d:'Только просмотр'},
 };
-const can = a => { const l = ROLES[state.me.role]?.lvl ?? 0; return a==='admin' ? l>=4 : a==='edit' ? l>=3 : a==='output' ? l>=1 : true; };
+const can = a => { const l = ROLES[state.me.role]?.lvl ?? 0; return a==='admin' ? l>=4 : a==='edit' ? l>=3 : a==='output' ? l>=1 : a==='wh' ? (l>=3||state.me.role==='warehouse') : true; };
 
 const ICONS = {
   dash:'M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 9h8V3h-8z',
@@ -1176,7 +1181,7 @@ function renderOutput(){
   const m=metrics(recs,state.from,state.to), shown=recs.slice(0,300);
   $('#content').innerHTML = periodBar() + `
   <div class="toolbar">${lineFilter()}<span class="muted" style="font-weight:600">${recs.length} записей · ${N(m.good)} годных · брак ${P(m.defPct)}</span><div class="sp"></div>
-    ${can('output')?`<button class="btn btn-p" onclick="openOutputModal()">+ Выпуск за смену</button>`:''}</div>
+    ${can('edit')?`<button class="btn btn-s" onclick="openOpReport('master')" title="Обжиг, охлаждение, чистка горла, печь, контроль — по заказам за смену">Операции за смену</button>`:''}${can('output')?`<button class="btn btn-p" onclick="openOutputModal()">+ Выпуск за смену</button>`:''}</div>
   <div class="card">${shown.length?`<div class="tw flush"><table>
     <tr><th>Дата</th><th>Смена</th><th>Линия</th><th>Проект</th><th>Хронометраж</th><th class="num">Годные</th><th class="num">Брак</th><th class="num">Работа</th><th class="num">Наладка</th><th class="num">Простои</th><th>Оператор</th><th>Проверка</th><th></th></tr>
     ${shown.map(r=>`<tr class="${can('output')?'click':''}" ${can('output')?`onclick="if(!event.target.closest('button'))openOutputModal('${r.id}')"`:''}><td>${fdate(r.date)}</td><td>${esc(shiftName(r.lineId,r.shift))}</td><td>${esc(lineName(r.lineId))}</td><td>${esc(projName(r.projectId))}${r.planItemId?'':' <span class="tag t-gray" data-tip="Не по сменному заданию">вне плана</span>'}</td>
@@ -1402,15 +1407,15 @@ const PTABS=[
   {id:'design',n:'Дизайн',d:'визуалы, макет, цвета, фильмы и сетки'},
   {id:'cost',n:'Себестоимость',d:'материалы, доп. затраты, маржа'},
   {id:'runs',n:'Наработки',d:'тех. отчёты и использованные рецептуры'}];
-const PT_ROLES=['technologist','master','quality','sales','designer','operator','viewer'];
+const PT_ROLES=['technologist','master','quality','sales','designer','warehouse','operator','viewer'];
 const PT_DEF={
-  main:   {technologist:'edit',master:'edit',quality:'edit',sales:'view',designer:'view',operator:'view',viewer:'view'},
-  tech:   {technologist:'edit',master:'view',quality:'view',sales:'none',designer:'none',operator:'view',viewer:'view'},
-  quality:{technologist:'edit',master:'view',quality:'edit',sales:'view',designer:'none',operator:'view',viewer:'view'},
-  sales:  {technologist:'view',master:'none',quality:'none',sales:'edit',designer:'view',operator:'none',viewer:'none'},
-  design: {technologist:'edit',master:'view',quality:'view',sales:'edit',designer:'edit',operator:'view',viewer:'view'},
-  cost:   {technologist:'edit',master:'none',quality:'none',sales:'view',designer:'none',operator:'none',viewer:'none'},
-  runs:   {technologist:'edit',master:'edit',quality:'view',sales:'none',designer:'none',operator:'view',viewer:'view'}};
+  main:   {technologist:'edit',master:'edit',quality:'edit',sales:'view',designer:'view',warehouse:'view',operator:'view',viewer:'view'},
+  tech:   {technologist:'edit',master:'view',quality:'view',sales:'none',designer:'none',warehouse:'none',operator:'view',viewer:'view'},
+  quality:{technologist:'edit',master:'view',quality:'edit',sales:'view',designer:'none',warehouse:'view',operator:'view',viewer:'view'},
+  sales:  {technologist:'view',master:'none',quality:'none',sales:'edit',designer:'view',warehouse:'none',operator:'none',viewer:'none'},
+  design: {technologist:'edit',master:'view',quality:'view',sales:'edit',designer:'edit',warehouse:'view',operator:'view',viewer:'view'},
+  cost:   {technologist:'edit',master:'none',quality:'none',sales:'view',designer:'none',warehouse:'none',operator:'none',viewer:'none'},
+  runs:   {technologist:'edit',master:'edit',quality:'view',sales:'none',designer:'none',warehouse:'none',operator:'view',viewer:'view'}};
 const PT_LV={none:'— нет',view:'просмотр',edit:'правка'};
 const ptMatrix=()=>Object.fromEntries(PTABS.map(t=>[t.id,Object.fromEntries(PT_ROLES.map(r=>[r,(DB.settings.projTabs||{})[t.id]?.[r]||PT_DEF[t.id][r]]))]));
 function ptAccess(tab,role){ role=role||state.me?.role; if(role==='admin') return 'edit'; const m=(DB.settings.projTabs||{})[tab]; return m?.[role]||PT_DEF[tab]?.[role]||'none'; }
@@ -2167,6 +2172,56 @@ async function qCommit(work,lineIds,extra=[],log){
 }
 async function qRelineAll(){ const work=DB.plan.map(clone), ch=await qCommit(work,DB.lines.map(l=>l.id),[],'Очередь выстроена заново на всех линиях'); toast('Готово'+(ch.length?` · обновлено позиций ${ch.length}`:'')); }
 
+
+// ─── прогресс заказа по операциям маршрута проекта
+function orderOps(o,p){ p=p||byId(DB.projects,o?.projectId); const skip=new Set(A(o?.skipOps)); return A(p?.ops).filter(x=>!skip.has(x.id)); }
+const opIsShip=op=>/отгруз|ship/i.test(op.name||'');
+function opProgress(op,o,it){
+  const total=o?+o.qty||0:+it?.qty||0;
+  if(opIsShip(op)) return {done:o?orderShipped(o):0,total,src:'по отгрузкам со склада'};
+  const l=byId(DB.lines,op.lineId);
+  if(l){ const ar=lineArea(l), its=o?DB.plan.filter(i=>i.orderId===o.id):[it];
+    const set=new Set([l.id,...its.map(i=>i.lineId).filter(x=>{ const ll=byId(DB.lines,x); return ar&&ar!=='none'&&ll&&lineArea(ll)===ar; })]);
+    const recs=o?orderOuts(o,true):DB.output.filter(r=>r.planItemId===it?.id&&r.approved!==false);
+    return {done:recs.filter(r=>set.has(r.lineId)).reduce((s,r)=>s+(+r.good||0),0),total,src:'по подтверждённым отчётам смен: '+[...set].map(x=>lineShort(byId(DB.lines,x))).join(', ')}; }
+  const pack=opIsPack(op), done=o?DB.opLog.filter(x=>x.orderId===o.id&&x.opId===op.id).reduce((s,x)=>s+(+x.qty||0),0):0;
+  return {done,total,manual:true,pack,src:o?(pack?'склад: отчёты по упаковке':'отчёты мастера по операциям'):'позиция без заказа'};
+}
+const opIsPack=op=>/упаков|pack/i.test(op.name||'');
+// отчёт по операциям без линии: мастер — за смену (обжиг, охлаждение, чистка горла, печь, ОТК…), склад — упаковка
+function opRepOrders(){ return DB.orders.filter(o=>orderShipped(o)<o.qty&&byId(DB.projects,o.projectId)).filter(o=>orderDone(o,true)>0||DB.opLog.some(x=>x.orderId===o.id)||DB.plan.some(i=>i.orderId===o.id&&itemStarted(i))).filter(o=>orderOps(o).some(op=>!opIsShip(op)&&opProgress(op,o).done<o.qty)).sort((a,b)=>(a.due||'').localeCompare(b.due||'')); }
+function openOpReport(mode,date,shift){
+  const wh=mode==='wh'; if(wh?!can('wh'):!can('edit')) return toast('Нет прав');
+  date=date||iso(new Date()); shift=shift==null?(wh?0:(new Date().getHours()>=7&&new Date().getHours()<19?1:2)):+shift;
+  const rows=[]; opRepOrders().forEach(o=>orderOps(o).forEach(op=>{ if(op.lineId||opIsShip(op)||opIsPack(op)!==wh) return; rows.push({o,op}); }));
+  const cur=(o,op)=>DB.opLog.find(x=>x.orderId===o.id&&x.opId===op.id&&x.date===date&&+x.shift===shift&&x.src===(wh?'wh':'master'));
+  let lastO='';
+  modal(wh?'Упаковка — отчёт склада':'Операции за смену — отчёт мастера',`<div class="frow3"><div class="fg"><label class="fl">Дата</label><input class="fi" type="date" name="date" value="${date}" onchange="closeModal();openOpReport('${mode}',this.value,${shift})"></div>
+    ${wh?'<div class="fg"></div>':`<div class="fg"><label class="fl">Смена</label><select class="fi" name="shift" onchange="closeModal();openOpReport('${mode}','${date}',this.value)">${[1,2,3].map(n=>`<option value="${n}" ${n===shift?'selected':''}>${n}-я</option>`).join('')}</select></div>`}<div class="fg"></div></div>
+    <div class="hint" style="margin-bottom:10px">${wh?'Сколько упаковано за день по каждому заказу.':'Операции без линии (обжиг, охлаждение, чистка горла, печь, контроль…) — сколько сделано за смену.'} Повторное открытие той же ${wh?'даты':'даты и смены'} — исправление. Линейные операции считаются по отчётам смен, отгрузка — по складу.</div>
+    ${rows.length?`<div class="tw flush"><table><tr><th>Заказ</th><th>Операция</th><th class="num">Сделано всего</th><th class="num">${wh?'За день':'За смену'}, шт</th></tr>${rows.map(({o,op})=>{ const g=opProgress(op,o), c=cur(o,op), p=byId(DB.projects,o.projectId), first=lastO!==o.id; lastO=o.id;
+      return `<tr ${first?'style="border-top:2px solid var(--line2)"':''}><td>${first?`<b>${esc(o.no)}</b><small class="muted" style="display:block">${esc(p?.name||'')}</small>`:''}</td><td>${esc(op.name)}</td><td class="num">${N(g.done-(+c?.qty||0))} / ${N(o.qty)}</td>
+      <td class="num"><input class="fi" type="text" inputmode="numeric" data-num="1" name="q_${o.id}_${op.id}" value="${c?c.qty:''}" placeholder="0" style="width:110px;text-align:right"></td></tr>`; }).join('')}</table></div>`:`<div class="empty">Нет заказов в работе с ${wh?'операцией упаковки':'операциями без линии'} в маршруте</div>`}`,
+  async f=>{ const list=[]; rows.forEach(({o,op})=>{ const v=+String(f['q_'+o.id+'_'+op.id]||'').replace(/\s/g,'').replace(',','.')||0, c=cur(o,op);
+      if(c&&!v) list.push({col:'opLog',id:c.id,del:true}); else if(v&&(!c||+c.qty!==v)) list.push({col:'opLog',obj:{id:c?.id||uid(),date:f.date||date,shift:wh?0:+(f.shift||shift),orderId:o.id,projectId:o.projectId,opId:op.id,opName:op.name,qty:v,src:wh?'wh':'master',by:state.me.name,ts:Date.now()}}); });
+    if(!list.length){ toast('Изменений нет'); return; } await Store.batch(list); toast('Сохранено'); });
+  $('#modalC').classList.add('wide');
+}
+function opBars(it,o,p){ const ops=orderOps(o,p); if(!ops.length) return '';
+  return `<div class="opb-w" ${o?`onclick="event.stopPropagation();openOrderProgress('${o.id}')" title="Нажмите — подробно по операциям"`:''}>${ops.map(op=>{ const g=opProgress(op,o,it), pc=g.total?Math.min(100,g.done/g.total*100):0;
+    return `<div class="opb ${pc>=100?'full':pc>0?'part':''}" data-tip="${esc(`<b>${esc(op.name)}</b><br>${N(g.done)} из ${N(g.total)} шт · ${P(pc,0)}<br><span style='opacity:.7'>${g.src}</span>`)}"><span>${esc(op.name)}</span><i><b style="width:${pc}%"></b></i><em>${Math.floor(pc)}%</em></div>`; }).join('')}</div>`; }
+function openOrderProgress(oid){
+  const o=byId(DB.orders,oid), p=byId(DB.projects,o?.projectId); if(!o||!p) return; const ce=can('edit'), skip=new Set(A(o.skipOps)), ops=A(p.ops);
+  if(!ops.length) return toast('В проекте не задан маршрут операций (вкладка «Технология»)');
+  modal(`Заказ ${o.no} — выполнение операций`,`<div class="hint" style="margin-bottom:10px"><b>${esc(p.name)}</b> · ${N(o.qty)} шт · срок ${fdate(o.due)}. Снимите галочку, если операция для этого заказа не нужна (например, стекло пришло без обжига). Цифры берутся из отчётов смен, отчётов мастера по операциям и склада (упаковка, отгрузка).</div>
+    <div class="tw flush"><table><tr><th></th><th>Операция</th><th class="num">Выполнено, шт</th><th class="num">%</th><th>Источник</th></tr>${ops.map(op=>{ const g=opProgress(op,o), on=!skip.has(op.id);
+      return `<tr><td><input type="checkbox" name="on_${op.id}" ${on?'checked':''} ${ce?'':'disabled'}></td><td><b>${esc(op.name)}</b>${op.lineId?`<small class="muted" style="display:block">${esc(lineName(op.lineId))}</small>`:''}</td>
+      <td class="num"><b>${N(g.done)}</b></td><td class="num">${g.total?P(Math.min(100,g.done/g.total*100),0):'—'}</td><td class="muted" style="font-size:12px">${g.src}</td></tr>`; }).join('')}</table></div>`,
+  async f=>{ if(!ce) return; const skipOps=ops.filter(op=>!f['on_'+op.id]).map(op=>op.id); if(JSON.stringify(skipOps)===JSON.stringify(A(o.skipOps))) return;
+    await Store.put('orders',{...clone(o),skipOps}); toast('Сохранено'); },ce?'Сохранить':'Закрыть',
+    `${can('edit')?`<button class="btn btn-s" type="button" onclick="closeModal();openOpReport('master')">Отчёт мастера</button> `:''}${can('wh')?`<button class="btn btn-s" type="button" onclick="closeModal();openOpReport('wh')">Упаковка (склад)</button>`:''}`);
+  $('#modalC').classList.add('wide');
+}
 // ─── 1. очередь по линиям
 function planQueue(chk){
   const {a:from}=plRange(), now=Date.now(), ce=can('edit');
@@ -2180,7 +2235,7 @@ function planQueue(chk){
       const f=itemFact(it), q=+it.qty||0, risk=itemRisk(it,chk[it.id]), s=sched(it,LIVE);
       return `<tr class="${ce?'click':''} ${started&&e>now?'q-run':''} ${e<=now?'q-done':''}" onclick="if(!event.target.closest('button'))openQItem('${it.id}')">
         <td class="q-arr">${ce?`<button class="btn btn-s btn-sm" ${canUp?'':'disabled'} onclick="qMove('${it.id}',-1)" title="Выше в очереди">↑</button><button class="btn btn-s btn-sm" ${canDn?'':'disabled'} onclick="qMove('${it.id}',1)" title="Ниже в очереди">↓</button><div style="margin-top:3px">${e>now?`<button class="btn btn-s btn-sm" onclick="openQSplit('${it.id}')" title="Остановить / разделить: доделать остаток позже или на другой линии">⏸</button>`:''}<button class="btn btn-d btn-sm" onclick="delPlanItem('${it.id}')" title="Удалить из плана">🗑</button></div>`:''}</td>
-        <td><div style="display:flex;gap:8px;align-items:center"><span class="sw" style="background:${pColor(p)};flex-shrink:0"></span>${projThumb(p,30)}<div><b>${esc(p?.name||'—')}</b><small class="muted" style="display:block">${esc(p?.client||'')}${s.pause?` · паузы ${minTxt(s.pause)}`:''}${started&&e>now?' · <b style="color:var(--blue)">в работе</b>':''}</small></div></div></td>
+        <td><div style="display:flex;gap:8px;align-items:center">${projThumb(p,30)}<div><b>${esc(p?.name||'—')}</b><small class="muted" style="display:block">${esc(p?.client||'')}${s.pause?` · паузы ${minTxt(s.pause)}`:''}${started&&e>now?' · <b style="color:var(--blue)">в работе</b>':''}</small></div></div></td>
         <td>${o?`${esc(o.no)}<small class="muted" style="display:block">сделано ${short(ob.done)} из ${short(ob.qty)}${ob.lines>1?` · ${ob.lines} линии`:''}</small>`:'<span class="muted">—</span>'}</td>
         <td class="num"><b>${N(q)}</b><small class="muted" style="display:block">факт ${N(f.good)}${q?' · '+P(f.good/q*100,0):''}${f.pending?` · ⏳ ${N(f.pending)}`:''}${f.good&&s.rest>0?`<br>осталось ${N(s.rest)}`:''}</small></td>
         <td>${ce?`<input class="fi q-st ${it.notBefore&&!started?'fix':''}" type="datetime-local" value="${toDT(a)}" title="${started?'Фактическое начало':'Задать начало вручную (пусто — сразу за предыдущим)'}" onchange="qSetStart('${it.id}',this.value)">`:fdt(a)}${it.notBefore&&!started?'<small class="muted" style="display:block">📌 задано вручную</small>':''}</td>
@@ -2188,7 +2243,7 @@ function planQueue(chk){
         <td>${o?fdate(o.due):'<span class="muted">—</span>'}</td>
         <td>${matTag(chk[it.id])}</td>
         <td>${risk.length?risk.map(r=>`<span class="tag ${r[1]}" data-tip="${r[2]}">${r[0]}</span>`).join(' '):(e<=now?'<span class="tag t-gray">завершён</span>':'<span class="tag t-green">в срок</span>')}</td>
-</tr>`;
+</tr>${(()=>{ const ob=opBars(it,o,p); return ob?`<tr class="q-ops ${started&&e>now?'q-run':''} ${e<=now?'q-done':''}"><td></td><td colspan="8">${ob}</td></tr>`:''; })()}`;
     }).join('')||` <tr><td colspan="9" class="muted" style="padding:10px 14px">Очередь пуста</td></tr>`;
     return head+body;
   }).join('');
@@ -2965,7 +3020,7 @@ function renderStock(){
       ${Object.entries(m).filter(([,v])=>v.made||v.ship).sort((a,b)=>(b[1].made-b[1].ship)-(a[1].made-a[1].ship)).map(([pid,v])=>`<tr><td><b>${esc(projName(pid))}</b></td><td class="muted">${esc(byId(DB.projects,pid)?.client||'')}</td><td class="num">${N(v.made)}</td><td class="num">${N(v.ship)}</td><td class="num"><b>${N(v.made-v.ship)}</b></td></tr>`).join('')}</table></div></div>`;
   } else body=renderMovesTab();
   $('#content').innerHTML=`<div class="toolbar"><div class="seg">${[['raw','Остатки сырья'],['moves','Движение сырья'],['fg','Готовая продукция']].map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="state.stockTab='${k}';render()">${l}</button>`).join('')}</div><div class="sp"></div>
-    ${ce?`<button class="btn btn-s" onclick="openMove('in')">+ Приход</button><button class="btn btn-s" onclick="openMove('out')">− Расход</button><button class="btn btn-s" onclick="openInventory()">Инвентаризация</button><button class="btn btn-p" onclick="openShip()">Отгрузка продукции</button>`:''}</div>${body}`;
+    ${ce?`<button class="btn btn-s" onclick="openMove('in')">+ Приход</button><button class="btn btn-s" onclick="openMove('out')">− Расход</button><button class="btn btn-s" onclick="openInventory()">Инвентаризация</button><button class="btn btn-p" onclick="openShip()">Отгрузка продукции</button><button class="btn btn-s" onclick="openOpReport('wh')">Упаковка</button>`:''}</div>${body}`;
 }
 // ── движение сырья за период
 function mvPick(){ if(!state.mvRaw) state.mvRaw=[]; return state.mvRaw; }
@@ -3081,7 +3136,7 @@ function shipOrderOpts(pid){ return opts(DB.orders.filter(o=>o.projectId===pid&&
 function renderOrders(){
   const list=[...DB.orders].sort((a,b)=>a.due.localeCompare(b.due)), s=orderStats();
   const planEnd=o=>orderFinish(o,LIVE);
-  $('#content').innerHTML=`<div class="toolbar"><span class="tag t-blue">${s.work} в работе</span><span class="tag t-gray">${s.new} новых</span><span class="tag t-red">${s.overdue} просрочено</span><span class="tag t-green">${s.done+s.shipped} готово</span><div class="sp"></div>${can('edit')?`<button class="btn btn-s" onclick="openShip()">Отгрузка</button><button class="btn btn-p" onclick="openOrderModal()">+ Заказ</button>`:''}</div>
+  $('#content').innerHTML=`<div class="toolbar"><span class="tag t-blue">${s.work} в работе</span><span class="tag t-gray">${s.new} новых</span><span class="tag t-red">${s.overdue} просрочено</span><span class="tag t-green">${s.done+s.shipped} готово</span><div class="sp"></div>${(can('wh')?`<button class="btn btn-s" onclick="openOpReport('wh')">Упаковка</button><button class="btn btn-s" onclick="openShip()">Отгрузка</button>`:'')+(can('edit')?`<button class="btn btn-p" onclick="openOrderModal()">+ Заказ</button>`:'')}</div>
   <div class="card">${list.length?`<div class="tw flush"><table><tr><th>№</th><th>Проект</th><th class="num">Заказано</th><th>Произведено</th><th class="num">Отгружено</th><th>Срок отгрузки</th><th>По плану готово</th><th>Статус</th><th></th></tr>
   ${list.map(o=>{ const d=orderDone(o), sh=orderShipped(o), pct=Math.min(d/o.qty*100,100), st=OST[orderStatus(o)], pe=planEnd(o), late=pe&&pe>pd(o.due).getTime()+864e5, p=byId(DB.projects,o.projectId);
     return `<tr><td><b>${esc(o.no)}</b></td><td>${esc(p?.name||'—')}<div class="muted" style="font-size:12px">${esc(p?.client||'')}</div></td><td class="num">${N(o.qty)}</td>
@@ -3097,7 +3152,7 @@ function openOrderModal(id){
     <div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" min="1" name="qty" value="${o.qty}"></div>
     <div class="fg"><label class="fl">Комментарий</label><input class="fi" name="note" value="${esc(o.note||'')}"></div>`,
   async f=>{ if(!(+f.qty)){ toast('Укажите количество'); return false; } await Store.put('orders',{...(id?o:{}),id:id||uid(),no:f.no,due:f.due,projectId:f.projectId,qty:+f.qty,note:f.note}); toast('Заказ сохранён'); },
-  'Сохранить', id&&can('admin')?`<button class="btn btn-d" type="button" onclick="closeModal();delItem('orders','${id}')">Удалить</button>`:'');
+  'Сохранить', (id?`<button class="btn btn-s" type="button" onclick="closeModal();openOrderProgress('${id}')">Операции и выполнение</button> `:'')+(id&&can('admin')?`<button class="btn btn-d" type="button" onclick="closeModal();delItem('orders','${id}')">Удалить</button>`:''));
 }
 
 // ═════════════════════════════════════════════
@@ -3457,7 +3512,7 @@ function applyLocal(list){
 // ═════════════════════════════════════════════
 //  ЖУРНАЛ ИЗМЕНЕНИЙ (аудит): кто, что, когда — запись только добавляется, изменить или удалить нельзя
 // ═════════════════════════════════════════════
-const AUD_COL={ptab:'Проекты: вкладки служб',images:'Визуалы проектов',lines:'Линии',projects:'Проекты',raw:'Сырьё',semis:'Полуфабрикаты',orders:'Заказы',output:'Отчёты смен',runs:'Тех. отчёты',plan:'План',supplies:'Поставки',moves:'Склад',downs:'Простои',scenarios:'Моделирование',shiftCal:'Календарь смен',people:'Персонал',roster:'График работы',settings:'Настройки',approved:'Утверждение плана',users:'Доступы',session:'Вход',products:'Проекты',stock:'Склад'};
+const AUD_COL={opLog:'Выполнение операций',ptab:'Проекты: вкладки служб',images:'Визуалы проектов',lines:'Линии',projects:'Проекты',raw:'Сырьё',semis:'Полуфабрикаты',orders:'Заказы',output:'Отчёты смен',runs:'Тех. отчёты',plan:'План',supplies:'Поставки',moves:'Склад',downs:'Простои',scenarios:'Моделирование',shiftCal:'Календарь смен',people:'Персонал',roster:'График работы',settings:'Настройки',approved:'Утверждение плана',users:'Доступы',session:'Вход',products:'Проекты',stock:'Склад'};
 const AUD_OP={add:['Добавил','t-green'],upd:['Изменил','t-blue'],del:['Удалил','t-red'],set:['Записал','t-blue'],login:['Вошёл','t-gray'],pwd:['Сменил пароль','t-amber']};
 const AUD_F={noSetup:'Без наладки',name:'Название',qty:'Кол-во',start:'Начало',notBefore:'Начало вручную',speedPlan:'Скорость',setupPlan:'Наладка',extras:'Паузы',lineId:'Линия',projectId:'Проект',orderId:'Заказ',status:'Статус',good:'Годные',defect:'Брак',approved:'Подтверждено',role:'Роль',active:'Доступ включён',cost:'Цена',due:'Срок',shift:'Смена',date:'Дата',shifts:'Смены',seq:'Место в очереди',note:'Комментарий',speed:'Скорость',setupMin:'Наладка, мин',stations:'Станции',items:'Состав',qual:'Квалификация',team:'Бригада',position:'Должность',min:'Мин. остаток',supplier:'Поставщик',reason:'Причина',end:'Окончание',client:'Клиент',color:'Цвет',qualSetup:'Квалиф. наладка',qualRun:'Квалиф. производство',rawFact:'Факт сырья',writtenOff:'Списано',settings:'Параметры машины',timeline:'Хронометраж',workMin:'Работа, мин',downtime:'Простои, мин',staffId:'Сотрудник',absence:'Отсутствие',workShifts:'Рабочие смены',workDays:'Рабочие дни',scheme:'Схема смен',area:'Участок',type:'Тип',unit:'Ед.',cat:'Категория',login:'Логин',personId:'Связь с персоналом',orgName:'Название предприятия',shiftSchemes:'Схемы смен',activities:'Виды работ',defectReasons:'Причины брака',machineParams:'Параметры машины'};
 const AUD_SKIP=new Set(['thumb','coverId','ts','by','updated','log','approvedAt','approvedBy','sec','id','uid','email','created','writtenMap','outputIds','history','ver']);
@@ -3801,6 +3856,16 @@ function genDemo(){
   DB.roster=roster;
   db.people=DB.people; db.roster=DB.roster;
   db.ptab=ptab;
+  const opLog=[]; { let firstP1=true; orders.forEach(o=>{ const p=projects.find(x=>x.id===o.projectId); if(!p) return; const ops=A(p.ops);
+    if(p.id==='P1'&&firstP1){ firstP1=false; const f=ops.find(x=>/обжиг/i.test(x.name)); if(f) o.skipOps=[f.id]; }
+    const main=ops.find(x=>x.lineId===p.lineId); if(!main) return; const done=orderOuts(o,true).reduce((s,r)=>s+(+r.good||0),0); if(!done) return;
+    const od={}; let prev=Math.min(o.qty,Math.round(done*1.08));
+    ops.forEach(op=>{ if(o.skipOps&&o.skipOps.includes(op.id)) return; if(opIsShip(op)) return;
+      if(op.lineId){ prev=opProgress(op,o).done; return; } const before=ops.indexOf(op)<ops.indexOf(main);
+      const v=before?prev:Math.round(prev*.86); if(v>0) od[op.id]=Math.round(v/100)*100; if(!before) prev=v; });
+    Object.entries(od).forEach(([opId,v])=>{ const op=ops.find(x=>x.id===opId), wh=opIsPack(op), n=3; for(let k=0;k<n;k++){ const q=k<n-1?Math.round(v/n/100)*100:v-2*Math.round(v/n/100)*100;
+      opLog.push({id:'OL'+(opLog.length+1),date:iso(addD(now,-(n-k))),shift:wh?0:1+(k%2),orderId:o.id,projectId:o.projectId,opId,opName:op.name,qty:q,src:wh?'wh':'master',by:wh?'Склад':'Ольга Петренко',ts:NOW-(n-k)*864e5}); } }); }); }
+  db.opLog=opLog;
   db.images={}; projects.forEach((p,i)=>{ const A1=demoBottle(p,0), B1=i<3?demoBottle(p,1):null, a=A1&&A1.data, b=B1&&B1.data; if(A1){ p.thumb=(B1||A1).thumb; p.coverId='IM'+p.id+(B1?'b':'a'); } const ims=[a&&{id:'IM'+p.id+'a',title:'Эскиз',data:a,w:600,h:800,orig:'4000×5333',file:'эскиз_'+p.id+'.png',kb:Math.round(a.length*.75/1024),link:'https://drive.google.com/…/'+p.id,ts:NOW-40*864e5,by:'Марина Коваль'},
     b&&{id:'IM'+p.id+'b',title:'Утверждённый образец',data:b,w:600,h:800,orig:'6000×8000',file:'образец_'+p.id+'.jpg',kb:Math.round(b.length*.75/1024),link:'',ts:NOW-20*864e5,by:'Марина Коваль'}].filter(Boolean);
     if(ims.length){ db.images[p.id]=ims; } });
@@ -3819,11 +3884,11 @@ function genDemo(){
   return db;
 }
 let _quotaWarn=false;
-function demoSave(){ if(state.mode!=='demo') return; try{ localStorage.setItem('pdd_demo_v13',JSON.stringify(DB)); }catch(e){ if(!_quotaWarn){ _quotaWarn=true; toast('Демо: место в браузере закончилось — последние изменения (например, картинки) не сохранятся после перезагрузки'); } } }
-function resetDemo(){ if(!confirm('Сбросить демо-данные к исходным?')) return; try{ localStorage.removeItem('pdd_demo_v13'); }catch(e){} DB=normalize(genDemo()); render(); toast('Демо-данные сброшены'); }
+function demoSave(){ if(state.mode!=='demo') return; try{ localStorage.setItem('pdd_demo_v15',JSON.stringify(DB)); }catch(e){ if(!_quotaWarn){ _quotaWarn=true; toast('Демо: место в браузере закончилось — последние изменения (например, картинки) не сохранятся после перезагрузки'); } } }
+function resetDemo(){ if(!confirm('Сбросить демо-данные к исходным?')) return; try{ localStorage.removeItem('pdd_demo_v15'); }catch(e){} DB=normalize(genDemo()); render(); toast('Демо-данные сброшены'); }
 function startDemo(){
   state.mode='demo';
-  let saved=null; try{ saved=JSON.parse(localStorage.getItem('pdd_demo_v13')||'null'); }catch(e){}
+  let saved=null; try{ saved=JSON.parse(localStorage.getItem('pdd_demo_v15')||'null'); }catch(e){}
   DB=normalize(saved&&saved.plan?saved:genDemo());
   state.me={...DB.members[0]}; enterApp();
 }
