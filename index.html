@@ -246,6 +246,11 @@ tfoot td{font-weight:800;background:var(--card2)}
 .pv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px} .pv{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--card2)} .pv:hover{border-color:var(--brand)}
 .pv img{display:block;width:100%;height:170px;object-fit:cover} .pv-t{padding:6px 8px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .pv-star{position:absolute;top:6px;right:6px;background:#fff;color:#e8a400;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 1px 4px rgba(0,0,0,.2)}
 .card.drop{outline:2px dashed var(--brand);outline-offset:-4px}
+.rs-cov{padding:3px!important} .cv{display:flex;gap:2px;justify-content:center} .cv-s{display:inline-flex;flex-direction:column;align-items:center;min-width:30px;padding:1px 2px;border-radius:5px;font-size:11px;font-weight:800;line-height:1.2;background:var(--card2);color:var(--text2)}
+.cv-s i{font-style:normal;font-size:9px;font-weight:700;color:var(--text3)} .cv-s.ok{background:var(--greenBg);color:var(--green)} .cv-s.bad{background:var(--redBg);color:var(--red)} .cv-s.off{background:repeating-linear-gradient(135deg,rgba(120,130,150,.15) 0 3px,transparent 3px 6px);color:var(--text3)}
+.cv-s b{display:block;font-size:10.5px;font-weight:700;white-space:nowrap;max-width:78px;overflow:hidden;text-overflow:ellipsis} .cv-s em{display:block;font-style:normal;font-size:9.5px;font-weight:800;opacity:.75}
+.rs-grp td{background:var(--card2);font-size:12.5px;padding:7px 10px!important;position:sticky;left:0} .cv-s{min-width:64px;padding:2px 4px}
+.rs .rs-d0{border-left:1px solid var(--line2)} .rs .rs-dn{border-left:1px dashed var(--line);background-color:rgba(70,90,140,.05)} .rs tr.rs-sub th{font-size:10px;padding:1px 2px;color:var(--text3)} .rs td.rs-c select{width:48px} .rs td.rs-c.abs select{width:100%;max-width:120px} .rs td.rs-c.rs-d0,.rs th.rs-d0{border-left:2px solid var(--line2)}
 .dc-now{position:absolute;top:0;bottom:0;width:2px;background:var(--red);z-index:3;pointer-events:none}
 .ex-head,.ex-row{display:grid;grid-template-columns:1fr 80px 124px 130px 36px;gap:6px;align-items:center} .ex-row{margin-bottom:6px} .ex-head{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
 .ex-row .fi{padding:7px 9px} .ex-e-l{display:flex;gap:6px;align-items:center;font-size:12.5px;white-space:nowrap}
@@ -2250,15 +2255,16 @@ function factSegs(lineId,a,b){
   return out;
 }
 // персонал смены и проверка квалификации
-function shiftCrew(lineId,d,n){ return DB.roster.filter(r=>r.date===d&&r.lineId===lineId&&+r.shift===+n).map(r=>byId(DB.people,r.staffId)).filter(Boolean); }
+function shiftCrew(lineId,d,n,all){ const c=DB.roster.filter(r=>r.date===d&&r.lineId===lineId&&+r.shift===+n).map(r=>byId(DB.people,r.staffId)).filter(Boolean); return all?c:c.filter(p=>personCat(p)==='op'); }
 function shiftQual(l,d,n,sa,sb){
-  const pl=shiftPlan(l.id,sa,sb), crew=shiftCrew(l.id,d,n), area=lineArea(l);
-  if(area==='none') return {crew,best:0,need:[],lacks:[],empty:false,tip:`<b>Персонал смены</b><br>${crew.map(s=>esc(s.name)+' — '+esc(s.position||'')).join('<br>')||'никого'}<br><span style="opacity:.7">участок без проверки квалификации</span>`};
+  const pl=shiftPlan(l.id,sa,sb), crew=shiftCrew(l.id,d,n), others=shiftCrew(l.id,d,n,true).filter(p=>personCat(p)!=='op'), area=lineArea(l);
+  const oTip=others.length?'<br><b>Handler / лаборатория</b><br>'+others.map(s=>esc(s.name)+' — '+esc(s.position||'')).join('<br>'):'';
+  if(area==='none') return {crew,best:0,need:[],lacks:[],empty:false,tip:`<b>Персонал смены</b><br>${crew.map(s=>esc(s.name)+' — '+esc(s.position||'')).join('<br>')||'никого'}<br><span style="opacity:.7">участок без проверки квалификации</span>${oTip}`,others};
   const best=Math.max(0,...crew.map(s=>qRank(s.qual?.[area])));
   const need=[]; pl.forEach(x=>{ const p=byId(DB.projects,x.it.projectId); if(!p) return; if(x.setup>0&&p.qualSetup) need.push({w:'наладка',p,q:p.qualSetup}); if(x.run>0&&p.qualRun) need.push({w:'массовое пр-во',p,q:p.qualRun}); });
   const lacks=need.filter(x=>qRank(x.q)>best), empty=pl.length>0&&!crew.length&&DB.roster.some(r=>r.date===d);
-  const tip=`<b>Персонал смены (${esc(areaName(area))})</b><br>${crew.map(s=>`${esc(s.name)} — ${esc(s.position||'')} · ${s.qual?.[area]||'без квалиф.'}`).join('<br>')||'никого'}${need.length?'<br><b>Требуется</b><br>'+need.map(x=>`${x.w} «${esc(x.p.name)}»: ${x.q}`).join('<br>'):''}`;
-  return {crew,best,need,lacks,empty,tip};
+  const tip=`<b>Персонал смены (${esc(areaName(area))})</b><br>${crew.map(s=>`${esc(s.name)} — ${esc(s.position||'')} · ${s.qual?.[area]||'без квалиф.'}`).join('<br>')||'никого'}${oTip}${need.length?'<br><b>Требуется</b><br>'+need.map(x=>`${x.w} «${esc(x.p.name)}»: ${x.q}`).join('<br>'):''}`;
+  return {crew,best,need,lacks,empty,tip,others};
 }
 async function toggleShift(lineId,d,n,on){
   if(!can('edit')) return;
@@ -2905,9 +2911,13 @@ function exportCSV(){
 // ═════════════════════════════════════════════
 const teamRank=t=>{ if(!t) return 999; const i=DB.lines.findIndex(l=>lineShort(l)===String(t).split('-')[0]); return i>=0?i:500; };
 const pBest=p=>Math.max(0,...Object.values(p.qual||{}).map(qRank));
-const personSort=(a,b)=>teamRank(a.team)-teamRank(b.team)||String(a.team||'').localeCompare(String(b.team||''),'ru',{numeric:true})||pBest(b)-pBest(a)||a.name.localeCompare(b.name);
-const POSITIONS=['Оператор линии','Наладчик','Мастер смены','Контролёр ОТК','Технолог','Подсобный рабочий'];
-const lineShort = l => { if(!l) return '?'; if(l.code) return l.code; const nm=String(l.name||''), d=(nm.match(/\d+/)||[''])[0];
+const personSort=(a,b)=>PCATS.findIndex(c=>c.id===personCat(a))-PCATS.findIndex(c=>c.id===personCat(b))||teamRank(a.team)-teamRank(b.team)||String(a.team||'').localeCompare(String(b.team||''),'ru',{numeric:true})||pBest(b)-pBest(a)||a.name.localeCompare(b.name);
+const POSITIONS=['Оператор линии','Наладчик','Мастер смены','Handler','Подсобный рабочий','Лаборант','Контролёр ОТК','Технолог'];
+const PCATS=[{id:'op',name:'Операторы'},{id:'handler',name:'Handler'},{id:'lab',name:'Лаборатория'}];
+const personCat = p => p?.cat || (/handler|подсоб|упаков|грузч|вспомог/i.test(p?.position||'')?'handler':/лаборант|лаборат|отк|контрол|технолог/i.test(p?.position||'')?'lab':'op');
+const surname = p => String(p?.name||'').trim().split(/\s+/)[0]||'?';
+const lineShort = l => { if(!l) return '?'; if(l.id==='*') return 'Цех'; if(l.code) return l.code; const nm=String(l.name||'').trim(), d=(nm.match(/\d+/)||[''])[0];
+  if(nm&&!/\s/.test(nm)&&nm.length<=6) return nm; const w0=nm.split(/\s+/)[0]; if(/^[A-Za-zА-Яа-яЁёІіЇїЄє]{1,3}-?\d+$/.test(w0)) return w0;
   const ar=lineArea(l); return d&&(ar==='printing'||ar==='coating')?(ar==='printing'?'P':'C')+d:d?nm.split(/\s+/)[0][0].toUpperCase()+d:nm.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join(''); };
 const qTag = q => q?`<span class="tag ${q==='Senior'?'t-green':q==='Operator'?'t-blue':'t-gray'}">${q}</span>`:'<span class="muted">—</span>';
 function renderPeople(){
@@ -2916,9 +2926,9 @@ function renderPeople(){
   if(tab==='list'){
     const ps=DB.people.slice().sort((a,b)=>(a.active===false)-(b.active===false)||personSort(a,b));
     $('#content').innerHTML=`<div class="toolbar">${tabs}<span class="muted" style="font-weight:600">${ps.filter(p=>p.active!==false).length} работают</span><div class="sp"></div>${ce?`<button class="btn btn-p" onclick="openPerson()">+ Сотрудник</button>`:''}</div>
-    <div class="card">${ps.length?`<div class="tw flush"><table><tr><th>Бригада</th><th>ФИО</th><th>Должность</th><th>Доступ в программу</th>${areas().map(a=>`<th>${esc(a.name)}</th>`).join('')}<th class="num">Смен за 30 дней</th><th>Заметка</th></tr>
+    <div class="card">${ps.length?`<div class="tw flush"><table><tr><th>Бригада</th><th>ФИО</th><th>Категория</th><th>Должность</th><th>Доступ в программу</th>${areas().map(a=>`<th>${esc(a.name)}</th>`).join('')}<th class="num">Смен за 30 дней</th><th>Заметка</th></tr>
     ${ps.map(p=>{ const n=DB.roster.filter(r=>r.staffId===p.id&&r.date<=iso(new Date())&&r.date>iso(addD(new Date(),-30))).length;
-      return `<tr class="${ce?'click':''}" style="${p.active===false?'opacity:.5':''}" ${ce?`onclick="openPerson('${p.id}')"`:''}><td>${p.team?`<span class="tag t-blue">${esc(p.team)}</span>`:'<span class="muted">—</span>'}</td><td><b>${esc(p.name)}</b>${p.active===false?' <span class="tag t-gray">не работает</span>':''}</td><td>${esc(p.position||'')}</td><td>${(()=>{ const m=DB.members.find(x=>x.personId===p.id); return m?`<span class="tag ${m.active===false?'t-gray':'t-blue'}">${esc(m.login)} · ${esc(ROLES[m.role]?.n||m.role)}</span>`:'<span class="muted">—</span>'; })()}</td>${areas().map(a=>`<td>${qTag(p.qual?.[a.id])}</td>`).join('')}<td class="num">${n||'—'}</td><td class="muted">${esc(p.note||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Персонал ещё не заведён</div>'}</div>
+      return `<tr class="${ce?'click':''}" style="${p.active===false?'opacity:.5':''}" ${ce?`onclick="openPerson('${p.id}')"`:''}><td>${p.team?`<span class="tag t-blue">${esc(p.team)}</span>`:'<span class="muted">—</span>'}</td><td><b>${esc(p.name)}</b>${p.active===false?' <span class="tag t-gray">не работает</span>':''}</td><td>${esc(PCATS.find(c=>c.id===personCat(p))?.name||'')}</td><td>${esc(p.position||'')}</td><td>${(()=>{ const m=DB.members.find(x=>x.personId===p.id); return m?`<span class="tag ${m.active===false?'t-gray':'t-blue'}">${esc(m.login)} · ${esc(ROLES[m.role]?.n||m.role)}</span>`:'<span class="muted">—</span>'; })()}</td>${areas().map(a=>`<td>${qTag(p.qual?.[a.id])}</td>`).join('')}<td class="num">${n||'—'}</td><td class="muted">${esc(p.note||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Персонал ещё не заведён</div>'}</div>
     <div class="hint" style="margin-top:10px">Квалификация (Junior / Operator / Senior) задаётся отдельно для каждого участка (${esc(areas().map(a=>a.name).join(', '))}); список участков — в «Настройках». Участок линии указывается в разделе «Линии», требования — в карточке проекта.</div>`;
     return;
   }
@@ -2927,7 +2937,8 @@ function renderPeople(){
   const days=[]; for(let d=pd(state.rsFrom); iso(d)<=state.rsTo&&days.length<93; d=addD(d,1)) days.push(iso(d));
   const ps=DB.people.filter(p=>p.active!==false).sort(personSort);
   const rmap={}; DB.roster.forEach(r=>rmap[r.date+'|'+r.staffId]=r);
-  const slots=d=>DB.lines.flatMap(l=>dayShifts(l.id,d,LIVE).map(n=>({l,n})));
+  const SHOP={id:'*',name:'Цех (без линии)'};
+  const slots=d=>[...DB.lines.flatMap(l=>dayShifts(l.id,d,LIVE).map(n=>({l,n}))),...lineShiftDefs('*').map(s=>({l:SHOP,n:s.n}))];
   const td=iso(new Date());
   // колонки: дни + итог в конце каждого месяца (или в конце периода)
   const cols=[]; days.forEach((d,i)=>{ cols.push({d}); const nx=days[i+1]; if(!nx||nx.slice(0,7)!==d.slice(0,7)){ const mDays=days.filter(x=>x.slice(0,7)===d.slice(0,7)); cols.push({sum:d.slice(0,7),days:mDays}); } });
@@ -2935,32 +2946,46 @@ function renderPeople(){
   const sumHead=c=>{ const full=c.days.length===new Date(+c.sum.slice(0,4),+c.sum.slice(5,7),0).getDate(); return `<th class="c rs-sum">Σ ${mName(c.sum)}${full?'':`<br><small>${+c.days[0].slice(8)}–${+c.days[c.days.length-1].slice(8)}</small>`}</th>`; };
   const head=lab=>`<tr><th style="position:sticky;left:0;z-index:2">${lab}</th>${cols.map(c=>{ if(c.sum) return sumHead(c); const d=c.d, dt=pd(d), we=[0,6].includes(dt.getDay()); return `<th class="c ${d===td?'rs-td':''}" style="${we?'color:var(--red)':''}">${WD[(dt.getDay()+6)%7]}<br>${dt.getDate()}.${String(dt.getMonth()+1).padStart(2,'0')}</th>`; }).join('')}</tr>`;
   const ABS={'Б':'Больничный','О':'Отпуск','Н':'Неявка'};
-  const rows=ps.map(p=>`<tr><td class="rs-name ${p.team&&ps[ps.indexOf(p)-1]?.team!==p.team?'rs-team':''}"><b>${p.team?`<span class="tag t-blue" style="margin-right:4px">${esc(p.team)}</span>`:''}${esc(p.name)}</b><small>${esc(p.position||'')}${areas().map(a=>p.qual?.[a.id]?` · ${esc(a.name.split(/\s+/)[0])}:${p.qual[a.id][0]}`:'').join('')}</small></td>${cols.map(c=>{
+  const NS=Math.max(2,...DB.lines.map(l=>lineShiftDefs(l.id).length),lineShiftDefs('*').length), SL=NS===2?['Д','Н']:['1','2','3','4'].slice(0,NS);
+  const ncols=cols.filter(c=>!c.sum).length*NS+cols.filter(c=>c.sum).length+1;
+  const head2=lab=>`<tr><th rowspan="2" style="position:sticky;left:0;z-index:2">${lab}</th>${cols.map(c=>{ if(c.sum) return sumHead(c).replace('<th ','<th rowspan="2" '); const d=c.d, dt=pd(d), we=[0,6].includes(dt.getDay()); return `<th colspan="${NS}" class="c rs-d0 ${d===td?'rs-td':''}" style="${we?'color:var(--red)':''}">${WD[(dt.getDay()+6)%7]}<br>${dt.getDate()}.${String(dt.getMonth()+1).padStart(2,'0')}</th>`; }).join('')}</tr>
+    <tr class="rs-sub">${cols.filter(c=>!c.sum).map(c=>SL.map((x,k)=>`<th class="c ${k?'rs-dn':'rs-d0'} ${c.d===td?'rs-td':''}">${x}</th>`).join('')).join('')}</tr>`;
+  const rows=ps.map((p,i)=>(i===0||personCat(ps[i-1])!==personCat(p)?`<tr class="rs-grp"><td colspan="${ncols}"><b>${esc(PCATS.find(c=>c.id===personCat(p))?.name||'')}</b> <span class="muted">· ${ps.filter(x=>personCat(x)===personCat(p)).length} чел.</span></td></tr>`:'')+`<tr><td class="rs-name ${p.team&&ps[ps.indexOf(p)-1]?.team!==p.team?'rs-team':''}"><b>${p.team?`<span class="tag t-blue" style="margin-right:4px">${esc(p.team)}</span>`:''}${esc(p.name)}</b><small>${esc(p.position||'')}${areas().map(a=>p.qual?.[a.id]?` · ${esc(a.name.split(/\s+/)[0])}:${p.qual[a.id][0]}`:'').join('')}</small></td>${cols.map(c=>{
       if(c.sum){ const h=rosterHours(p.id,c.days); return `<td class="rs-c rs-sum" data-tip="${esc(p.name)} · ${mName(c.sum)}<br>Смен по графику: ${h.n}<br>Часов к оплате: ${Q(h.paid,1)} (смена минус обед)<br>Из них ночных: ${Q(h.night,1)}">${h.n?`<b>${Q(h.paid,0)} ч</b><small>${h.n} см · ночь ${Q(h.night,0)}</small>`:'<span class="muted">—</span>'}</td>`; }
-      const d=c.d, r=rmap[d+'|'+p.id], v=r?(r.absence?'abs|'+r.absence:r.lineId+'|'+r.shift):'';
-      const lbl=r?(r.absence?r.absence:`${esc(lineShort(byId(DB.lines,r.lineId)))}·${r.shift}`):'—';
-      return `<td class="rs-c ${r?(r.absence?'abs':'on'):''} ${d===td?'rs-td':''}">${ce?`<select onchange="setRoster('${d}','${p.id}',this.value)"><option value="">—</option>${slots(d).map(({l,n})=>`<option value="${l.id}|${n}" ${v===l.id+'|'+n?'selected':''}>${esc(lineShort(l))}·${n}</option>`).join('')}${r&&!r.absence&&!slots(d).some(({l,n})=>v===l.id+'|'+n)?`<option value="${v}" selected>${lbl} ⚠</option>`:''}${Object.entries(ABS).map(([k,n])=>`<option value="abs|${k}" ${v==='abs|'+k?'selected':''}>${k} · ${n}</option>`).join('')}</select>`:lbl}</td>`; }).join('')}</tr>`).join('');
+      const d=c.d, r=rmap[d+'|'+p.id], v=r?(r.absence?'abs|'+r.absence:r.lineId+'|'+r.shift):'', tdc=d===td?'rs-td':'';
+      const absOpts=Object.entries(ABS).map(([k,n])=>`<option value="abs|${k}" ${v==='abs|'+k?'selected':''}>${k} · ${n}</option>`).join('');
+      if(r&&r.absence) return `<td class="rs-c abs rs-d0 ${tdc}" colspan="${NS}">${ce?`<select onchange="setRoster('${d}','${p.id}',this.value)"><option value="">—</option>${absOpts}</select>`:r.absence}</td>`;
+      return Array.from({length:NS},(_,k)=>{ const n=k+1, mine=r&&+r.shift===n, sl=slots(d).filter(x=>+x.n===n), cur=mine?r.lineId+'|'+n:'';
+        const lbl=mine?esc(r.lineId==='*'?'Цех':lineShort(byId(DB.lines,r.lineId))):'';
+        return `<td class="rs-c ${mine?'on':''} ${k?'rs-dn':'rs-d0'} ${tdc}">${ce?`<select title="${SL[k]}-смена" onchange="setRoster('${d}','${p.id}',this.value,${n},${mine?1:0})"><option value="">—</option>${sl.map(({l})=>`<option value="${l.id}|${n}" ${cur===l.id+'|'+n?'selected':''}>${esc(lineShort(l))}</option>`).join('')}${mine&&!sl.some(({l})=>cur===l.id+'|'+n)?`<option value="${cur}" selected>${lbl} ⚠</option>`:''}${k===0?absOpts:''}</select>`:(lbl||'—')}</td>`; }).join(''); }).join('')}</tr>`).join('');
   // покрытие: по каждой линии/смене — сколько людей и хватает ли квалификации под план
-  const cover=DB.lines.flatMap(l=>lineShiftDefs(l.id).map(s=>`<tr><td class="rs-name"><b>${esc(l.name)}</b><small>${s.n}-я смена · ${s.from}–${s.to}</small></td>${cols.map(c=>{
-      if(c.sum) return '<td class="rs-c rs-sum"></td>'; const d=c.d;
-      if(!dayShifts(l.id,d,LIVE).includes(+s.n)) return `<td class="rs-c rs-off ${d===td?'rs-td':''}"></td>`;
-      const [sa,sb]=shiftWindow(d,s.n,l.id), q=shiftQual(l,d,s.n,sa,sb), bad=q.lacks.length||(q.need.length&&!q.crew.length)||(shiftPlan(l.id,sa,sb).length&&!q.crew.length);
-      return `<td class="rs-c ${bad?'rs-bad':q.crew.length?'rs-ok':''} ${d===td?'rs-td':''}" data-tip="${q.tip.replace(/"/g,'&quot;')}${q.lacks.length?'<br><b style=&quot;color:#e5484d&quot;>Не хватает: '+q.lacks.map(x=>x.q+' ('+x.w+')').join(', ')+'</b>':''}">${q.crew.length}${q.best?' · '+QUALS[q.best-1][0]:''}${bad?' ⚠':''}</td>`; }).join('')}</tr>`)).join('');
+  // покрытие: одна строка на линию, в каждом дне — по ячейке на смену (2 при 12-часовой схеме, 3 при 8-часовой)
+  const cover=DB.lines.map(l=>{ const defs=lineShiftDefs(l.id), two=defs.length===2;
+    return `<tr><td class="rs-name"><b>${esc(l.name)}</b><small>${esc(lineScheme(l.id).name)} · ${defs.map(s=>s.from+'–'+s.to).join(' / ')}</small></td>${cols.map(c=>{
+      if(c.sum) return '<td class="rs-c rs-sum"></td>'; const d=c.d, ws=dayShifts(l.id,d,LIVE);
+      return `<td class="rs-c rs-cov ${d===td?'rs-td':''}"><div class="cv">${defs.map(s=>{ const lab=two?(s.n===1?'Д':'Н'):s.n;
+        if(!ws.includes(+s.n)) return `<span class="cv-s off" title="${s.n}-я смена ${s.from}–${s.to}: не работает"><i>${lab}</i>—</span>`;
+        const [sa,sb]=shiftWindow(d,s.n,l.id), q=shiftQual(l,d,s.n,sa,sb), bad=q.lacks.length||(q.need.length&&!q.crew.length)||(shiftPlan(l.id,sa,sb).length&&!q.crew.length);
+        return `<span class="cv-s ${bad?'bad':q.crew.length?'ok':''}" data-tip="<b>${s.n}-я смена ${s.from}–${s.to}</b><br>${q.tip.replace(/"/g,'&quot;')}${q.lacks.length?'<br><b style=&quot;color:#e5484d&quot;>Не хватает: '+q.lacks.map(x=>x.q+' ('+x.w+')').join(', ')+'</b>':''}"><i>${lab}${q.best?' · '+QUALS[q.best-1][0]:''}${bad?' ⚠':''}</i>${q.crew.length?q.crew.map(p=>`<b>${esc(surname(p))}</b>`).join(''):'<b>—</b>'}${q.others.length?`<em>+${q.others.filter(p=>personCat(p)==='handler').length?q.others.filter(p=>personCat(p)==='handler').length+' H':''}${q.others.filter(p=>personCat(p)==='lab').length?' '+q.others.filter(p=>personCat(p)==='lab').length+' Лаб':''}</em>`:''}</span>`; }).join('')}</div></td>`; }).join('')}</tr>`; }).join('');
+  const gdefs=lineShiftDefs('*'), gtwo=gdefs.length===2;
+  const coverShop=DB.roster.some(r=>r.lineId==='*'&&days.includes(r.date))?`<tr><td class="rs-name"><b>Цех (без линии)</b><small>лаборатория, Handler на весь цех</small></td>${cols.map(c=>{ if(c.sum) return '<td class="rs-c rs-sum"></td>'; const d=c.d;
+      return `<td class="rs-c rs-cov ${d===td?'rs-td':''}"><div class="cv">${gdefs.map(s=>{ const lab=gtwo?(s.n===1?'Д':'Н'):s.n, all=shiftCrew('*',d,s.n,true), hd=all.filter(p=>personCat(p)==='handler'), lb=all.filter(p=>personCat(p)!=='handler');
+        return `<span class="cv-s ${all.length?'ok':''}" data-tip="<b>${s.n}-я смена ${s.from}–${s.to} · цех</b><br>${all.map(p=>esc(p.name)+' — '+esc(p.position||'')).join('<br>')||'никого'}"><i>${lab}</i>${lb.map(p=>`<b>${esc(surname(p))}</b>`).join('')||(hd.length?'':'<b>—</b>')}${hd.length?`<em>+${hd.length} H</em>`:''}</span>`; }).join('')}</div></td>`; }).join('')}</tr>`:'';
   // факт: закрытые смены (есть подтверждённый отчёт смены по этой линии) за период
   const fr=ps.map(p=>{ const f=rosterFact(p.id,days); return {p,f}; }).filter(x=>x.f.planN||x.f.abs.length);
   const tot=fr.reduce((a,{f})=>({n:a.n+f.n,paid:a.paid+f.paid,night:a.night+f.night,open:a.open+f.open,abs:a.abs+f.abs.length}),{n:0,paid:0,night:0,open:0,abs:0});
-  const factT=fr.length?`<div class="tw flush"><table><tr><th>Сотрудник</th><th class="num">Смен по графику</th><th class="num">Закрыто смен</th><th class="num">Часов к оплате</th><th class="num">Из них ночных</th><th class="num">Не закрыто</th><th>Отсутствия</th></tr>
-    ${fr.map(({p,f})=>`<tr><td><b>${esc(p.name)}</b> <span class="muted">${esc(p.position||'')}</span></td><td class="num">${f.planN}</td><td class="num"><b>${f.n}</b></td><td class="num"><b>${Q(f.paid,1)}</b></td><td class="num">${Q(f.night,1)}</td><td class="num">${f.open?`<span class="tag t-amber" data-tip="Смена прошла, но отчёт смены не подтверждён:<br>${f.openList.join('<br>')}">${f.open}</span>`:'—'}</td><td>${f.abs.length?Object.entries(f.abs.reduce((a,x)=>(a[x]=(a[x]||0)+1,a),{})).map(([k,n])=>`<span class="tag t-gray" title="${ABS[k]}">${k} × ${n}</span>`).join(' '):'—'}</td></tr>`).join('')}
-    <tr style="font-weight:800;background:var(--card2)"><td>Итого</td><td class="num">${fr.reduce((a,{f})=>a+f.planN,0)}</td><td class="num">${tot.n}</td><td class="num">${Q(tot.paid,1)}</td><td class="num">${Q(tot.night,1)}</td><td class="num">${tot.open||'—'}</td><td>${tot.abs||'—'}</td></tr></table></div>`:'<div class="empty">За период нет смен по графику</div>';
+  const factT=fr.length?`<div class="tw flush"><table><tr><th>Сотрудник</th><th>Категория</th><th class="num">Смен по графику</th><th class="num">Закрыто смен</th><th class="num">Часов к оплате</th><th class="num">Из них ночных</th><th class="num">Не закрыто</th><th>Отсутствия</th></tr>
+    ${fr.map(({p,f})=>`<tr><td><b>${esc(p.name)}</b> <span class="muted">${esc(p.position||'')}</span></td><td>${esc(PCATS.find(c=>c.id===personCat(p))?.name||'')}</td><td class="num">${f.planN}</td><td class="num"><b>${f.n}</b></td><td class="num"><b>${Q(f.paid,1)}</b></td><td class="num">${Q(f.night,1)}</td><td class="num">${f.open?`<span class="tag t-amber" data-tip="Смена прошла, но отчёт смены не подтверждён:<br>${f.openList.join('<br>')}">${f.open}</span>`:'—'}</td><td>${f.abs.length?Object.entries(f.abs.reduce((a,x)=>(a[x]=(a[x]||0)+1,a),{})).map(([k,n])=>`<span class="tag t-gray" title="${ABS[k]}">${k} × ${n}</span>`).join(' '):'—'}</td></tr>`).join('')}
+    <tr style="font-weight:800;background:var(--card2)"><td colspan="2">Итого</td><td class="num">${fr.reduce((a,{f})=>a+f.planN,0)}</td><td class="num">${tot.n}</td><td class="num">${Q(tot.paid,1)}</td><td class="num">${Q(tot.night,1)}</td><td class="num">${tot.open||'—'}</td><td>${tot.abs||'—'}</td></tr></table></div>`:'<div class="empty">За период нет смен по графику</div>';
   const ph=payHours();
   $('#content').innerHTML=`<div class="toolbar">${tabs}
     <div style="display:flex;align-items:center;gap:6px;margin-left:6px"><span class="fl" style="margin:0">Период с</span><input class="fi" type="date" value="${state.rsFrom}" style="width:155px" onchange="state.rsFrom=this.value||state.rsFrom;render()"><span class="fl" style="margin:0">по</span><input class="fi" type="date" value="${state.rsTo}" style="width:155px" onchange="state.rsTo=this.value||state.rsTo;render()"><span class="muted" style="font-size:12px;font-weight:700">${days.length} дн.</span></div>
     <div class="sp"></div>${ce?`<button class="btn btn-s" onclick="rosterCopyWeek()" title="Каждому сотруднику на пустые дни периода ставится то же, что было ровно неделю назад">⧉ Как неделю назад</button>`:''}</div>
-  <div class="card row-gap" style="min-width:0"><div class="card-h"><div class="card-t">График работы</div><div class="card-s">в ячейке — линия·смена: ${DB.lines.map(l=>`<b>${esc(lineShort(l))}</b> ${esc(l.name)}`).join(' · ')} · Б/О/Н — больничный, отпуск, неявка · Σ — план часов к оплате за месяц</div></div>
-    ${ps.length?`<div class="tw flush rs" style="overflow-x:auto;max-width:100%"><table>${head('Сотрудник')}${rows}</table></div>`:'<div class="empty">Сначала заведите сотрудников на вкладке «Сотрудники»</div>'}</div>
+  <div class="card row-gap" style="min-width:0"><div class="card-h"><div class="card-t">График работы</div><div class="card-s">в каждом дне — ${NS===2?'Д (дневная) и Н (ночная)':NS+' смены'}, в ячейке линия: ${DB.lines.map(l=>`<b>${esc(lineShort(l))}</b> ${esc(l.name)}`).join(' · ')} · Б/О/Н — больничный, отпуск, неявка · Σ — план часов к оплате за месяц</div></div>
+    ${ps.length?`<div class="tw flush rs" style="overflow-x:auto;max-width:100%"><table>${head2('Сотрудник')}${rows}</table></div>`:'<div class="empty">Сначала заведите сотрудников на вкладке «Сотрудники»</div>'}</div>
   <div class="card row-gap" style="min-width:0"><div class="card-h"><div class="card-t">Факт за период — закрытые смены</div><div class="card-s">${fdate(state.rsFrom)} — ${fdate(state.rsTo)} · смена закрыта, когда отчёт смены по линии подтверждён · к оплате: смена минус ${ph.brk} мин обеда · ночные: ${ph.nf}–${ph.nt}</div></div>${factT}</div>
-  <div class="card" style="min-width:0"><div class="card-h"><div class="card-t">Покрытие смен</div><div class="card-s">людей в смене · лучший уровень (J/O/S) по участку линии · ⚠ — не хватает квалификации под план или нет людей</div></div>
-    <div class="tw flush rs" style="overflow-x:auto;max-width:100%"><table>${head('Линия / смена')}${cover}</table></div></div>`;
+  <div class="card" style="min-width:0"><div class="card-h"><div class="card-t">Покрытие смен</div><div class="card-s">в каждом дне — смены линии (Д — день, Н — ночь; при 8-часовой схеме 1/2/3) · людей · лучший уровень J/O/S · ⚠ — не хватает квалификации под план или нет людей · заштриховано — смена не работает</div></div>
+    <div class="tw flush rs" style="overflow-x:auto;max-width:100%"><table>${head('Линия / смена')}${cover}${coverShop}</table></div></div>`;
 }
 // часы смены для оплаты: длина смены минус обед; ночные — пересечение с ночным интервалом
 function payHours(){ const s=DB.settings||{}; return {brk:s.payBreakMin??60, nf:s.nightFrom||'22:00', nt:s.nightTo||'06:00'}; }
@@ -2970,13 +2995,14 @@ function shiftPay(r){
   return {len,paid,night:Math.min(night,paid)};
 }
 function rosterHours(sid,days){ const set=new Set(days); let n=0,paid=0,night=0; DB.roster.forEach(r=>{ if(r.staffId!==sid||!set.has(r.date)||r.absence||!r.lineId) return; const x=shiftPay(r); n++; paid+=x.paid; night+=x.night; }); return {n,paid,night}; }
-function shiftClosed(r){ return DB.output.some(o=>o.date===r.date&&o.lineId===r.lineId&&+o.shift===+r.shift&&o.approved!==false); }
+function shiftClosed(r){ return DB.output.some(o=>o.date===r.date&&(r.lineId==='*'||o.lineId===r.lineId)&&+o.shift===+r.shift&&o.approved!==false); }
 function rosterFact(sid,days){ const set=new Set(days), now=Date.now(); let n=0,paid=0,night=0,open=0,planN=0; const abs=[], openList=[];
   DB.roster.forEach(r=>{ if(r.staffId!==sid||!set.has(r.date)) return; if(r.absence){ abs.push(r.absence); return; } if(!r.lineId) return; planN++;
     if(shiftClosed(r)){ const x=shiftPay(r); n++; paid+=x.paid; night+=x.night; } else if(shiftWindow(r.date,r.shift,r.lineId)[1]<=now){ open++; openList.push(`${fdate(r.date)} ${esc(lineShort(byId(DB.lines,r.lineId)))}·${r.shift}`); } });
   return {n,paid,night,open,openList,planN,abs}; }
-async function setRoster(d,sid,v){
+async function setRoster(d,sid,v,n,mine){
   const id=fbKey(d+'_'+sid);
+  if(!v&&n&&!mine){ render(); return; }
   if(!v){ await Store.batch([{col:'roster',id,del:true}]); return; }
   const [a,b]=v.split('|');
   if(a==='abs'){ await Store.batch([{col:'roster',obj:{id,date:d,staffId:sid,lineId:'',shift:0,absence:b,by:state.me.name}}]); return; }
@@ -2993,13 +3019,14 @@ function openPerson(id){
   const p=id?byId(DB.people,id):{name:'',position:POSITIONS[0],qual:{},active:true,note:''};
   const qs=(k)=>`<select class="fi" name="q_${k}"><option value="">—</option>${QUALS.map(q=>`<option ${q===p.qual?.[k]?'selected':''}>${q}</option>`).join('')}</select>`;
   modal(id?'Сотрудник':'Новый сотрудник',`<div class="fg"><label class="fl">ФИО</label><input class="fi" name="name" value="${esc(p.name)}" autofocus></div>
+    <div class="fg"><label class="fl">Категория в графике</label><select class="fi" name="cat">${PCATS.map(c=>`<option value="${c.id}" ${personCat(p)===c.id?'selected':''}>${c.name}</option>`).join('')}</select></div>
     <div class="fg"><label class="fl">Должность</label><input class="fi" name="position" list="posList" value="${esc(p.position||'')}"><datalist id="posList">${POSITIONS.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
     <div class="fg"><label class="fl">Бригада</label><input class="fi" name="team" list="teamList" value="${esc(p.team||'')}" placeholder="например C1-A"><datalist id="teamList">${[...new Set(DB.people.map(x=>x.team).filter(Boolean))].sort().map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
     <div class="frow3">${areas().map(a=>`<div class="fg"><label class="fl">Квалификация · ${esc(a.name)}</label>${qs(a.id)}</div>`).join('')}</div>
     <div class="fg"><label class="fl">Заметка</label><input class="fi" name="note" value="${esc(p.note||'')}" placeholder="Допуски, ограничения…"></div>
     <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" name="active" ${p.active!==false?'checked':''}> Работает</label>`,
   async f=>{ if(!f.name.trim()){ toast('Укажите ФИО'); return false; }
-    await Store.put('people',{...(id?clone(p):{}),id:id||uid(),name:f.name.trim(),position:f.position.trim(),team:(f.team||'').trim(),qual:Object.fromEntries([...Object.entries(p.qual||{}),...areas().map(a=>[a.id,f['q_'+a.id]||''])]),note:f.note,active:!!f.active}); },'Сохранить',
+    await Store.put('people',{...(id?clone(p):{}),id:id||uid(),name:f.name.trim(),position:f.position.trim(),cat:f.cat||'op',team:(f.team||'').trim(),qual:Object.fromEntries([...Object.entries(p.qual||{}),...areas().map(a=>[a.id,f['q_'+a.id]||''])]),note:f.note,active:!!f.active}); },'Сохранить',
   id?`<button class="btn btn-d" type="button" onclick="if(confirm('Удалить сотрудника? Его смены в графике тоже удалятся.')){ closeModal(); Store.batch([{col:'people',id:'${id}',del:true},...DB.roster.filter(r=>r.staffId==='${id}').map(r=>({col:'roster',id:r.id,del:true}))]); }">Удалить</button>`:'');
 }
 
@@ -3502,7 +3529,11 @@ function genDemo(){
   Object.entries(CR).forEach(([lid,cs])=>{ crews[lid]=cs.map((c,ci)=>c.map(([name,position,cq,pq],k)=>{ const p={id:'ST'+(sn++),name,position,qual:{coating:cq,printing:pq},active:true,team:`${lineShort(lines.find(l=>l.id===lid))}-${LET[ci]}`,note:k?'второй в бригаде':'ведущий бригады'}; people.push(p); return p.id; })); });
   const FLOAT={id:'ST'+(sn++),name:'Пономаренко Сергій',position:'Наладчик',qual:{coating:'Senior',printing:'Operator'},active:true,team:'Подмена',note:'подмена отпусков и больничных'};
   const PN=[{id:'ST'+(sn++),name:'Sedláček Filip',position:'Наладчик',qual:{coating:'',printing:'Senior'},active:true,team:'Подмена',note:'принтинг: подмена и вторые смены'},{id:'ST'+(sn++),name:'Fiala Jakub',position:'Оператор линии',qual:{coating:'',printing:'Junior'},active:true,team:'Подмена',note:'принтинг: подмена и вторые смены'}];
-  people.push(FLOAT,...PN,{id:'ST'+(sn++),name:'Černá Lucie',position:'Контролёр ОТК',qual:{coating:'',printing:''},active:true,note:''});
+  people.push(FLOAT,...PN,{id:'ST'+(sn++),name:'Černá Lucie',position:'Контролёр ОТК',cat:'lab',qual:{},active:true,team:'Лаб-Д',note:'дневная, Пн–Пт'});
+  const HND=['Novák Petr','Kovalenko Ivan','Svoboda Tomáš','Шевчук Олег'].map((name,i)=>({id:'ST'+(sn++),name,position:'Handler',cat:'handler',qual:{},active:true,team:'H-'+LET[i],note:'загрузка / съём, линии коатинга'}));
+  const HPR=['Dvořák Martin','Ткач Андрій'].map(name=>({id:'ST'+(sn++),name,position:'Handler',cat:'handler',qual:{},active:true,team:'H-Принт',note:'упаковка принтинга, дневная'}));
+  const LAB=['Procházková Jana','Литвин Олена','Kučera Pavel','Benešová Klára'].map((name,i)=>({id:'ST'+(sn++),name,position:'Лаборант',cat:'lab',qual:{},active:true,team:'Лаб-'+LET[i],note:'контроль покрытия, 24/7'}));
+  people.push(...HND,...HPR,...LAB);
   DB.people=people; const roster=[];
   const REF=new Date(2026,0,5).getTime(); // понедельник — точка отсчёта циклов
   const dIdx=ds=>Math.round((pd(ds).getTime()-REF)/864e5);
@@ -3513,7 +3544,11 @@ function genDemo(){
     if(dow>4) return -1; const X=(((w%2)+2)%2)===0, pat=[0,0,1,1,0][dow]^(X?0:1); return n===1?pat:1-pat; };
   for(let d=addD(now,-30); d<nEnd; d=addD(d,1)){ const ds=iso(d);
     lines.forEach(l=>dayShifts(l.id,ds,LIVE).forEach(n=>{ const ci=crewFor(l.id,ds,n); let cr=crews[l.id]?.[ci]; if(lineArea(l)==='printing'&&n===2) cr=PN.map(p=>p.id); if(!cr) return;
-      cr.forEach(sid=>{ if(!roster.some(r=>r.date===ds&&r.staffId===sid)) roster.push({id:ds+'_'+sid,date:ds,staffId:sid,lineId:l.id,shift:n}); }); })); }
+      cr.forEach(sid=>{ if(!roster.some(r=>r.date===ds&&r.staffId===sid)) roster.push({id:ds+'_'+sid,date:ds,staffId:sid,lineId:l.id,shift:n}); }); }));
+    const put=(sid,lineId,n)=>{ if(sid&&!roster.some(r=>r.date===ds&&r.staffId===sid)) roster.push({id:ds+'_'+sid,date:ds,staffId:sid,lineId,shift:n}); };
+    const dow=(d.getDay()+6)%7, l1=lines[0], l2=lines[1], pr=lines.filter(l=>lineArea(l)==='printing');
+    [1,2].forEach(n=>{ const ci=crewFor('L1',ds,n); if(ci>=0){ put(HND[ci]?.id,(dow<6&&ci%2?l2:l1).id,n); put(LAB[ci]?.id,'*',n); } });
+    if(dow<5){ put(people.find(p=>p.name==='Černá Lucie').id,'*',1); pr.slice(0,2).forEach((l,i)=>put(HPR[i]?.id,l.id,1)); } }
   // отсутствия: больничный на прошлой неделе, отпуск на следующей, неявка; на смену ставим подменного, если он свободен
   const pid=name=>people.find(p=>p.name===name).id;
   [[pid('Бондар Роман'),-8,3,'Б'],[pid('Lukáš Eva'),6,5,'О'],[pid('Мороз Наталія'),-3,1,'Н']].forEach(([sid,off,n,k])=>{ for(let i=0;i<n;i++){ const ds=iso(addD(now,off+i));
@@ -3540,11 +3575,11 @@ function genDemo(){
   return db;
 }
 let _quotaWarn=false;
-function demoSave(){ if(state.mode!=='demo') return; try{ localStorage.setItem('pdd_demo_v11',JSON.stringify(DB)); }catch(e){ if(!_quotaWarn){ _quotaWarn=true; toast('Демо: место в браузере закончилось — последние изменения (например, картинки) не сохранятся после перезагрузки'); } } }
-function resetDemo(){ if(!confirm('Сбросить демо-данные к исходным?')) return; try{ localStorage.removeItem('pdd_demo_v11'); }catch(e){} DB=normalize(genDemo()); render(); toast('Демо-данные сброшены'); }
+function demoSave(){ if(state.mode!=='demo') return; try{ localStorage.setItem('pdd_demo_v12',JSON.stringify(DB)); }catch(e){ if(!_quotaWarn){ _quotaWarn=true; toast('Демо: место в браузере закончилось — последние изменения (например, картинки) не сохранятся после перезагрузки'); } } }
+function resetDemo(){ if(!confirm('Сбросить демо-данные к исходным?')) return; try{ localStorage.removeItem('pdd_demo_v12'); }catch(e){} DB=normalize(genDemo()); render(); toast('Демо-данные сброшены'); }
 function startDemo(){
   state.mode='demo';
-  let saved=null; try{ saved=JSON.parse(localStorage.getItem('pdd_demo_v11')||'null'); }catch(e){}
+  let saved=null; try{ saved=JSON.parse(localStorage.getItem('pdd_demo_v12')||'null'); }catch(e){}
   DB=normalize(saved&&saved.plan?saved:genDemo());
   state.me={...DB.members[0]}; enterApp();
 }
