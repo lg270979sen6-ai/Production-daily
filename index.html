@@ -237,7 +237,7 @@ tfoot td{font-weight:800;background:var(--card2)}
 .dc-q{position:relative;height:20px} .dc-qlab{height:20px!important} .dc-qw{position:absolute;top:2px;height:16px;line-height:16px;font-size:10.5px;font-weight:800;color:var(--red);background:var(--redBg);border-radius:4px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dc-sh .cr{margin-left:auto;color:var(--text2);font-weight:700}
 .rs table{font-size:12px} .rs th,.rs td{padding:4px 5px} .rs th.c{text-align:center;line-height:1.25} .rs-name{position:sticky;left:0;background:var(--card);z-index:1;white-space:nowrap;min-width:170px} .rs-name small{display:block;color:var(--text3);font-size:10.5px}
-.rs-c{text-align:center;border-left:1px solid var(--line);white-space:nowrap} .rs-c select{border:1px solid transparent;background:transparent;font-size:11.5px;padding:3px 2px;border-radius:6px;width:62px;color:var(--text3)} .rs-c.on select{background:var(--blueBg);color:var(--blue);font-weight:700}
+.rs-c{text-align:center;border-left:1px solid var(--line);white-space:nowrap} .rs-c select{border:1px solid transparent;background:transparent;font-size:11.5px;padding:3px 2px;border-radius:6px;width:62px;color:var(--text3)} .rs-c.on select{background:var(--blueBg);color:var(--blue);font-weight:700} .rs-c.flex select{background:var(--amberBg);color:var(--amber);outline:1px dashed currentColor;outline-offset:-2px}
 .rs-c select:hover{border-color:var(--line2)} .rs-td{background:rgba(226,70,44,.05)} .rs-off{background:repeating-linear-gradient(135deg,rgba(120,130,150,.13) 0 4px,transparent 4px 8px)} .rs-ok{color:var(--green);font-weight:800} .rs-bad{background:var(--redBg);color:var(--red);font-weight:800}
 .rs-sum{background:var(--card2);border-left:2px solid var(--line2)!important;min-width:84px} .rs-c.rs-sum b{display:block;font-size:12.5px} .rs-c.rs-sum small{display:block;color:var(--text3);font-size:10.5px;font-weight:700} th.rs-sum small{font-weight:700}
 .rs-team{border-top:2px solid var(--line2)} tr:has(.rs-team) td{border-top:2px solid var(--line2)}
@@ -2245,11 +2245,14 @@ function openLineModal(id){
     <div class="fg"><label class="fl">Работающие смены</label><div id="lnSh" style="display:flex;gap:6px;flex-wrap:wrap">${lineShiftChips(scId,ws)}</div></div></div>
     <div class="fg"><label class="fl">Рабочие дни</label><div style="display:flex;gap:6px;flex-wrap:wrap">${[1,2,3,4,5,6,0].map(x=>`<label class="chip ${wd.includes(x)?'on':''}" style="cursor:pointer"><input type="checkbox" name="d_${x}" style="display:none" ${wd.includes(x)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${DAYN[x]}</label>`).join('')}</div></div>
     <div class="frow"><div class="fg"><label class="fl">Мощность, шт/смену</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="cap" value="${l.cap}"><div class="hint" style="margin-top:4px">Для плана по умолчанию, пока месяц не утверждён.</div></div>
-    <div class="fg"><label class="fl">Участок (для квалификации персонала)</label><select class="fi" name="area">${areas().map(a=>`<option value="${esc(a.id)}" ${lineArea(l)===a.id?'selected':''}>${esc(a.name)}</option>`).join('')}<option value="none" ${lineArea(l)==='none'?'selected':''}>— без проверки квалификации —</option></select><div class="hint" style="margin-top:4px">Список участков — в «Настройках».</div></div></div>`,
+    <div class="fg"><label class="fl">Участок (для квалификации персонала)</label><select class="fi" name="area">${areas().map(a=>`<option value="${esc(a.id)}" ${lineArea(l)===a.id?'selected':''}>${esc(a.name)}</option>`).join('')}<option value="none" ${lineArea(l)==='none'?'selected':''}>— без проверки квалификации —</option></select><div class="hint" style="margin-top:4px">Список участков — в «Настройках».</div></div></div>
+    ${DB.lines.filter(x=>x.id!==id).length?`<div class="fg"><label class="fl">Общая бригада операторов — оператор может перейти на линию</label><div style="display:flex;gap:6px;flex-wrap:wrap">${DB.lines.filter(x=>x.id!==id).map(x=>{ const on=A(l.crewWith).includes(x.id)||A(x.crewWith).includes(id); return `<label class="chip ${on?'on':''}" style="cursor:pointer"><input type="checkbox" name="cw_${x.id}" style="display:none" ${on?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${esc(lineLabel(x))}</label>`; }).join('')}</div><div class="hint" style="margin-top:4px">Например Coating Old ↔ Coating New, K1 ↔ K2. В графике работы появится выбор «CO/CN · переход»: оператор закончил проект на одной линии и продолжает на другой.</div></div>`:''}`,
   async f=>{ if(!f.name.trim()) return false;
+    const crewWith=DB.lines.filter(x=>x.id!==id&&f['cw_'+x.id]).map(x=>x.id);
+    if(id) for(const x of DB.lines.filter(x=>A(x.crewWith).includes(id)&&!crewWith.includes(x.id))) await Store.put('lines',{...x,crewWith:A(x.crewWith).filter(y=>y!==id)});
     const sc=shiftSchemes().find(x=>x.id===f.scheme)||shiftSchemes()[0], workShifts=A(sc.shifts).map((_,i)=>i+1).filter(n=>f['sh_'+n]), workDays=[0,1,2,3,4,5,6].filter(x=>f['d_'+x]);
     if(!workShifts.length||!workDays.length){ toast('Выберите хотя бы одну смену и один день'); return false; }
-    await Store.put('lines',{...(id?l:{}),id:id||uid(),name:f.name.trim(),type:f.type,stations:+f.stations||1,cap:+f.cap||0,shifts:workShifts.length,scheme:sc.id,workShifts,workDays,area:f.area,color:f.color||'',code:(f.code||'').trim(),kind:f.oven?'oven':''}); });
+    await Store.put('lines',{...(id?l:{}),id:id||uid(),name:f.name.trim(),type:f.type,stations:+f.stations||1,cap:+f.cap||0,shifts:workShifts.length,scheme:sc.id,workShifts,workDays,area:f.area,color:f.color||'',code:(f.code||'').trim(),kind:f.oven?'oven':'',crewWith}); });
 }
 function lineShiftChips(schemeId,active){ const sc=shiftSchemes().find(x=>x.id===schemeId)||shiftSchemes()[0];
   return A(sc.shifts).map((s,i)=>{ const n=i+1, on=!active||active.includes(n); return `<label class="chip ${on?'on':''}" style="cursor:pointer"><input type="checkbox" name="sh_${n}" style="display:none" ${on?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${n}-я · ${s.from}–${s.to}</label>`; }).join('');
@@ -3093,20 +3096,66 @@ function factSegs(lineId,a,b){
   return out;
 }
 // персонал смены и проверка квалификации
-function shiftCrew(lineId,d,n,all){ const c=DB.roster.filter(r=>r.date===d&&r.lineId===lineId&&+r.shift===+n).map(r=>byId(DB.people,r.staffId)).filter(Boolean); return all?c:c.filter(p=>personCat(p)==='op'); }
+function shiftCrew(lineId,d,n,all){ const c=DB.roster.filter(r=>r.date===d&&(r.lineId===lineId||r.alt===lineId)&&+r.shift===+n).map(r=>byId(DB.people,r.staffId)).filter(Boolean); return all?c:c.filter(p=>personCat(p)==='op'); }
+// линии с общей бригадой операторов (Coating Old ↔ Coating New, K1 ↔ K2) — задаются в карточке линии, связь взаимная
+const lineMates = id => { const s=new Set(A(byId(DB.lines,id)?.crewWith)); DB.lines.forEach(x=>{ if(A(x.crewWith).includes(id)) s.add(x.id); }); s.delete(id); return [...s].filter(x=>byId(DB.lines,x)); };
+const rosterLines = r => r.alt?[r.lineId,r.alt]:[r.lineId];
+const rosterLbl = r => r.lineId==='*'?'Цех':lineShort(byId(DB.lines,r.lineId))+(r.alt?'/'+lineShort(byId(DB.lines,r.alt)):'');
+// когда линия реально требует людей: наладка и наработка (паузы/обед — нет)
+function lineDemandSegs(lineId,a,b){ const res=[]; DB.plan.filter(i=>i.lineId===lineId&&!isChange(i)).forEach(it=>itemSegs(it,LIVE).forEach(([sa,sb,k])=>{ if(k!=='r'&&k!=='s') return; const u=Math.max(sa,a), v=Math.min(sb,b); if(v>u) res.push([u,v,k,it]); })); return res; }
+const _crewMemo={t:0,m:{}}; function crewMemo(k,f){ const now=Date.now(); if(now-_crewMemo.t>800){ _crewMemo.t=now; _crewMemo.m={}; } return k in _crewMemo.m?_crewMemo.m[k]:(_crewMemo.m[k]=f()); }
+const tq = (u,v) => hhmm(u)+'–'+hhmm(v);
+// распределение операторов смены по времени: «строго K1» работают только на K1, «K1/K2» — там, где в этот момент нужнее.
+// Квалификация: Senior закрывает Operator и Junior, Operator закрывает Junior; Junior вместо Operator — нехватка.
+function crewAlloc(d,n,lineId){ return crewMemo('ca|'+d+'|'+n+'|'+lineId,()=>{
+  const ops=DB.roster.filter(r=>r.date===d&&+r.shift===+n&&!r.absence&&r.lineId&&r.lineId!=='*').map(r=>({r,p:byId(DB.people,r.staffId)})).filter(x=>x.p&&personCat(x.p)==='op').map(x=>({...x,lines:rosterLines(x.r)}));
+  const comp=new Set([lineId]); for(let g=true;g;){ g=false; ops.forEach(o=>{ if(o.lines.length>1&&o.lines.some(x=>comp.has(x))) o.lines.forEach(x=>{ if(!comp.has(x)){ comp.add(x); g=true; } }); }); }
+  const people=ops.filter(o=>o.lines.some(x=>comp.has(x))), [sa,sb]=shiftWindow(d,n,lineId), segs={}, bp=new Set([sa,sb]);
+  comp.forEach(id=>{ segs[id]=lineDemandSegs(id,sa,sb); segs[id].forEach(x=>{ bp.add(x[0]); bp.add(x[1]); }); });
+  const pts=[...bp].sort((x,y)=>x-y), out=[];
+  const rk=(o,id)=>qRank(o.p.qual?.[lineArea(byId(DB.lines,id))]);
+  for(let i=0;i<pts.length-1;i++){ const u=pts[i], v=pts[i+1], mid=(u+v)/2, dem={}, asg={};
+    comp.forEach(id=>{ asg[id]=people.filter(o=>o.lines.length===1&&o.lines[0]===id); const x=segs[id].find(z=>z[0]<=mid&&z[1]>mid); if(!x) return; const p=byId(DB.projects,x[3].projectId), op=p?projOpFor(p,id):{};
+      dem[id]={n:Math.max(1,+op.operators||0),q:(x[2]==='s'?op.qualSetup:op.qualRun)||'',w:x[2]==='s'?'наладка':'массовое пр-во',p}; });
+    let free=people.filter(o=>o.lines.length>1);
+    const take=(id,ok)=>{ const c=free.filter(o=>o.lines.includes(id)&&ok(o)).sort((a,b)=>rk(a,id)-rk(b,id)||(a.r.lineId===id?-1:1))[0]; if(c){ asg[id].push(c); free=free.filter(o=>o!==c); } return c; };
+    Object.entries(dem).forEach(([id,x])=>{ const need=qRank(x.q); if(need&&Math.max(0,...asg[id].map(o=>rk(o,id)))<need) take(id,o=>rk(o,id)>=need); });
+    for(let g=true;g;){ g=false; Object.entries(dem).sort((a,b)=>(b[1].n-asg[b[0]].length)-(a[1].n-asg[a[0]].length)).forEach(([id,x])=>{ if(asg[id].length<x.n&&take(id,()=>true)) g=true; }); }
+    out.push({u,v,dem,asg,idle:free}); }
+  return {comp,people,out,sa,sb}; }); }
+// Handler — общий пул цеха: сколько пришло в смену против суммы потребности всех линий в каждый момент
+function handlerShop(a,b){ return crewMemo('hs|'+a+'|'+b,()=>{
+  const ds=[iso(addD(new Date(a),-1)),iso(new Date(a)),iso(new Date(b))];
+  const hs=DB.roster.filter(r=>ds.includes(r.date)&&!r.absence&&r.lineId&&personCat(byId(DB.people,r.staffId))==='handler').map(r=>{ const [u,v]=shiftWindow(r.date,r.shift,r.lineId); return {u,v,p:byId(DB.people,r.staffId)}; }).filter(x=>x.p&&x.v>a&&x.u<b);
+  const dm=[]; DB.lines.forEach(l=>lineDemandSegs(l.id,a,b).forEach(([u,v,k,it])=>{ const p=byId(DB.projects,it.projectId), h=p?+projOpFor(p,l.id).handlers||0:0; if(h) dm.push({u,v,h,l,p}); }));
+  const bp=new Set([a,b]); hs.forEach(x=>{ if(x.u>a&&x.u<b) bp.add(x.u); if(x.v>a&&x.v<b) bp.add(x.v); }); dm.forEach(x=>{ bp.add(x.u); bp.add(x.v); });
+  const pts=[...bp].sort((x,y)=>x-y), segs=[];
+  for(let i=0;i<pts.length-1;i++){ const u=pts[i], v=pts[i+1], m=(u+v)/2, act=dm.filter(x=>x.u<=m&&x.v>m), need=act.reduce((s,x)=>s+x.h,0), have=hs.filter(x=>x.u<=m&&x.v>m).length;
+    const last=segs[segs.length-1]; if(last&&last.v===u&&last.need===need&&last.have===have) last.v=v; else segs.push({u,v,need,have,act}); }
+  const peak=Math.max(0,...segs.map(x=>x.need)), have=Math.max(0,...segs.map(x=>x.have));
+  return {segs,peak,have,short:segs.filter(x=>x.need>x.have),hs}; }); }
 function shiftQual(l,d,n,sa,sb){
-  const pl=shiftPlan(l.id,sa,sb), crew=shiftCrew(l.id,d,n), others=shiftCrew(l.id,d,n,true).filter(p=>personCat(p)!=='op'), area=lineArea(l);
+  const pl=shiftPlan(l.id,sa,sb), others=shiftCrew(l.id,d,n,true).filter(p=>personCat(p)!=='op'), area=lineArea(l), ca=crewAlloc(d,n,l.id);
+  const mine=ca.people.filter(o=>o.lines.includes(l.id)), crew=mine.map(o=>o.p);
   const oTip=others.length?'<br><b>Handler / лаборатория</b><br>'+others.map(s=>esc(s.name)+' — '+esc(s.position||'')).join('<br>'):'';
-  if(area==='none') return {crew,best:0,need:[],lacks:[],empty:false,tip:`<b>Персонал смены</b><br>${crew.map(s=>esc(s.name)+' — '+esc(s.position||'')).join('<br>')||'никого'}<br><span style="opacity:.7">участок без проверки квалификации</span>${oTip}`,others};
+  const where=o=>{ if(o.lines.length<2) return ''; const hr=[]; ca.out.filter(x=>x.asg[l.id]?.includes(o)).forEach(x=>{ const z=hr[hr.length-1]; if(z&&x.u-z.v<=60*60e3&&!ca.out.some(y=>y.u>=z.v&&y.v<=x.u&&o.lines.some(id=>id!==l.id&&y.asg[id]?.includes(o)))) z.v=x.v; else hr.push({u:x.u,v:x.v}); }); const here=hr; return ` · <i>${esc(rosterLbl(o.r))}</i>${here.length?': здесь '+here.map(x=>tq(x.u,x.v)).join(', '):Object.keys(ca.out.find(x=>x.dem[l.id])?.dem||{}).length?': занят на другой линии':''}`; };
+  const crewTip=mine.map(o=>`${esc(o.p.name)} — ${esc(o.p.position||'')} · ${o.p.qual?.[area]||'без квалиф.'}${where(o)}`).join('<br>')||'никого';
+  if(area==='none') return {crew,best:0,need:[],lacks:[],empty:false,tip:`<b>Персонал смены</b><br>${crewTip}<br><span style="opacity:.7">участок без проверки квалификации</span>${oTip}`,others};
   const best=Math.max(0,...crew.map(s=>qRank(s.qual?.[area])));
-  const need=[], hands=others.filter(p=>personCat(p)==='handler').length; let needOp=0, needH=0, hp=null, op_p=null;
-  pl.forEach(x=>{ const p=byId(DB.projects,x.it.projectId); if(!p) return; const o=projOpFor(p,l.id); if(x.setup>0&&o.qualSetup) need.push({w:'наладка',p,q:o.qualSetup}); if(x.run>0&&o.qualRun) need.push({w:'массовое пр-во',p,q:o.qualRun});
-    if(o.handlers>needH){ needH=o.handlers; hp=p; } if(o.operators>needOp){ needOp=o.operators; op_p=p; } });
-  const lacks=need.filter(x=>qRank(x.q)>best);
-  if(needOp&&crew.length<needOp) { need.push({w:'операторов',p:op_p,q:needOp+' чел.'}); lacks.push({w:'операторов',q:needOp+' (есть '+crew.length+')',p:op_p}); }
-  if(needH&&hands<needH) { need.push({w:'Handler',p:hp,q:needH+' чел.'}); lacks.push({w:'Handler',q:needH+' (есть '+hands+')',p:hp}); }
+  const need=[]; pl.forEach(x=>{ const p=byId(DB.projects,x.it.projectId); if(!p) return; const o=projOpFor(p,l.id); if(x.setup>0&&o.qualSetup) need.push({w:'наладка',p,q:o.qualSetup}); if(x.run>0&&o.qualRun) need.push({w:'массовое пр-во',p,q:o.qualRun}); if(+o.operators>1) need.push({w:'операторов',p,q:o.operators+' чел.'}); if(+o.handlers) need.push({w:'Handler (цех)',p,q:o.handlers+' чел.'}); });
+  // нехватки по интервалам времени
+  const raw=[]; ca.out.forEach(x=>{ const dm=x.dem[l.id]; if(!dm) return; const g=x.asg[l.id], have=g.length, bq=Math.max(0,...g.map(o=>qRank(o.p.qual?.[area])));
+    if(have<dm.n) raw.push({k:'n',u:x.u,v:x.v,w:'операторов',q:`${dm.n}, есть ${have}`,p:dm.p});
+    else if(dm.q&&bq<qRank(dm.q)) raw.push({k:'q',u:x.u,v:x.v,w:dm.w,q:`${dm.q}, есть ${bq?QUALS[bq-1]:'нет'}`,p:dm.p});
+    else raw.push({k:'ok'}); });
+  // соседние одинаковые нехватки склеиваем (через обед/паузы тоже), «ок»-интервал разрывает
+  const lacks=[]; let prev=null; raw.forEach(x=>{ if(x.k==='ok'){ prev=null; return; } if(prev&&prev.k===x.k&&prev.q0===x.q&&prev.p===x.p) prev.v=x.v; else { prev={...x,q0:x.q}; lacks.push(prev); } });
+  for(let i=lacks.length-1;i>=0;i--) if(lacks[i].v-lacks[i].u<3*60e3) lacks.splice(i,1);
+  lacks.forEach(x=>{ x.q=x.q0+(x.u>ca.sa||x.v<ca.sb?` (${tq(x.u,x.v)})`:''); });
+  const hsh=handlerShop(sa,sb), hl=[]; hsh.short.filter(x=>x.act.some(y=>y.l.id===l.id)).forEach(x=>{ const z=hl[hl.length-1], add=x.need-x.have; if(z&&x.u-z.v<=5*60e3){ z.v=x.v; z.add=Math.max(z.add,add); z.need=Math.max(z.need,x.need); } else hl.push({u:x.u,v:x.v,add,need:x.need,have:x.have,p:x.act.find(y=>y.l.id===l.id).p}); });
+  hl.filter(x=>x.v-x.u>=3*60e3).forEach(x=>lacks.push({k:'h',w:'Handler (цех)',q:`до ${x.need}, в цеху ${x.have} — не хватает ${x.add} (${tq(x.u,x.v)})`,p:x.p}));
   const empty=pl.length>0&&!crew.length&&DB.roster.some(r=>r.date===d);
-  const tip=`<b>Персонал смены (${esc(areaName(area))})</b><br>${crew.map(s=>`${esc(s.name)} — ${esc(s.position||'')} · ${s.qual?.[area]||'без квалиф.'}`).join('<br>')||'никого'}${oTip}${need.length?'<br><b>Требуется</b><br>'+need.map(x=>`${x.w} «${esc(x.p.name)}»: ${x.q}`).join('<br>'):''}`;
+  const tip=`<b>Персонал смены (${esc(areaName(area))})</b><br>${crewTip}${oTip}${need.length?'<br><b>Требуется</b><br>'+need.map(x=>`${x.w} «${esc(x.p.name)}»: ${x.q}`).join('<br>'):''}`;
   return {crew,best,need,lacks,empty,tip,others};
 }
 async function toggleShift(lineId,d,n,on){
@@ -3816,9 +3865,9 @@ function renderPeople(){
       const absOpts=Object.entries(ABS).map(([k,n])=>`<option value="abs|${k}" ${v==='abs|'+k?'selected':''}>${k} · ${n}</option>`).join('');
       if(r&&r.absence){ const ac=absColor(r.absence), opt2=ABS[r.absence]?absOpts:absOpts+`<option value="abs|${esc(r.absence)}" selected>${esc(r.absence)} · ${esc(absName(r.absence))}</option>`;
         return `<td class="rs-c abs rs-d0 ${tdc}" colspan="${NS}" title="${esc(absName(r.absence))}">${ce?`<select style="background:${ac};color:${txtOn(ac)}" onchange="setRoster('${d}','${p.id}',this.value)"><option value="">—</option>${opt2}</select>`:`<span class="tag" style="background:${ac};color:${txtOn(ac)}">${esc(r.absence)}</span>`}</td>`; }
-      return Array.from({length:NS},(_,k)=>{ const n=k+1, mine=r&&+r.shift===n, sl=slots(d).filter(x=>+x.n===n), cur=mine?r.lineId+'|'+n:'';
-        const lbl=mine?esc(r.lineId==='*'?'Цех':lineShort(byId(DB.lines,r.lineId))):'';
-        return `<td class="rs-c ${mine?'on':''} ${k?'rs-dn':'rs-d0'} ${tdc}">${ce?`<select title="${SL[k]}-смена" onchange="setRoster('${d}','${p.id}',this.value,${n},${mine?1:0})"><option value="">—</option>${sl.map(({l,off})=>`<option value="${l.id}|${n}" ${cur===l.id+'|'+n?'selected':''}>${esc(lineShort(l))}${off?' · линия не по графику':''}</option>`).join('')}${mine&&!sl.some(({l})=>cur===l.id+'|'+n)?`<option value="${cur}" selected>${lbl} ⚠</option>`:''}${k===0?absOpts:''}</select>`:(lbl||'—')}</td>`; }).join(''); }).join('')}</tr>`).join('');
+      return Array.from({length:NS},(_,k)=>{ const n=k+1, mine=r&&+r.shift===n, sl=slots(d).filter(x=>+x.n===n), cur=mine?r.lineId+(r.alt?'+'+r.alt:'')+'|'+n:'';
+        const lbl=mine?esc(rosterLbl(r)):'', isOp=personCat(p)==='op', combos=isOp?sl.filter(x=>x.l.id!=='*').flatMap(({l})=>lineMates(l.id).filter(m=>DB.lines.indexOf(byId(DB.lines,m))>DB.lines.indexOf(l)&&sl.some(y=>y.l.id===m)).map(m=>({v:l.id+'+'+m,t:lineShort(l)+'/'+lineShort(byId(DB.lines,m))}))):[];
+        return `<td class="rs-c ${mine?'on':''} ${mine&&r.alt?'flex':''} ${k?'rs-dn':'rs-d0'} ${tdc}">${ce?`<select title="${SL[k]}-смена" onchange="setRoster('${d}','${p.id}',this.value,${n},${mine?1:0})"><option value="">—</option>${sl.map(({l,off})=>`<option value="${l.id}|${n}" ${cur===l.id+'|'+n?'selected':''}>${esc(lineShort(l))}${off?' · линия не по графику':''}</option>`).join('')}${combos.map(c=>`<option value="${c.v}|${n}" ${cur===c.v+'|'+n?'selected':''}>${esc(c.t)} · переход</option>`).join('')}${mine&&!sl.some(({l})=>cur===l.id+'|'+n)&&!combos.some(c=>cur===c.v+'|'+n)?`<option value="${cur}" selected>${lbl} ⚠</option>`:''}${k===0?absOpts:''}</select>`:(lbl||'—')}</td>`; }).join(''); }).join('')}</tr>`).join('');
   // покрытие: по каждой линии/смене — сколько людей и хватает ли квалификации под план
   // покрытие: одна строка на линию, в каждом дне — по ячейке на смену (2 при 12-часовой схеме, 3 при 8-часовой)
   const cover=DB.lines.map(l=>{ const defs=lineShiftDefs(l.id), two=defs.length===2;
@@ -3826,12 +3875,13 @@ function renderPeople(){
       if(c.sum) return '<td class="rs-c rs-sum"></td>'; const d=c.d, ws=dayShifts(l.id,d,LIVE);
       return `<td class="rs-c rs-cov ${d===td?'rs-td':''}"><div class="cv">${defs.map(s=>{ const lab=two?(s.n===1?'Д':'Н'):s.n;
         if(!ws.includes(+s.n)) return `<span class="cv-s off" title="${s.n}-я смена ${s.from}–${s.to}: не работает"><i>${lab}</i>—</span>`;
-        const [sa,sb]=shiftWindow(d,s.n,l.id), q=shiftQual(l,d,s.n,sa,sb), bad=q.lacks.length||(q.need.length&&!q.crew.length)||(shiftPlan(l.id,sa,sb).length&&!q.crew.length);
-        return `<span class="cv-s ${bad?'bad':q.crew.length?'ok':''}" data-tip="<b>${s.n}-я смена ${s.from}–${s.to}</b><br>${q.tip.replace(/"/g,'&quot;')}${q.lacks.length?'<br><b style=&quot;color:#e5484d&quot;>Не хватает: '+q.lacks.map(x=>x.w+' — '+x.q).join(', ')+'</b>':''}"><i>${lab}${q.best?' · '+QUALS[q.best-1][0]:''}${bad?' ⚠':''}</i>${q.crew.length?q.crew.map(p=>`<b>${esc(surname(p))}</b>`).join(''):'<b>—</b>'}${q.others.length?`<em>+${q.others.filter(p=>personCat(p)==='handler').length?q.others.filter(p=>personCat(p)==='handler').length+' H':''}${q.others.filter(p=>personCat(p)==='lab').length?' '+q.others.filter(p=>personCat(p)==='lab').length+' Лаб':''}</em>`:''}</span>`; }).join('')}</div></td>`; }).join('')}</tr>`; }).join('');
+        const [sa,sb]=shiftWindow(d,s.n,l.id), q0=shiftQual(l,d,s.n,sa,sb), q={...q0,lacks:q0.lacks.filter(x=>x.k!=='h')}, bad=q.lacks.length||(q.need.length&&!q.crew.length)||(shiftPlan(l.id,sa,sb).length&&!q.crew.length);
+        return `<span class="cv-s ${bad?'bad':q.crew.length?'ok':''}" data-tip="<b>${s.n}-я смена ${s.from}–${s.to}</b><br>${q.tip.replace(/"/g,'&quot;')}${q.lacks.length?'<br><b style=&quot;color:#e5484d&quot;>Не хватает: '+q.lacks.map(x=>x.w+' — '+x.q).join(', ')+'</b>':''}"><i>${lab}${q.best?' · '+QUALS[q.best-1][0]:''}${bad?' ⚠':''}</i>${q.crew.length?q.crew.map(p=>{ const rr=DB.roster.find(r=>r.date===d&&r.staffId===p.id); return `<b>${esc(surname(p))}${rr?.alt?` <small style="opacity:.7">${esc(rosterLbl(rr))}</small>`:''}</b>`; }).join(''):'<b>—</b>'}${q.others.length?`<em>+${q.others.filter(p=>personCat(p)==='handler').length?q.others.filter(p=>personCat(p)==='handler').length+' H':''}${q.others.filter(p=>personCat(p)==='lab').length?' '+q.others.filter(p=>personCat(p)==='lab').length+' Лаб':''}</em>`:''}</span>`; }).join('')}</div></td>`; }).join('')}</tr>`; }).join('');
   const gdefs=lineShiftDefs('*'), gtwo=gdefs.length===2;
-  const coverShop=DB.roster.some(r=>r.lineId==='*'&&days.includes(r.date))?`<tr><td class="rs-name"><b>Цех (без линии)</b><small>лаборатория, Handler на весь цех</small></td>${cols.map(c=>{ if(c.sum) return '<td class="rs-c rs-sum"></td>'; const d=c.d;
-      return `<td class="rs-c rs-cov ${d===td?'rs-td':''}"><div class="cv">${gdefs.map(s=>{ const lab=gtwo?(s.n===1?'Д':'Н'):s.n, all=shiftCrew('*',d,s.n,true), hd=all.filter(p=>personCat(p)==='handler'), lb=all.filter(p=>personCat(p)!=='handler');
-        return `<span class="cv-s ${all.length?'ok':''}" data-tip="<b>${s.n}-я смена ${s.from}–${s.to} · цех</b><br>${all.map(p=>esc(p.name)+' — '+esc(p.position||'')).join('<br>')||'никого'}"><i>${lab}</i>${lb.map(p=>`<b>${esc(surname(p))}</b>`).join('')||(hd.length?'':'<b>—</b>')}${hd.length?`<em>+${hd.length} H</em>`:''}</span>`; }).join('')}</div></td>`; }).join('')}</tr>`:'';
+  const coverShop=`<tr><td class="rs-name"><b>Handler — весь цех</b><small>есть в смене / пик потребности всех линий</small></td>${cols.map(c=>{ if(c.sum) return '<td class="rs-c rs-sum"></td>'; const d=c.d;
+      return `<td class="rs-c rs-cov ${d===td?'rs-td':''}"><div class="cv">${gdefs.map(s=>{ const lab=gtwo?(s.n===1?'Д':'Н'):s.n, [a,b]=shiftWindow(d,s.n,'*'), h=handlerShop(a,b), lb=shiftCrew('*',d,s.n,true).filter(p=>personCat(p)!=='handler'), bad=h.short.length;
+        const tip=`<b>${s.n}-я смена ${s.from}–${s.to} · Handler по цеху</b><br>В смене: ${h.hs.map(x=>esc(x.p.name)).join(', ')||'никого'}<br>${h.segs.filter(x=>x.need).map(x=>`${tq(x.u,x.v)}: нужно ${x.need} (${x.act.map(y=>esc(lineShort(y.l))+' '+y.h).join(' + ')}), есть ${x.have}${x.need>x.have?' — <b style=&quot;color:#e5484d&quot;>+'+(x.need-x.have)+'</b>':''}`).join('<br>')||'по плану Handler не нужны'}${lb.length?'<br><b>Лаборатория / цех</b><br>'+lb.map(p=>esc(p.name)).join('<br>'):''}`;
+        return `<span class="cv-s ${bad?'bad':h.hs.length?'ok':''}" data-tip="${tip.replace(/"/g,'&quot;')}"><i>${lab}${bad?' ⚠':''}</i><b>${h.hs.length} H</b>${h.peak?`<em>нужно ${h.peak}${bad?' · +'+Math.max(...h.short.map(x=>x.need-x.have)):''}</em>`:''}${lb.length?`<em>${lb.length} Лаб</em>`:''}</span>`; }).join('')}</div></td>`; }).join('')}</tr>`;
   // факт: закрытые смены (есть подтверждённый отчёт смены по этой линии) за период
   const fr=ps.map(p=>{ const f=rosterFact(p.id,days); return {p,f}; }).filter(x=>x.f.planN||x.f.abs.length);
   const tot=fr.reduce((a,{f})=>({n:a.n+f.n,paid:a.paid+f.paid,night:a.night+f.night,open:a.open+f.open,abs:a.abs+f.abs.length}),{n:0,paid:0,night:0,open:0,abs:0});
@@ -3846,7 +3896,7 @@ function renderPeople(){
     ${ps.length?`<div class="tw flush rs" style="overflow-x:auto;max-width:100%"><table>${head2('Сотрудник')}${(()=>{ const cnt={}; DB.roster.forEach(r=>{ if(r.absence||!r.lineId) return; const k=r.date+'|'+r.shift; cnt[k]=(cnt[k]||0)+1; });
       return SL.map((lab,k)=>`<tr class="rs-cnt"><td class="rs-name" style="font-weight:800">План: ${NS===2?(k?'ночь':'день'):k+1+'-я смена'} <small>людей в смене</small></td>${cols.map(c=>c.sum?'<td class="rs-c rs-sum"></td>':Array.from({length:NS},(_,j)=>`<td class="rs-c ${j?'rs-dn':'rs-d0'} ${c.d===td?'rs-td':''}">${j===k?`<b>${cnt[c.d+'|'+(k+1)]||''}</b>`:''}</td>`).join('')).join('')}</tr>`).join(''); })()}${rows}</table></div>`:'<div class="empty">Сначала заведите сотрудников на вкладке «Сотрудники»</div>'}</div>
   <div class="card row-gap" style="min-width:0"><div class="card-h"><div class="card-t">Факт за период — закрытые смены</div><div class="card-s">${fdate(state.rsFrom)} — ${fdate(state.rsTo)} · смена закрыта, когда отчёт смены по линии подтверждён · к оплате: смена минус ${ph.brk} мин обеда · ночные: ${ph.nf}–${ph.nt}</div></div>${factT}</div>
-  <div class="card" style="min-width:0"><div class="card-h"><div class="card-t">Покрытие смен</div><div class="card-s">в каждом дне — смены линии (Д — день, Н — ночь; при 8-часовой схеме 1/2/3) · людей · лучший уровень J/O/S · ⚠ — не хватает квалификации под план или нет людей · заштриховано — смена не работает</div></div>
+  <div class="card" style="min-width:0"><div class="card-h"><div class="card-t">Покрытие смен</div><div class="card-s">в каждом дне — смены линии (Д — день, Н — ночь; при 8-часовой схеме 1/2/3) · операторы (CO/CN — с переходом между линиями) · лучший уровень J/O/S · ⚠ — не хватает людей или квалификации в какой-то промежуток смены · Handler считаются на весь цех</div></div>
     <div class="tw flush rs" style="overflow-x:auto;max-width:100%"><table>${head('Линия / смена')}${cover}${coverShop}</table></div></div>`;
 }
 // часы смены для оплаты: длина смены минус обед; ночные — пересечение с ночным интервалом
@@ -3868,7 +3918,8 @@ async function setRoster(d,sid,v,n,mine){
   if(!v){ await Store.batch([{col:'roster',id,del:true}]); return; }
   const [a,b]=v.split('|');
   if(a==='abs'){ await Store.batch([{col:'roster',obj:{id,date:d,staffId:sid,lineId:'',shift:0,absence:b,by:state.me.name}}]); return; }
-  await Store.batch([{col:'roster',obj:{id,date:d,staffId:sid,lineId:a,shift:+b,by:state.me.name}}]);
+  const [l1,l2]=a.split('+');
+  await Store.batch([{col:'roster',obj:{id,date:d,staffId:sid,lineId:l1,alt:l2||'',shift:+b,by:state.me.name}}]);
 }
 async function rosterCopyWeek(){
   const list=[]; const have=new Set(DB.roster.map(r=>r.date+'|'+r.staffId));
@@ -4468,7 +4519,8 @@ function genDemo(){
   const HND=['Novák Petr','Kovalenko Ivan','Svoboda Tomáš','Шевчук Олег'].map((name,i)=>({id:'ST'+(sn++),name,position:'Handler',cat:'handler',qual:{},active:true,team:'H-'+LET[i],note:'загрузка / съём, линии коатинга'}));
   const HPR=['Dvořák Martin','Ткач Андрій'].map(name=>({id:'ST'+(sn++),name,position:'Handler',cat:'handler',qual:{},active:true,team:'H-Принт',note:'упаковка принтинга, дневная'}));
   const LAB=['Procházková Jana','Литвин Олена','Kučera Pavel','Benešová Klára'].map((name,i)=>({id:'ST'+(sn++),name,position:'Лаборант',cat:'lab',qual:{},active:true,team:'Лаб-'+LET[i],note:'контроль покрытия, 24/7'}));
-  people.push(...HND,...HPR,...LAB);
+  const HND2=['Marek Jiří','Бойко Степан','Kolář Jan','Ткачук Микола'].map((name,i)=>({id:'ST'+(sn++),name,position:'Handler',cat:'handler',qual:{},active:true,team:'H-'+LET[i],note:'загрузка / съём, линии коатинга'}));
+  people.push(...HND,...HND2,...HPR,...LAB);
   DB.people=people; const roster=[];
   const REF=new Date(2026,0,5).getTime(); // понедельник — точка отсчёта циклов
   const dIdx=ds=>Math.round((pd(ds).getTime()-REF)/864e5);
@@ -4482,7 +4534,7 @@ function genDemo(){
       cr.forEach(sid=>{ if(!roster.some(r=>r.date===ds&&r.staffId===sid)) roster.push({id:ds+'_'+sid,date:ds,staffId:sid,lineId:l.id,shift:n}); }); }));
     const put=(sid,lineId,n)=>{ if(sid&&!roster.some(r=>r.date===ds&&r.staffId===sid)) roster.push({id:ds+'_'+sid,date:ds,staffId:sid,lineId,shift:n}); };
     const dow=(d.getDay()+6)%7, l1=lines[0], l2=lines[1], pr=lines.filter(l=>lineArea(l)==='printing');
-    [1,2].forEach(n=>{ const ci=crewFor('L1',ds,n); if(ci>=0){ put(HND[ci]?.id,l1.id,n); put(LAB[ci]?.id,'*',n); } });
+    [1,2].forEach(n=>{ const ci=crewFor('L1',ds,n); if(ci>=0){ put(HND[ci]?.id,l1.id,n); put(HND2[ci]?.id,'*',n); put(LAB[ci]?.id,'*',n); } });
     if(dow<5){ put(people.find(p=>p.name==='Černá Lucie').id,'*',1); pr.slice(0,2).forEach((l,i)=>put(HPR[i]?.id,l.id,1)); } }
   // отсутствия: больничный на прошлой неделе, отпуск на следующей, неявка; на смену ставим подменного, если он свободен
   const pid=name=>people.find(p=>p.name===name).id;
@@ -4490,6 +4542,9 @@ function genDemo(){
     const j=roster.findIndex(r=>r.date===ds&&r.staffId===sid); const was=j>=0?roster.splice(j,1)[0]:null;
     roster.push({id:ds+'_'+sid,date:ds,staffId:sid,lineId:'',shift:0,absence:k});
     if(was&&!roster.some(r=>r.date===ds&&r.staffId===FLOAT.id)) roster.push({id:ds+'_'+FLOAT.id,date:ds,staffId:FLOAT.id,lineId:was.lineId,shift:was.shift}); } });
+  // общие бригады: CO ↔ CN, K1 ↔ K2; второй оператор ночной смены CN может перейти на CO
+  lines[0].crewWith=[lines[1].id]; { const prl=lines.filter(l=>lineArea(l)==='printing'); if(prl[1]) prl[0].crewWith=[prl[1].id]; }
+  roster.filter(r=>r.date>=iso(now)&&r.lineId===lines[1].id&&+r.shift===2).forEach(r=>{ if(people.find(p=>p.id===r.staffId)?.note==='второй в бригаде') r.alt=lines[0].id; });
   DB.roster=roster;
   db.people=DB.people; db.roster=DB.roster;
   db.ptab=ptab;
@@ -4523,11 +4578,11 @@ function genDemo(){
   return db;
 }
 let _quotaWarn=false;
-function demoSave(){ if(state.mode!=='demo') return; try{ localStorage.setItem('pdd_demo_v25',JSON.stringify(DB)); }catch(e){ if(!_quotaWarn){ _quotaWarn=true; toast('Демо: место в браузере закончилось — последние изменения (например, картинки) не сохранятся после перезагрузки'); } } }
-function resetDemo(){ if(!confirm('Сбросить демо-данные к исходным?')) return; try{ localStorage.removeItem('pdd_demo_v25'); }catch(e){} DB=normalize(genDemo()); render(); toast('Демо-данные сброшены'); }
+function demoSave(){ if(state.mode!=='demo') return; try{ localStorage.setItem('pdd_demo_v26',JSON.stringify(DB)); }catch(e){ if(!_quotaWarn){ _quotaWarn=true; toast('Демо: место в браузере закончилось — последние изменения (например, картинки) не сохранятся после перезагрузки'); } } }
+function resetDemo(){ if(!confirm('Сбросить демо-данные к исходным?')) return; try{ localStorage.removeItem('pdd_demo_v26'); }catch(e){} DB=normalize(genDemo()); render(); toast('Демо-данные сброшены'); }
 function startDemo(){
   state.mode='demo';
-  let saved=null; try{ saved=JSON.parse(localStorage.getItem('pdd_demo_v25')||'null'); }catch(e){}
+  let saved=null; try{ saved=JSON.parse(localStorage.getItem('pdd_demo_v26')||'null'); }catch(e){}
   DB=normalize(saved&&saved.plan?saved:genDemo());
   state.me={...DB.members[0]}; enterApp();
 }
