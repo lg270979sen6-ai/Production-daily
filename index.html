@@ -2449,10 +2449,18 @@ function itemRisk(it,chk){
 }
 // сохранить изменения очереди: пересчитать цепочку на линиях и записать только изменившиеся позиции
 // связи операций заказа: следующая операция на линии — не раньше выдержки после предыдущей и не обгоняет её
+// индекс операции маршрута заказа для позиции плана
+function itemOpIx(o,ops,it){ if(it.opId){ const k=ops.findIndex(x=>x.id===it.opId); if(k>=0) return k; } return ops.findIndex(x=>x.lineId&&(opHasLine(x,it.lineId)||stageLines(o,x.lineId)?.has(it.lineId))); }
+// на одной линии операции одного заказа идут строго по маршруту: «Принтинг step 2» никогда не встаёт в очереди раньше «Принтинг step 1»
+function orderSeqFix(work,lineId){ const li=work.filter(i=>i.lineId===lineId).sort((a,b)=>seqOf(a)-seqOf(b)||tms(a.start)-tms(b.start)); li.forEach((x,k)=>x.seq=k); let ch=false;
+  const byO={}; li.forEach(i=>{ if(i.orderId&&!isChange(i)&&!hasOutputs(i)) (byO[i.orderId]=byO[i.orderId]||[]).push(i); });
+  Object.entries(byO).forEach(([oid,its])=>{ if(its.length<2) return; const o=byId(DB.orders,oid); if(!o) return; const ops=orderOps(o), slots=its.map(i=>i.seq), srt=its.slice().sort((a,b)=>(itemOpIx(o,ops,a)-itemOpIx(o,ops,b))||(a.seq-b.seq));
+    srt.forEach((it,k)=>{ if(it.seq!==slots[k]){ it.seq=slots[k]; ch=true; } }); });
+  return ch; }
 function depPass(work,ctx){
   const changed=new Set(), byO={}; work.forEach(i=>{ if(i.orderId&&!isChange(i)) (byO[i.orderId]=byO[i.orderId]||[]).push(i); });
   Object.entries(byO).forEach(([oid,its])=>{ const o=byId(DB.orders,oid); if(!o) return; const ops=orderOps(o); if(ops.length<2) return;
-    const ix=it=>{ if(it.opId){ const k=ops.findIndex(x=>x.id===it.opId); if(k>=0) return k; } return ops.findIndex(x=>x.lineId&&(opHasLine(x,it.lineId)||stageLines(o,x.lineId)?.has(it.lineId))); };
+    const ix=it=>itemOpIx(o,ops,it);
     its.forEach(B=>{ if(B.withId||hasOutputs(B)) return; const k=ix(B); if(k<0) return;
       if(B.pinNb===undefined) B.pinNb=/· запуск/.test(B.note||'')?'':(B.notBefore||'');
       let need=0; if(k>0){ let j=k-1,W=0; while(j>=0&&!ops[j].lineId){ if(opIsWait(ops[j])) W+=+ops[j].waitH||0; j--; }
@@ -2463,8 +2471,8 @@ function depPass(work,ctx){
   return changed;
 }
 async function qCommit(work,lineIds,extra=[],log){
-  const wctx={id:'tmp'+uid(),items:work}; [...new Set(lineIds)].forEach(l=>relineChain(work,l,wctx));
-  for(let k=0;k<5;k++){ const ch=depPass(work,wctx); if(!ch.size) break; ch.forEach(l=>{ const li=work.filter(i=>i.lineId===l&&!i.withId&&!hasOutputs(i)); li.forEach(it=>{ if(it.notBefore) placeByTime(work,it); }); relineChain(work,l,wctx); }); }
+  const wctx={id:'tmp'+uid(),items:work}; [...new Set(lineIds)].forEach(l=>{ orderSeqFix(work,l); relineChain(work,l,wctx); });
+  for(let k=0;k<12;k++){ const ch=depPass(work,wctx); if(!ch.size) break; ch.forEach(l=>{ const li=work.filter(i=>i.lineId===l&&!i.withId&&!hasOutputs(i)); li.forEach(it=>{ if(it.notBefore) placeByTime(work,it); }); orderSeqFix(work,l); relineChain(work,l,wctx); }); }
   const ch=work.filter(w=>{ const o=byId(DB.plan,w.id); return !o||JSON.stringify(o)!==JSON.stringify(w); });
   const txt=typeof log==='function'?log(work,wctx):log;
   await Store.batch([...ch.map(x=>({col:'plan',obj:x})),...extra,...(txt?[logEntry(txt)]:[])]);
@@ -2826,7 +2834,9 @@ async function qMove(id,dir){
   const work=DB.plan.map(clone), li=work.filter(i=>i.lineId===it.lineId).sort((a,b)=>seqOf(a)-seqOf(b)||tms(a.start)-tms(b.start));
   li.forEach((x,k)=>x.seq=k); const i=li.findIndex(x=>x.id===id), j=i+dir; if(j<0||j>=li.length) return;
   if(itemStarted(byId(DB.plan,li[i].id))||itemStarted(byId(DB.plan,li[j].id))) return toast('Проект уже в работе — его место в очереди не меняется');
-  const A1=li[i], B1=li[j]; [A1.seq,B1.seq]=[B1.seq,A1.seq]; const first=dir<0?A1:B1, second=dir<0?B1:A1; first.start=[A1.start,B1.start].sort()[0];
+  const A1=li[i], B1=li[j];
+  if(A1.orderId&&A1.orderId===B1.orderId){ const o=byId(DB.orders,A1.orderId), ops=o?orderOps(o):[]; if(o&&itemOpIx(o,ops,A1)!==itemOpIx(o,ops,B1)){ const f=dir<0?B1:A1, sc=dir<0?A1:B1; return toast(`«${ops[itemOpIx(o,ops,sc)]?.name||'операция'}» не может идти раньше «${ops[itemOpIx(o,ops,f)]?.name||'предыдущей'}» — порядок задан маршрутом заказа`); } }
+  [A1.seq,B1.seq]=[B1.seq,A1.seq]; const first=dir<0?A1:B1, second=dir<0?B1:A1; first.start=[A1.start,B1.start].sort()[0];
   await qCommit(work,[it.lineId],[],`Очередь ${lineName(it.lineId)}: «${projName(first.projectId)}» поставлен перед «${projName(second.projectId)}»`);
 }
 
