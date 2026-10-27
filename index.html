@@ -280,7 +280,7 @@ tfoot td{font-weight:800;background:var(--card2)}
 .bd .bd-td{background:rgba(226,70,44,.06)} .bd th.bd-td{background:#fde6e1!important} .bd .bd-off{background:repeating-linear-gradient(135deg,rgba(120,130,150,.12) 0 4px,transparent 4px 8px)}
 .bd-cell{border-radius:5px;height:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;position:relative;overflow:hidden;font-size:9.5px}
 .bd-cell b{font-size:9.5px} .bd-cell small{font-size:9px;opacity:.9} .bd-cell i{position:absolute;top:1px;left:2px;font-style:normal;font-weight:900;font-size:9px;background:rgba(0,0,0,.35);color:#fff;border-radius:3px;padding:0 2px}
-.bd-cell.plan{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.55) 0 4px,rgba(255,255,255,0) 4px 8px)!important;background-color:var(--bg)!important;opacity:.85}
+.bd-cell.past{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.55) 0 4px,rgba(255,255,255,0) 4px 8px)!important}
 .bd-cell.miss{outline:2px solid var(--red);outline-offset:-2px}
 .bd-wh{display:flex;flex-direction:column;gap:1px;margin-top:1px} .bd-wh span{font-size:8.5px;font-weight:800;background:#c189f7;color:#2a0d45;border-radius:3px;padding:0 2px} .bd-wh span.o{background:#1d2433;color:#fff}
 .bd tr.bd-row:hover td.bd-c{background:var(--card2)} .bd-prog{min-width:80px;padding:2px 6px!important;border-left:2px solid var(--line2)!important}
@@ -827,14 +827,15 @@ function snapItem(it,ctx){ const s=sched(it,ctx); const o=clone(it); delete o.fi
 // очередь линии: каждый следующий проект стартует, когда закончился предыдущий (или не раньше заданного времени)
 const seqOf = it => it.seq!=null&&it.seq!==''?+it.seq:1e9+(tms(it.start)||0)/1e6;
 const hasOutputs = it => DB.output.some(r=>r.planItemId===it.id);
-const itemStarted = it => hasOutputs(it)||itemStart(it,LIVE)<=Date.now();
+const itemStarted = it => hasOutputs(it); // зафиксировано только то, по чему уже есть отчёты смен
+const itemRunning = it => itemStart(it,LIVE)<=Date.now();
 function relineChain(items,lineId,ctx){
   const now=Date.now(), li=items.filter(i=>i.lineId===lineId).sort((a,b)=>seqOf(a)-seqOf(b)||(tms(a.start)-tms(b.start))), ch=new Set(); let prevEnd=null;
   const starts={};
   li.forEach((it,k)=>{
     if(+it.seq!==k){ it.seq=k; ch.add(it); }
     if(it.withId&&starts[it.withId]!=null&&!hasOutputs(it)){ const w=toDT(starts[it.withId]); if(it.start!==w){ it.start=w; ch.add(it); } const e=sched(it,ctx).end; prevEnd=prevEnd==null?e:Math.max(prevEnd,e); return; }
-    const st=tms(it.start), ss=isFinite(st)?sched(it,ctx).start:NaN, started=hasOutputs(it)||(isFinite(st)&&st<=now&&ss<=now&&(prevEnd==null||prevEnd<=ss+60e3));
+    const st=tms(it.start), ss=isFinite(st)?sched(it,ctx).start:NaN, started=hasOutputs(it);
     if(!started){ const nb=it.notBefore?tms(it.notBefore):0; let want=prevEnd!=null?Math.max(prevEnd,nb):Math.max(isFinite(st)?st:now,nb); want=Math.max(want,prevEnd??0);
       const w=toDT(want); if(it.start!==w){ it.start=w; ch.add(it); } }
     const e=sched(it,ctx).end; starts[it.id]=sched(it,ctx).start; prevEnd=prevEnd==null?e:Math.max(prevEnd,e);
@@ -2370,7 +2371,7 @@ function renderBoard(tabs){
     const lab=ls.length?ls.map(l=>esc(lineShort(l))).join('+'):'';
     const it0=pl[0]?.it;
     return `<td class="bd-x ${ci%NSb?'':'bd-d0'} ${c.d===td?'bd-td':''}" data-tip="${tip.replace(/"/g,'&quot;')}" ${it0&&can('edit')?`onclick="openQItem('${it0.id}')" style="cursor:pointer"`:''}>
-      ${ls.length?`<div class="bd-cell ${done?'fact':'plan'} ${past&&!done&&pl.length?'miss':''}" style="--bg:${ls.length===1?lineColor(ls[0]):'#888'};background:${bg};color:${txtOn(lineColor(ls[0]))}">${setup?'<i>S</i>':''}<b>${lab}</b><small>${done?short(f.good):short(planQ)}</small></div>`:''}
+      ${ls.length?`<div class="bd-cell ${c.b<=now?'past':''} ${past&&!done&&pl.length?'miss':''}" style="--bg:${ls.length===1?lineColor(ls[0]):'#888'};background:${bg};color:${txtOn(lineColor(ls[0]))}">${setup?'<i>S</i>':''}<b>${lab}</b><small>${done?short(f.good):short(planQ)}</small></div>`:''}
       ${pk||sh?`<div class="bd-wh">${pk?`<span title="упаковано">У ${short(pk)}</span>`:''}${sh?`<span class="o" title="отгружено">О ${short(sh)}</span>`:''}</div>`:''}</td>`; };
   const activeSet=new Set(act.keys()); state._bdAct=activeSet; state._bdRows=rowsO.filter(x=>byId(DB.orders,x)); const ceB=can('edit'); state.bdOpen=state.bdOpen||{};
   const open=oid=>state.bdOpen[oid]!=null?state.bdOpen[oid]:(state.bdAll!==false&&activeSet.has(oid));
@@ -2380,10 +2381,10 @@ function renderBoard(tabs){
       <td class="bd-c bd-c3"><small>${st&&!opIsWait(r.op)&&!opIsShip(r.op)?'зап. '+short(st.launch):''}</small></td><td class="bd-c bd-c4">${r.kind==='line'&&!DB.plan.some(i=>i.orderId===o.id&&opLineSet(r.op,o)?.has(i.lineId))?'<small style="color:var(--amber)">не в плане</small>':''}</td><td class="bd-c bd-c5"><small>${+r.op.defT?'цель '+P(+r.op.defT,1):''}</small></td><td class="bd-c bd-c6"><small>${opIsWait(r.op)?'':`${short(g.done)} из ${short(g.total)}`}</small></td>
       ${cols.map((c,ci)=>{ const e=r.m.get(ci), cls=`bd-x ${ci%NSb?'':'bd-d0'} ${c.d===td?'bd-td':''}`; if(!e) return `<td class="${cls}"></td>`;
         if(r.kind==='line'){ const ls=e.ls, bg=ls.length>1?`linear-gradient(135deg,${lineColor(ls[0])} 0 50%,${lineColor(ls[1])} 50% 100%)`:lineColor(ls[0]); const done=!!e.fact;
-          return `<td class="${cls}" data-tip="${esc(r.op.name)} · ${c.d.split('-').reverse().join('.')} ${SLb[ci%NSb]}<br>план ${N(e.plan)}${e.fact?' · факт '+N(e.fact):e.past&&e.plan?' · отчёта нет':''}" ${e.it&&can('edit')?`onclick="openQItem('${e.it.id}')" style="cursor:pointer"`:''}><div class="bd-cell ${done?'fact':'plan'} ${e.past&&!done&&e.plan?'miss':''}" style="--bg:${lineColor(ls[0])};background:${bg};color:${txtOn(lineColor(ls[0]))}">${e.setup?'<i>S</i>':''}<b>${ls.map(l=>esc(lineShort(l))).join('+')}</b><small>${short(e.fact||e.plan)}</small></div></td>`; }
+          return `<td class="${cls}" data-tip="${esc(r.op.name)} · ${c.d.split('-').reverse().join('.')} ${SLb[ci%NSb]}<br>план ${N(e.plan)}${e.fact?' · факт '+N(e.fact):e.past&&e.plan?' · отчёта нет':''}" ${e.it&&can('edit')?`onclick="openQItem('${e.it.id}')" style="cursor:pointer"`:''}><div class="bd-cell ${c.b<=now?'past':''} ${e.past&&!done&&e.plan?'miss':''}" style="--bg:${lineColor(ls[0])};background:${bg};color:${txtOn(lineColor(ls[0]))}">${e.setup?'<i>S</i>':''}<b>${ls.map(l=>esc(lineShort(l))).join('+')}</b><small>${short(e.fact||e.plan)}</small></div></td>`; }
         if(r.kind==='ship') return `<td class="${cls}" data-tip="${e.due?'срок отгрузки':''}${e.fact?'<br>отгружено '+N(e.fact):''}">${e.fact?`<div class="bd-cell fact" style="background:#1d2433;color:#fff"><b>О</b><small>${short(e.fact)}</small></div>`:''}${e.due?'<div class="bd-due">срок</div>':''}</td>`;
         const done=e.fact!=null, txt=r.kind==='wait'?'⏱':(done?short(e.fact):short(e.plan));
-        return `<td class="${cls}" data-tip="${esc(r.op.name)} · ${c.d.split('-').reverse().join('.')} ${SLb[ci%NSb]}<br>${r.kind==='wait'?'выдержка (охлаждение) партии':'ожидается ~'+N(e.plan||0)}${done?`<br><b>факт ${N(e.fact)}${e.def?' · брак '+N(e.def):''}</b>`:''}"><div class="bd-cell ${done?'fact':'plan'}" style="--bg:${col};background:${col};color:${txtOn(col)}"><small>${txt}</small></div></td>`; }).join('')}</tr>`; }).join(''); };
+        return `<td class="${cls}" data-tip="${esc(r.op.name)} · ${c.d.split('-').reverse().join('.')} ${SLb[ci%NSb]}<br>${r.kind==='wait'?'выдержка (охлаждение) партии':'ожидается ~'+N(e.plan||0)}${done?`<br><b>факт ${N(e.fact)}${e.def?' · брак '+N(e.def):''}</b>`:''}"><div class="bd-cell ${c.b<=now?'past':''}" style="--bg:${col};background:${col};color:${txtOn(col)}"><small>${txt}</small></div></td>`; }).join('')}</tr>`; }).join(''); };
   const rows=rowsO.map(oid=>{ const o=byId(DB.orders,oid), p=byId(DB.projects,o?.projectId||oid.slice(1)); if(!p) return '';
     const dd=o?orderDefects(o):null, chkR=projReady(p), tech=projTechOk(p), late=o&&DB.plan.some(i=>i.orderId===o.id&&endMs(i,LIVE)>pd(o.due).getTime()+864e5);
     const sbits=o?orderStages(o):null, ops=o?orderOps(o,p):[];
@@ -2412,9 +2413,9 @@ function renderBoard(tabs){
       <label class="chip ${showIdle?'on':''}" style="cursor:pointer"><input type="checkbox" style="display:none" ${showIdle?'checked':''} onchange="state.bdIdle=this.checked;render()">Открытые заказы без плана</label>
       <label class="chip ${state.bdAll!==false?'on':''}" style="cursor:pointer"><input type="checkbox" style="display:none" ${state.bdAll!==false?'checked':''} onchange="state.bdAll=this.checked;state.bdOpen={};render()">Операции по заказам</label>
       <div class="sp"></div>${can('edit')?`<button class="btn btn-p" onclick="openOrderPlan()">+ Заказ в план</button>`:''}</div>
-    <div class="toolbar" style="margin-top:-4px;gap:12px;flex-wrap:wrap">${legend}<span class="bd-leg"><span class="bd-cell plan" style="--bg:#888;background:#888;width:22px;height:14px;display:inline-block"></span>план</span><span class="bd-leg"><span class="bd-cell fact" style="background:#888;width:22px;height:14px;display:inline-block"></span>факт (смена закрыта)</span><span class="bd-leg"><b>S</b> наладка · <b>У</b> упаковано · <b>О</b> отгружено · ⏱ выдержка · цифра — шт · ▸ / ▾ — операции заказа</span></div>
+    <div class="toolbar" style="margin-top:-4px;gap:12px;flex-wrap:wrap">${legend}<span class="bd-leg"><span class="bd-cell" style="background:#888;width:22px;height:14px;display:inline-block"></span>впереди</span><span class="bd-leg"><span class="bd-cell past" style="background:#888;width:22px;height:14px;display:inline-block"></span>время прошло</span><span class="bd-leg"><span class="bd-cell miss" style="background:#888;width:22px;height:14px;display:inline-block"></span>прошло, отчёта нет</span><span class="bd-leg"><b>S</b> наладка · <b>У</b> упаковано · <b>О</b> отгружено · ⏱ выдержка · цифра — шт · ▸ / ▾ — операции заказа</span></div>
     <div class="card" style="padding:0;min-width:0"><div class="bd-wrap"><table class="bd">${head}${rows||`<tr><td colspan="${cols.length+6}" class="empty">В периоде нет заказов</td></tr>`}<tr class="bd-sep"><td colspan="${cols.length+6}">Линии</td></tr>${lineRows}</table></div></div>
-    <div class="hint" style="margin-top:8px">Доска собирается из плана и отчётов — вручную не раскрашивается. Цвет — линия; штриховка — план, сплошная заливка — факт закрытой смены; красная рамка — смена прошла, а отчёта нет. Две линии в смену — ячейка делится по диагонали. Клик по заказу — карточка заказа, по ячейке — позиция плана.</div>`;
+    <div class="hint" style="margin-top:8px">Доска собирается из плана и отчётов — вручную не раскрашивается. Цвет — линия (как в легенде); заштриховано — время смены уже прошло; красная рамка — смена прошла, а отчёта нет; в ячейке — факт, если смена закрыта, иначе план. Две линии в смену — ячейка делится по диагонали. Клик по заказу — карточка заказа, по ячейке — позиция плана.</div>`;
 }
 
 // ─── общие помощники живого плана
@@ -2444,8 +2445,23 @@ function itemRisk(it,chk){
   return out;
 }
 // сохранить изменения очереди: пересчитать цепочку на линиях и записать только изменившиеся позиции
+// связи операций заказа: следующая операция на линии — не раньше выдержки после предыдущей и не обгоняет её
+function depPass(work,ctx){
+  const changed=new Set(), byO={}; work.forEach(i=>{ if(i.orderId&&!isChange(i)) (byO[i.orderId]=byO[i.orderId]||[]).push(i); });
+  Object.entries(byO).forEach(([oid,its])=>{ const o=byId(DB.orders,oid); if(!o) return; const ops=orderOps(o); if(ops.length<2) return;
+    const ix=it=>{ if(it.opId){ const k=ops.findIndex(x=>x.id===it.opId); if(k>=0) return k; } return ops.findIndex(x=>x.lineId&&(opHasLine(x,it.lineId)||stageLines(o,x.lineId)?.has(it.lineId))); };
+    its.forEach(B=>{ if(B.withId||hasOutputs(B)) return; const k=ix(B); if(k<0) return;
+      if(B.pinNb===undefined) B.pinNb=/· запуск/.test(B.note||'')?'':(B.notBefore||'');
+      let need=0; if(k>0){ let j=k-1,W=0; while(j>=0&&!ops[j].lineId){ if(opIsWait(ops[j])) W+=+ops[j].waitH||0; j--; }
+        const prev=j>=0?its.filter(i=>i!==B&&ix(i)===j):[];
+        if(prev.length){ const aS=Math.min(...prev.map(i=>sched(i,ctx).start)), aE=Math.max(...prev.map(i=>sched(i,ctx).end)), sb=sched(B,ctx), dur=Math.max(0,sb.end-sb.start); need=Math.max(aS+W*H,aE+W*H-dur); } }
+      const nb=Math.max(B.pinNb?tms(B.pinNb):0,need), v=nb?toDT(nb):'';
+      if((B.notBefore||'')!==v){ B.notBefore=v; if(v&&tms(B.start)<nb) B.start=v; changed.add(B.lineId); } }); });
+  return changed;
+}
 async function qCommit(work,lineIds,extra=[],log){
   const wctx={id:'tmp'+uid(),items:work}; [...new Set(lineIds)].forEach(l=>relineChain(work,l,wctx));
+  for(let k=0;k<5;k++){ const ch=depPass(work,wctx); if(!ch.size) break; ch.forEach(l=>{ const li=work.filter(i=>i.lineId===l&&!i.withId&&!hasOutputs(i)); li.forEach(it=>{ if(it.notBefore) placeByTime(work,it); }); relineChain(work,l,wctx); }); }
   const ch=work.filter(w=>{ const o=byId(DB.plan,w.id); return !o||JSON.stringify(o)!==JSON.stringify(w); });
   const txt=typeof log==='function'?log(work,wctx):log;
   await Store.batch([...ch.map(x=>({col:'plan',obj:x})),...extra,...(txt?[logEntry(txt)]:[])]);
@@ -2658,7 +2674,7 @@ async function oplSave(f){
     if(!f['on_'+j]){ prev=null; continue; } const qty=+String(f['qty_'+j]||'').replace(/\s/g,'')||0; if(qty<=0) continue;
     const lid=f['line_'+j], li=work.filter(i=>i.lineId===lid), mx=li.length?Math.max(...li.map(seqOf)):-1, le=lineEnd(lid,null,wctx);
     const op=r.s.op, main=lid===p.lineId&&op.lineId===p.lineId;
-    const it={id:uid(),opId:op.id,...(isOven(lid)?{mode:op.mode||(/обжиг/i.test(op.name)?'fire':'bake'),temp:+op.temp||'',group:op.group||''}:{}),projectId:p.id,lineId:lid,orderId:o.id,qty,speedPlan:main?'':(+op.speed||''),setupPlan:main?'':(op.setupMin!==''&&op.setupMin!=null?+op.setupMin:''),notBefore:'',extras:[],note:`${op.name} · запуск ${N(r.s.launch)}`,seq:mx+1,start:toDT(Math.max(Date.now(),le||0))};
+    const it={id:uid(),pinNb:'',opId:op.id,...(isOven(lid)?{mode:op.mode||(/обжиг/i.test(op.name)?'fire':'bake'),temp:+op.temp||'',group:op.group||''}:{}),projectId:p.id,lineId:lid,orderId:o.id,qty,speedPlan:main?'':(+op.speed||''),setupPlan:main?'':(op.setupMin!==''&&op.setupMin!=null?+op.setupMin:''),notBefore:'',extras:[],note:`${op.name} · запуск ${N(r.s.launch)}`,seq:mx+1,start:toDT(Math.max(Date.now(),le||0))};
     if(prev){ const aS=sched(prev,wctx).start, aE=sched(prev,wctx).end, dur=(itemSetup(it)/60+qty/itemSpeed(it)/60)*H, nb=Math.max(aS+W*H,aE+W*H-dur); if(nb>tms(it.start)){ it.notBefore=toDT(nb); it.start=it.notBefore; } }
     work.push(it); relineChain(work,lid,wctx); _sch.clear(); made.push(it); lines.add(lid); prev=it; }
   if(!made.length){ toast('Нечего ставить — отметьте операции и количество'); return false; }
@@ -2786,7 +2802,7 @@ function planQueue(chk){
         <td colspan="3"><b>⚙ Перестройка печи → ${esc(OVM[it.mode]?.n||'')} ${it.temp?it.temp+' °C':''}</b><small class="muted" style="display:block">${Q(+it.hours||0,1)} ч${it.note?' · '+esc(it.note):''}</small></td>
         <td>${fdt(a)}</td><td>${fdt(e)}</td><td colspan="3"></td></tr>`;
       const f=itemFact(it), q=+it.qty||0, risk=itemRisk(it,chk[it.id]), s=sched(it,LIVE);
-      return `<tr class="${ce?'click':''} ${started&&e>now?'q-run':''} ${e<=now?'q-done':''} ${it.withId?'q-with':''}" onclick="if(!event.target.closest('button'))openQItem('${it.id}')">
+      return `<tr class="${ce?'click':''} ${a<=now&&e>now?'q-run':''} ${e<=now?'q-done':''} ${it.withId?'q-with':''}" onclick="if(!event.target.closest('button'))openQItem('${it.id}')">
         <td class="q-arr">${ce?`<button class="btn btn-s btn-sm" ${canUp?'':'disabled'} onclick="qMove('${it.id}',-1)" title="Выше в очереди">↑</button><button class="btn btn-s btn-sm" ${canDn?'':'disabled'} onclick="qMove('${it.id}',1)" title="Ниже в очереди">↓</button><div style="margin-top:3px">${e>now?`<button class="btn btn-s btn-sm" onclick="openQSplit('${it.id}')" title="Остановить / разделить: доделать остаток позже или на другой линии">⏸</button>`:''}<button class="btn btn-d btn-sm" onclick="delPlanItem('${it.id}')" title="Удалить из плана">🗑</button></div>`:''}</td>
         <td><div style="display:flex;gap:8px;align-items:center">${projThumb(p,30)}<div><b>${esc(p?.name||'—')}</b>${isOven(l)?`<div style="margin-top:2px">${ovenTag(it)}${ce?` <button class="btn btn-s btn-sm" onclick="openOvenItem('${it.id}')" title="режим, температура, совместное запекание">⚙</button>`:''}</div>`:''}<small class="muted" style="display:block">${esc(p?.client||'')}${s.pause?` · паузы ${minTxt(s.pause)}`:''}${started&&e>now?' · <b style="color:var(--blue)">в работе</b>':''}</small></div></div></td>
         <td>${o?`${esc(o.no)}<small class="muted" style="display:block">сделано ${short(ob.done)} из ${short(ob.qty)}${ob.lines>1?` · ${ob.lines} линии`:''}</small>`:'<span class="muted">—</span>'}</td>
@@ -2796,7 +2812,7 @@ function planQueue(chk){
         <td>${o?fdate(o.due):'<span class="muted">—</span>'}</td>
         <td>${matTag(chk[it.id])}</td>
         <td>${risk.length?risk.map(r=>`<span class="tag ${r[1]}" data-tip="${r[2]}" ${r[3]?`style="cursor:pointer" onclick="event.stopPropagation();${r[3]}"`:''}>${r[0]}${r[3]?' 📌':''}</span>`).join(' '):(e<=now?'<span class="tag t-gray">завершён</span>':'<span class="tag t-green">в срок</span>')}</td>
-</tr>${(()=>{ const ob=opBars(it,o,p); return ob?`<tr class="q-ops ${started&&e>now?'q-run':''} ${e<=now?'q-done':''}"><td></td><td colspan="8">${ob}</td></tr>`:''; })()}`;
+</tr>${(()=>{ const ob=opBars(it,o,p); return ob?`<tr class="q-ops ${a<=now&&e>now?'q-run':''} ${e<=now?'q-done':''}"><td></td><td colspan="8">${ob}</td></tr>`:''; })()}`;
     }).join('')||` <tr><td colspan="9" class="muted" style="padding:10px 14px">Очередь пуста</td></tr>`;
     return head+body;
   }).join('');
@@ -2868,7 +2884,7 @@ const exRow = e => `<div class="ex-row"><input class="fi ex-k" list="pauseKinds"
   <label class="ex-e-l"><input type="checkbox" class="ex-e" ${e.every?'checked':''} onchange="qiCalc()"> каждую смену</label>
   <button type="button" class="btn btn-s btn-sm" onclick="this.parentNode.remove();qiCalc()">✕</button></div>`;
 function openQItem(id){
-  const it=byId(DB.plan,id); if(!it) return; const ce=can('edit'), p=byId(DB.projects,it.projectId), now=Date.now(), started=itemStart(it,LIVE)<=now;
+  const it=byId(DB.plan,id); if(!it) return; const ce=can('edit'), p=byId(DB.projects,it.projectId), now=Date.now(), started=hasOutputs(it);
   const f=itemFact(it), s=sched(it,LIVE);
   state._qi=id;
   const ro=ce?'':'disabled';
@@ -2895,6 +2911,7 @@ function openQItem(id){
     const r=qiRead(it); if(!(r.qty>0)||!(r.speedPlan>0)){ toast('Укажите количество и скорость'); return false; }
     const work=DB.plan.map(clone).map(x=>x.id===r.id?r:x);
     if(r.lineId!==it.lineId){ const li=work.filter(i=>i.lineId===r.lineId&&i.id!==r.id); r.seq=li.length?Math.max(...li.map(seqOf))+1:0; }
+    if(r.notBefore!==it.notBefore) r.pinNb=r.notBefore||'';
     if(r.notBefore&&!itemStarted(it)&&r.notBefore!==it.notBefore){ r.start=r.notBefore; placeByTime(work,r); }
     const old=sched(it,LIVE);
     await qCommit(work,[it.lineId,r.lineId],[],(w,c)=>{ const x=w.find(i=>i.id===r.id), s=sched(x,c); return qiDiff(it,x)+` · окончание ${fdt(old.end)} → ${fdt(s.end)}`; });
@@ -2950,7 +2967,7 @@ async function qSetStart(id,v){
   const it=byId(DB.plan,id); if(!it||!can('edit')) return;
   const work=DB.plan.map(clone), w=work.find(x=>x.id===id), started=itemStarted(it);
   if(started){ if(!v) return render(); w.start=v; }
-  else { w.notBefore=v||''; if(v){ w.start=v; placeByTime(work,w); } }
+  else { w.notBefore=v||''; w.pinNb=v||''; if(v){ w.start=v; placeByTime(work,w); } }
   await qCommit(work,[it.lineId],[],v?`«${projName(it.projectId)}» (${lineName(it.lineId)}): начало ${started?'(факт) ':''}вручную ${fdt(tms(v))}`:`«${projName(it.projectId)}»: снято ручное начало — сразу за предыдущим`);
   if(v&&!started){ const s=itemStart(byId(DB.plan,id),LIVE); if(s>tms(v)+30*60e3){ const q=lineQueue(it.lineId), k=q.findIndex(x=>x.id===id), pr=q[k-1];
     toast(`Раньше ${fdt(s)} не получится: линия занята${pr?` «${projName(pr.projectId)}»`:''}${pr?' — остановите его кнопкой ⏸, остаток перенесётся':''}`); } }
