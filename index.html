@@ -269,16 +269,18 @@ tfoot td{font-weight:800;background:var(--card2)}
 .rcp{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line2)} .rc-list{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .rc{border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:200px;max-width:300px;cursor:pointer;background:var(--card)} .rc:hover{border-color:var(--line2)} .rc.on{border-color:var(--blue);background:var(--blueBg)}
 .rc small{display:block;color:var(--text3);font-size:11px;margin-top:3px;line-height:1.35} .rc-ed{background:var(--card2);border-radius:10px;padding:10px}
-.bd-wrap{overflow:auto;max-height:calc(100vh - 230px)} table.bd{border-collapse:separate;border-spacing:0;font-size:11.5px}
+.bd-wrap{overflow:auto;max-height:calc(100vh - 230px)} table.bd{border-collapse:separate;border-spacing:0;font-size:11.5px;width:auto}
 .bd th,.bd td{padding:0;border-bottom:1px solid var(--line);white-space:nowrap} .bd thead th,.bd tr.bd-h1 th,.bd tr.bd-h2 th,.bd tr.bd-h3 th{position:sticky;background:var(--card2);z-index:3;font-size:10.5px;color:var(--text2);text-align:center}
 .bd tr.bd-h1 th{top:0;height:22px} .bd tr.bd-h2 th{top:22px;height:20px} .bd tr.bd-h3 th{top:42px;height:16px;font-size:9.5px;color:var(--text3)}
 .bd .bd-c{padding:4px 6px;background:var(--card);text-align:left;vertical-align:middle} .bd .bd-c small{display:block;color:var(--text3);font-size:10px;overflow:hidden;text-overflow:ellipsis}
-.bd .bd-c1{position:sticky;left:0;z-index:2;width:84px;min-width:84px;max-width:84px;overflow:hidden} .bd .bd-c2{position:sticky;left:84px;z-index:2;width:220px;min-width:220px;max-width:220px;border-right:2px solid var(--line2)}
-.bd tr.bd-h1 th.bd-c1,.bd tr.bd-h1 th.bd-c2{z-index:5;background:var(--card2)} .bd .bd-c3{min-width:66px} .bd .bd-c4{min-width:70px} .bd .bd-c5{min-width:84px} .bd .bd-c6{min-width:96px;border-right:2px solid var(--line2)}
-.bd .bd-nm{display:block;overflow:hidden;text-overflow:ellipsis;max-width:180px;font-size:11.5px}
+.bd .bd-c1{position:sticky;left:0;z-index:2;width:84px;min-width:84px;max-width:84px;overflow:hidden} .bd .bd-c2{position:sticky;left:84px;z-index:2;width:160px;min-width:160px;max-width:160px;overflow:hidden}
+.bd .bd-c3{position:sticky;left:244px;z-index:2;width:52px;min-width:52px;max-width:52px;overflow:hidden} .bd .bd-c4{position:sticky;left:296px;z-index:2;width:68px;min-width:68px;max-width:68px;overflow:hidden;border-right:2px solid var(--line2)}
+.bd .bd-c1,.bd .bd-c2,.bd .bd-c3,.bd .bd-c4{box-sizing:border-box} .bd td.bd-c2>div{max-width:146px} .bd .bd-c2 small{max-width:112px} .bd .bd-c3 small,.bd .bd-c4 small{max-width:56px} .bd td.bd-c1>*{max-width:72px}
+.bd tr.bd-h1 th.bd-c1,.bd tr.bd-h1 th.bd-c2,.bd tr.bd-h1 th.bd-c3,.bd tr.bd-h1 th.bd-c4{z-index:5;background:var(--card2)} .bd .bd-c5{min-width:84px} .bd .bd-c6{min-width:96px;border-right:2px solid var(--line2)}
+.bd .bd-nm{display:block;overflow:hidden;text-overflow:ellipsis;max-width:120px;font-size:11.5px}
 .bd .bd-x{width:34px;min-width:34px;max-width:34px;height:40px;text-align:center;vertical-align:middle;border-left:1px dashed var(--line);padding:1px} .bd .bd-d0{border-left:1px solid var(--line2)}
 .bd .bd-td{background:rgba(31,169,113,.08)} .bd th.bd-td{background:#dcf3e8!important;color:var(--green)}
-.bd td.bd-now,.bd th.bd-now{position:relative} .bd td.bd-now::after,.bd th.bd-now::after{content:'';position:absolute;top:0;bottom:0;left:var(--np);width:2px;margin-left:-1px;background:#e5484d;z-index:3;pointer-events:none}
+.bd td.bd-now,.bd th.bd-now{position:relative} .bd td.bd-now::after,.bd th.bd-now::after{content:'';position:absolute;top:0;bottom:0;left:var(--np);width:2px;margin-left:-1px;background:#e5484d;z-index:1;pointer-events:none}
 .bd-span{position:absolute;bottom:0;height:3px;background:rgba(0,0,0,.55);border-radius:2px}
 .bd-occ{position:relative;overflow:hidden} .bd .bd-off{background:repeating-linear-gradient(135deg,rgba(120,130,150,.12) 0 4px,transparent 4px 8px)}
 .bd-cell{border-radius:5px;height:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;position:relative;overflow:hidden;font-size:9.5px}
@@ -289,7 +291,10 @@ tfoot td{font-weight:800;background:var(--card2)}
 .bd-wh{display:flex;flex-direction:column;gap:1px;margin-top:1px} .bd-wh span{font-size:8.5px;font-weight:800;background:#c189f7;color:#2a0d45;border-radius:3px;padding:0 2px} .bd-wh span.o{background:#1d2433;color:#fff}
 .bd tr.bd-row:hover td.bd-c{background:var(--card2)} .bd-prog{min-width:80px;padding:2px 6px!important;border-left:2px solid var(--line2)!important}
 .bd-pgw{display:flex;gap:2px;align-items:flex-end;height:26px} .bd-pg{width:7px;height:26px;background:var(--line);border-radius:2px;display:flex;align-items:flex-end;overflow:hidden} .bd-pg i{display:block;width:100%;background:var(--blue)} .bd-pg.full i{background:var(--green)}
-.bd tr.bd-sep td{background:var(--card2);font-weight:800;font-size:11px;padding:5px 8px;position:sticky;left:0} .bd tr.bd-line .bd-x{height:26px}
+.bd tr.bd-sep td{background:var(--card2);font-weight:800;font-size:10.5px;padding:0 8px;height:18px;position:sticky;bottom:var(--lb);z-index:3;border-top:2px solid var(--line2)} .bd tr.bd-sep td.bd-sepn{left:0;z-index:6}
+.bd tr.bd-line td{position:sticky;bottom:var(--lb);z-index:3;background:var(--card);height:19px;padding:0 1px} .bd tr.bd-line td.bd-lname{left:0;z-index:6;padding:0 6px;font-size:10.5px;border-right:2px solid var(--line2)}
+.bd tr.bd-line td.bd-td{background:linear-gradient(rgba(31,169,113,.08),rgba(31,169,113,.08)),var(--card)} .bd tr.bd-line td.bd-off{background:repeating-linear-gradient(135deg,rgba(120,130,150,.12) 0 4px,transparent 4px 8px),var(--card)}
+.bd tr.bd-line .bd-x{height:19px} .bd tr.bd-line .bd-occ,.bd tr.bd-line .bd-dn{height:15px;line-height:15px;font-size:8.5px} .bd tr.bd-line .bd-lsw{width:9px;height:9px;margin-right:4px}
 .bd-occ{border-radius:4px;font-size:9px;font-weight:800;height:20px;line-height:20px;overflow:hidden} .bd-dn{border-radius:4px;font-size:8.5px;font-weight:800;height:20px;line-height:20px;background:#7a1b4c;color:#fff;overflow:hidden}
 .bd-lsw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:middle} .bd-leg{font-size:12px;font-weight:600;color:var(--text2);display:inline-flex;align-items:center;gap:4px}
 .bd .bd-lname{width:auto;max-width:none;min-width:0}
@@ -305,7 +310,7 @@ tfoot td{font-weight:800;background:var(--card2)}
 .bd-opn{display:flex;align-items:center;gap:5px} .bd-opt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bd-hb{flex:1 1 auto;min-width:40px;height:7px;border-radius:4px;background:var(--line);overflow:hidden;display:block} .bd-hb i{display:block;height:100%;background:var(--blue);border-radius:4px} .bd-hb.full i{background:var(--green)}
 .bd-hp{font-style:normal;font-size:10px;font-weight:800;color:var(--text3);min-width:28px;text-align:right} .bd-hp.part{color:var(--blue)} .bd-hp.full{color:var(--green)}
-.bd .bd-c1{width:92px;min-width:92px;max-width:92px} .bd .bd-c2{left:92px;width:260px;min-width:260px;max-width:260px}
+.bd .bd-c1{width:92px;min-width:92px;max-width:92px} .bd .bd-c2{left:92px;width:160px;min-width:160px;max-width:160px} .bd .bd-c3{left:252px} .bd .bd-c4{left:304px}
 .bd-mvb{display:flex;gap:3px;margin-bottom:3px} .bd-mvb .btn{padding:2px 8px;min-height:0;line-height:1.2;font-size:12px}
 .rs tr.rs-cnt td{background:var(--card2);font-size:12px;height:26px} .rs tr.rs-cnt td.rs-name{background:var(--card2)} .rs tr.rs-cnt td.rs-name small{display:inline;margin-left:4px}
 .dc-now{position:absolute;top:0;bottom:0;width:2px;background:var(--red);z-index:3;pointer-events:none}
@@ -2420,7 +2425,8 @@ function renderBoard(tabs){
       ${cols.map((c,ci)=>cellHtml(oid,ci)).join('')}
 </tr>${o&&open(oid)?opRowsHtml(o,p):''}`; }).join('');
   // строки линий внизу: что стоит на линии + простои (лаборатория, чистка, ППР…)
-  const lineRows=DB.lines.map(l=>`<tr class="bd-line"><td class="bd-c bd-c1 bd-lname" colspan="6"><span class="bd-lsw" style="background:${lineColor(l)}"></span><b>${esc(l.name)}</b>${lineShort(l)!==l.name?` <small class="muted">${esc(lineShort(l))}</small>`:''}</td>${cols.map((c,ci)=>{ const sp=lineCell[l.id+'|'+ci]||[], works=dayShifts(l.id,c.d,LIVE).includes(+c.n), dn=DB.downs.filter(x=>x.lineId===l.id&&tms(x.start)<c.b&&tms(x.end)>c.a);
+  const LH=19, nL=DB.lines.length;
+  const lineRows=DB.lines.map((l,li)=>`<tr class="bd-line" style="--lb:${(nL-1-li)*LH}px"><td class="bd-lname" colspan="4"><span class="bd-lsw" style="background:${lineColor(l)}"></span><b>${esc(l.name)}</b>${lineShort(l)!==l.name?` <span class="muted">${esc(lineShort(l))}</span>`:''}</td><td colspan="2"></td>${cols.map((c,ci)=>{ const sp=lineCell[l.id+'|'+ci]||[], works=dayShifts(l.id,c.d,LIVE).includes(+c.n), dn=DB.downs.filter(x=>x.lineId===l.id&&tms(x.start)<c.b&&tms(x.end)>c.a);
       const tip=`${esc(l.name)} · ${c.d.split('-').reverse().join('.')} ${SLb[ci%NSb]}${sp.map(x=>`<br>${esc(projName(x.it.projectId))}${x.it.orderId?' · '+esc(byId(DB.orders,x.it.orderId)?.no||''):''}: ${N(x.qty)} шт<br><span style="opacity:.8">${timesTip([x])}</span>`).join('')}${sp.length&&Math.max(...sp.map(x=>x.y))<c.b-60e3&&works?`<br><b>свободна с ${hhmm(Math.max(...sp.map(x=>x.y)))}</b>`:''}${dn.map(x=>`<br>⛔ ${esc(x.reason)}${x.note?' — '+esc(x.note):''}`).join('')}${works?'':'<br>смена не работает'}`;
       const chg=isOven(l)?DB.plan.filter(x=>isChange(x)&&x.lineId===l.id&&itemSegs(x,LIVE).some(([a,b])=>a<c.b&&b>c.a)):[];
       if(chg.length) return `<td class="bd-x ${ci%NSb?'':'bd-d0'} ${c.d===td?'bd-td':''}${c===nowCol?' bd-now':''}" data-tip="⚙ перестройка печи → ${esc(OVM[chg[0].mode]?.n||'')} ${chg[0].temp||''} °C"><div class="bd-occ" style="background:repeating-linear-gradient(135deg,#bbb 0 4px,#ddd 4px 8px);color:#333">⚙${chg[0].temp||''}</div></td>`;
@@ -2434,7 +2440,7 @@ function renderBoard(tabs){
       <label class="chip ${state.bdAll!==false?'on':''}" style="cursor:pointer"><input type="checkbox" style="display:none" ${state.bdAll!==false?'checked':''} onchange="state.bdAll=this.checked;state.bdOpen={};render()">Операции по заказам</label>
       <div class="sp"></div>${can('edit')?`<button class="btn btn-p" onclick="openOrderPlan()">+ Заказ в план</button>`:''}</div>
     <div class="toolbar" style="margin-top:-4px;gap:12px;flex-wrap:wrap">${legend}<span class="bd-leg"><span class="bd-cell" style="background:#888;width:22px;height:14px;display:inline-block"></span>впереди</span><span class="bd-leg"><span class="bd-cell past" style="background:#888;width:22px;height:14px;display:inline-block"></span>время прошло</span><span class="bd-leg"><span class="bd-cell miss" style="background:#888;width:22px;height:14px;display:inline-block"></span>прошло, отчёта нет</span><span class="bd-leg"><b>S</b> наладка · <b>У</b> упаковано · <b>О</b> отгружено · ⏱ выдержка · цифра — шт · ▸ / ▾ — операции заказа</span></div>
-    <div class="card" style="padding:0;min-width:0"><div class="bd-wrap"><table class="bd" style="--np:${NP}%">${head}${rows||`<tr><td colspan="${cols.length+6}" class="empty">В периоде нет заказов</td></tr>`}<tr class="bd-sep"><td colspan="${cols.length+6}">Линии</td></tr>${lineRows}</table></div></div>
+    <div class="card" style="padding:0;min-width:0"><div class="bd-wrap"><table class="bd" style="--np:${NP}%;table-layout:fixed;width:${552+cols.length*34}px"><colgroup>${[92,160,52,68,84,96].map(w=>`<col style="width:${w}px">`).join('')}${cols.map(()=>'<col style="width:34px">').join('')}</colgroup>${head}${rows||`<tr><td colspan="${cols.length+6}" class="empty">В периоде нет заказов</td></tr>`}<tr class="bd-sep" style="--lb:${nL*LH}px"><td class="bd-sepn" colspan="4">Линии</td><td colspan="${cols.length+2}"></td></tr>${lineRows}</table></div></div>
     <div class="hint" style="margin-top:8px">Доска собирается из плана и отчётов — вручную не раскрашивается. Цвет — линия (как в легенде); заштриховано — время смены уже прошло; красная рамка — смена прошла, а отчёта нет; в ячейке — факт, если смена закрыта, иначе план. Две линии в смену — ячейка делится по диагонали. Клик по заказу — карточка заказа, по ячейке — позиция плана.</div>`;
 }
 
