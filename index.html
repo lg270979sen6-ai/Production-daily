@@ -724,7 +724,10 @@ const LIVE = {id:'live'};
 const ctxItems = ctx => ctx&&ctx.items ? ctx.items : DB.plan;
 const ctxDowns = ctx => ctx&&ctx.downs ? ctx.downs : DB.downs;
 function shiftSchemes(){ const s=A(DB.settings.shiftSchemes).filter(x=>x&&A(x.shifts).length); return s.length?s:DEFAULT_SETTINGS.shiftSchemes; }
-function lineScheme(lineId){ const l=byId(DB.lines,lineId), sc=shiftSchemes(); return sc.find(x=>x.id===l?.scheme)||sc[0]; }
+// «@coating» — назначение в графике на участок целиком (любая линия участка)
+const isAreaRef = id => String(id||'')[0]==='@';
+const areaLineIds = a => DB.lines.filter(l=>lineArea(l)===a).map(l=>l.id);
+function lineScheme(lineId){ if(isAreaRef(lineId)) lineId=areaLineIds(lineId.slice(1))[0]; const l=byId(DB.lines,lineId), sc=shiftSchemes(); return sc.find(x=>x.id===l?.scheme)||sc[0]; }
 function lineShiftDefs(lineId){ return A(lineScheme(lineId).shifts).map((s,i)=>({...s,n:i+1})); }
 function lineCfg(lineId,ctx){
   const l=byId(DB.lines,lineId)||{}, ov=ctx&&ctx.lineShifts?A(ctx.lineShifts[lineId]):[];
@@ -735,6 +738,7 @@ function lineCfg(lineId,ctx){
 let _calMap=null;
 function calMap(){ if(_calMap) return _calMap; const m={}; A(DB.shiftCal).forEach(r=>{ m[r.lineId+'|'+r.date]=String(r.shifts??'').split(',').filter(Boolean).map(Number); }); return _calMap=m; }
 function dayShifts(lineId,ds,ctx){
+  if(isAreaRef(lineId)){ const st=new Set(); areaLineIds(lineId.slice(1)).forEach(id=>dayShifts(id,ds,ctx).forEach(n=>st.add(+n))); return [...st].sort(); }
   if(!(ctx&&ctx.lineShifts&&A(ctx.lineShifts[lineId]).length)){ const o=calMap()[lineId+'|'+ds]; if(o) return o; }
   const c=lineCfg(lineId,ctx); return c.days.includes(pd(ds).getDay())?c.shifts:[];
 }
@@ -3150,11 +3154,11 @@ function factSegs(lineId,a,b){
   return out;
 }
 // персонал смены и проверка квалификации
-function shiftCrew(lineId,d,n,all){ const c=DB.roster.filter(r=>r.date===d&&(r.lineId===lineId||r.alt===lineId)&&+r.shift===+n).map(r=>byId(DB.people,r.staffId)).filter(Boolean); return all?c:c.filter(p=>personCat(p)==='op'); }
+function shiftCrew(lineId,d,n,all){ const c=DB.roster.filter(r=>r.date===d&&+r.shift===+n&&!r.absence&&r.lineId&&(r.lineId===lineId||(lineId!=='*'&&rosterLines(r).includes(lineId)))).map(r=>byId(DB.people,r.staffId)).filter(Boolean); return all?c:c.filter(p=>personCat(p)==='op'); }
 // линии с общей бригадой операторов (Coating Old ↔ Coating New, K1 ↔ K2) — задаются в карточке линии, связь взаимная
 const lineMates = id => { const s=new Set(A(byId(DB.lines,id)?.crewWith)); DB.lines.forEach(x=>{ if(A(x.crewWith).includes(id)) s.add(x.id); }); s.delete(id); return [...s].filter(x=>byId(DB.lines,x)); };
-const rosterLines = r => r.alt?[r.lineId,r.alt]:[r.lineId];
-const rosterLbl = r => r.lineId==='*'?'Цех':lineShort(byId(DB.lines,r.lineId))+(r.alt?'/'+lineShort(byId(DB.lines,r.alt)):'');
+const rosterLines = r => isAreaRef(r.lineId)?areaLineIds(r.lineId.slice(1)):r.alt?[r.lineId,r.alt]:[r.lineId];
+const rosterLbl = r => r.lineId==='*'?'Цех':isAreaRef(r.lineId)?areaName(r.lineId.slice(1)):lineShort(byId(DB.lines,r.lineId))+(r.alt?'/'+lineShort(byId(DB.lines,r.alt)):'');
 // когда линия реально требует людей: наладка и наработка (паузы/обед — нет)
 function lineDemandSegs(lineId,a,b){ const res=[]; DB.plan.filter(i=>i.lineId===lineId&&!isChange(i)).forEach(it=>itemSegs(it,LIVE).forEach(([sa,sb,k])=>{ if(k!=='r'&&k!=='s') return; const u=Math.max(sa,a), v=Math.min(sb,b); if(v>u) res.push([u,v,k,it]); })); return res; }
 const _crewMemo={t:0,m:{}}; function crewMemo(k,f){ const now=Date.now(); if(now-_crewMemo.t>800){ _crewMemo.t=now; _crewMemo.m={}; } return k in _crewMemo.m?_crewMemo.m[k]:(_crewMemo.m[k]=f()); }
@@ -3162,7 +3166,7 @@ const tq = (u,v) => hhmm(u)+'–'+hhmm(v);
 // распределение операторов смены по времени: «строго K1» работают только на K1, «K1/K2» — там, где в этот момент нужнее.
 // Квалификация: Senior закрывает Operator и Junior, Operator закрывает Junior; Junior вместо Operator — нехватка.
 function crewAlloc(d,n,lineId){ return crewMemo('ca|'+d+'|'+n+'|'+lineId,()=>{
-  const ops=DB.roster.filter(r=>r.date===d&&+r.shift===+n&&!r.absence&&r.lineId&&r.lineId!=='*').map(r=>({r,p:byId(DB.people,r.staffId)})).filter(x=>x.p&&personCat(x.p)==='op').map(x=>({...x,lines:rosterLines(x.r)}));
+  const ops=DB.roster.filter(r=>r.date===d&&+r.shift===+n&&!r.absence&&r.lineId&&r.lineId!=='*').map(r=>({r,p:byId(DB.people,r.staffId)})).filter(x=>x.p&&personCat(x.p)!=='handler').map(x=>({...x,lines:rosterLines(x.r)}));
   const comp=new Set([lineId]); for(let g=true;g;){ g=false; ops.forEach(o=>{ if(o.lines.length>1&&o.lines.some(x=>comp.has(x))) o.lines.forEach(x=>{ if(!comp.has(x)){ comp.add(x); g=true; } }); }); }
   const people=ops.filter(o=>o.lines.some(x=>comp.has(x))), [sa,sb]=shiftWindow(d,n,lineId), segs={}, bp=new Set([sa,sb]);
   comp.forEach(id=>{ segs[id]=lineDemandSegs(id,sa,sb); segs[id].forEach(x=>{ bp.add(x[0]); bp.add(x[1]); }); });
@@ -3189,11 +3193,11 @@ function handlerShop(a,b){ return crewMemo('hs|'+a+'|'+b,()=>{
   const peak=Math.max(0,...segs.map(x=>x.need)), have=Math.max(0,...segs.map(x=>x.have));
   return {segs,peak,have,short:segs.filter(x=>x.need>x.have),hs}; }); }
 function shiftQual(l,d,n,sa,sb){
-  const pl=shiftPlan(l.id,sa,sb), others=shiftCrew(l.id,d,n,true).filter(p=>personCat(p)!=='op'), area=lineArea(l), ca=crewAlloc(d,n,l.id);
-  const mine=ca.people.filter(o=>o.lines.includes(l.id)), crew=mine.map(o=>o.p);
+  const area=lineArea(l), ca=crewAlloc(d,n,l.id);
+  const pl=shiftPlan(l.id,sa,sb), mine=ca.people.filter(o=>o.lines.includes(l.id)), crew=mine.map(o=>o.p), others=shiftCrew(l.id,d,n,true).filter(p=>!crew.includes(p));
   const oTip=others.length?'<br><b>Handler / лаборатория</b><br>'+others.map(s=>esc(s.name)+' — '+esc(s.position||'')).join('<br>'):'';
   const where=o=>{ if(o.lines.length<2) return ''; const hr=[]; ca.out.filter(x=>x.asg[l.id]?.includes(o)).forEach(x=>{ const z=hr[hr.length-1]; if(z&&x.u-z.v<=60*60e3&&!ca.out.some(y=>y.u>=z.v&&y.v<=x.u&&o.lines.some(id=>id!==l.id&&y.asg[id]?.includes(o)))) z.v=x.v; else hr.push({u:x.u,v:x.v}); }); const here=hr; return ` · <i>${esc(rosterLbl(o.r))}</i>${here.length?': здесь '+here.map(x=>tq(x.u,x.v)).join(', '):Object.keys(ca.out.find(x=>x.dem[l.id])?.dem||{}).length?': занят на другой линии':''}`; };
-  const crewTip=mine.map(o=>`${esc(o.p.name)} — ${esc(o.p.position||'')} · ${o.p.qual?.[area]||'без квалиф.'}${where(o)}`).join('<br>')||'никого';
+  const crewTip=mine.map(o=>`${esc(o.p.name)} — ${esc(o.p.position||'')}${personCat(o.p)!=='op'?' <b>(подмена)</b>':''} · ${o.p.qual?.[area]||'без квалиф.'}${where(o)}`).join('<br>')||'никого';
   if(area==='none') return {crew,best:0,need:[],lacks:[],empty:false,tip:`<b>Персонал смены</b><br>${crewTip}<br><span style="opacity:.7">участок без проверки квалификации</span>${oTip}`,others};
   const best=Math.max(0,...crew.map(s=>qRank(s.qual?.[area])));
   const need=[]; pl.forEach(x=>{ const p=byId(DB.projects,x.it.projectId); if(!p) return; const o=projOpFor(p,l.id); if(x.setup>0&&o.qualSetup) need.push({w:'наладка',p,q:o.qualSetup}); if(x.run>0&&o.qualRun) need.push({w:'массовое пр-во',p,q:o.qualRun}); if(+o.operators>1) need.push({w:'операторов',p,q:o.operators+' чел.'}); if(+o.handlers) need.push({w:'Handler (цех)',p,q:o.handlers+' чел.'}); });
@@ -3865,9 +3869,18 @@ function exportCSV(){
 // ═════════════════════════════════════════════
 //  PEOPLE — персонал, квалификация и график работы
 // ═════════════════════════════════════════════
+// направления сотрудников (вместо бригад) — фиксированный список в «Настройках»
+const DEF_DIRS=[{id:'coating',name:'Coating'},{id:'printing',name:'Printing'},{id:'handler',name:'Handler'},{id:'lab',name:'Лаборатория'},{id:'tech',name:'Технологи'}];
+const dirs = () => { const d=A(DB.settings?.dirs).filter(x=>x&&x.id&&x.name); return d.length?d:DEF_DIRS; };
+const personDir = p => { if(p?.dir&&dirs().some(d=>d.id===p.dir)) return p.dir; const ds=dirs(), has=id=>ds.some(d=>d.id===id)?id:'';
+  const c=personCat(p); if(c==='handler') return has('handler'); if(c==='lab') return /технолог/i.test(p?.position||'')?has('tech'):has('lab');
+  const l=DB.lines.find(x=>p?.team&&lineShort(x)===String(p.team).split('-')[0]); if(l&&has(lineArea(l))) return lineArea(l);
+  const q=p?.qual||{}; return qRank(q.printing)>qRank(q.coating)?has('printing'):has('coating'); };
+const dirName = id => dirs().find(d=>d.id===id)?.name||'Без направления';
+const dirRank = id => { const i=dirs().findIndex(d=>d.id===id); return i<0?999:i; };
 const teamRank=t=>{ if(!t) return 999; const i=DB.lines.findIndex(l=>lineShort(l)===String(t).split('-')[0]); return i>=0?i:500; };
 const pBest=p=>Math.max(0,...Object.values(p.qual||{}).map(qRank));
-const personSort=(a,b)=>PCATS.findIndex(c=>c.id===personCat(a))-PCATS.findIndex(c=>c.id===personCat(b))||teamRank(a.team)-teamRank(b.team)||String(a.team||'').localeCompare(String(b.team||''),'ru',{numeric:true})||pBest(b)-pBest(a)||a.name.localeCompare(b.name);
+const personSort=(a,b)=>PCATS.findIndex(c=>c.id===personCat(a))-PCATS.findIndex(c=>c.id===personCat(b))||dirRank(personDir(a))-dirRank(personDir(b))||teamRank(a.team)-teamRank(b.team)||String(a.team||'').localeCompare(String(b.team||''),'ru',{numeric:true})||pBest(b)-pBest(a)||a.name.localeCompare(b.name);
 const POSITIONS=['Оператор линии','Наладчик','Мастер смены','Handler','Подсобный рабочий','Лаборант','Контролёр ОТК','Технолог'];
 const PCATS=[{id:'op',name:'Операторы'},{id:'handler',name:'Handler'},{id:'lab',name:'Лаборатория'}];
 const personCat = p => p?.cat || (/handler|подсоб|упаков|грузч|вспомог/i.test(p?.position||'')?'handler':/лаборант|лаборат|отк|контрол|технолог/i.test(p?.position||'')?'lab':'op');
@@ -3886,11 +3899,13 @@ function renderPeople(){
   const tab=state.peopleTab||'roster', ce=can('edit');
   const tabs=`<div class="seg">${[['roster','График работы'],['list','Сотрудники']].map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="state.peopleTab='${k}';render()">${l}</button>`).join('')}</div>`;
   if(tab==='list'){
-    const ps=DB.people.slice().sort((a,b)=>(a.active===false)-(b.active===false)||personSort(a,b));
+    const ps=DB.people.slice().sort((a,b)=>dirRank(personDir(a))-dirRank(personDir(b))||(a.active===false)-(b.active===false)||personSort(a,b));
+    const NC=7+areas().length;
     $('#content').innerHTML=`<div class="toolbar">${tabs}<span class="muted" style="font-weight:600">${ps.filter(p=>p.active!==false).length} работают</span><div class="sp"></div>${ce?`<button class="btn btn-p" onclick="openPerson()">+ Сотрудник</button>`:''}</div>
-    <div class="card">${ps.length?`<div class="tw flush"><table><tr><th>Бригада</th><th>ФИО</th><th>Категория</th><th>Должность</th><th>Доступ в программу</th>${areas().map(a=>`<th>${esc(a.name)}</th>`).join('')}<th class="num">Смен за 30 дней</th><th>Заметка</th></tr>
+    <div class="card">${ps.length?`<div class="tw flush"><table><tr><th>Направление</th><th>ФИО</th><th>Категория</th><th>Должность</th><th>Доступ в программу</th>${areas().map(a=>`<th>${esc(a.name)}</th>`).join('')}<th class="num">Смен за 30 дней</th><th>Заметка</th></tr>
     ${ps.map(p=>{ const n=DB.roster.filter(r=>r.staffId===p.id&&r.date<=iso(new Date())&&r.date>iso(addD(new Date(),-30))).length;
-      return `<tr class="${ce?'click':''}" style="${p.active===false?'opacity:.5':''}" ${ce?`onclick="openPerson('${p.id}')"`:''}><td>${p.team?`<span class="tag t-blue">${esc(p.team)}</span>`:'<span class="muted">—</span>'}</td><td><b>${esc(p.name)}</b>${p.active===false?' <span class="tag t-gray">не работает</span>':''}</td><td>${esc(PCATS.find(c=>c.id===personCat(p))?.name||'')}</td><td>${esc(p.position||'')}</td><td>${(()=>{ const m=DB.members.find(x=>x.personId===p.id); return m?`<span class="tag ${m.active===false?'t-gray':'t-blue'}">${esc(m.login)} · ${esc(ROLES[m.role]?.n||m.role)}</span>`:'<span class="muted">—</span>'; })()}</td>${areas().map(a=>`<td>${qTag(p.qual?.[a.id])}</td>`).join('')}<td class="num">${n||'—'}</td><td class="muted">${esc(p.note||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Персонал ещё не заведён</div>'}</div>
+      const k=ps.indexOf(p), grp=k===0||personDir(ps[k-1])!==personDir(p)?`<tr class="rs-grp"><td colspan="${NC}" style="background:var(--card2);padding:7px 10px"><b>${esc(dirName(personDir(p)))}</b> <span class="muted">· ${ps.filter(x=>personDir(x)===personDir(p)&&x.active!==false).length} чел.</span></td></tr>`:'';
+      return grp+`<tr class="${ce?'click':''}" style="${p.active===false?'opacity:.5':''}" ${ce?`onclick="openPerson('${p.id}')"`:''}><td><span class="tag t-blue">${esc(dirName(personDir(p)))}</span></td><td><b>${esc(p.name)}</b>${p.active===false?' <span class="tag t-gray">не работает</span>':''}</td><td>${esc(PCATS.find(c=>c.id===personCat(p))?.name||'')}</td><td>${esc(p.position||'')}</td><td>${(()=>{ const m=DB.members.find(x=>x.personId===p.id); return m?`<span class="tag ${m.active===false?'t-gray':'t-blue'}">${esc(m.login)} · ${esc(ROLES[m.role]?.n||m.role)}</span>`:'<span class="muted">—</span>'; })()}</td>${areas().map(a=>`<td>${qTag(p.qual?.[a.id])}</td>`).join('')}<td class="num">${n||'—'}</td><td class="muted">${esc(p.note||'')}</td></tr>`; }).join('')}</table></div>`:'<div class="empty">Персонал ещё не заведён</div>'}</div>
     <div class="hint" style="margin-top:10px">Квалификация (Junior / Operator / Senior) задаётся отдельно для каждого участка (${esc(areas().map(a=>a.name).join(', '))}); список участков — в «Настройках». Участок линии указывается в разделе «Линии», требования — в карточке проекта.</div>`;
     return;
   }
@@ -3913,15 +3928,16 @@ function renderPeople(){
   const ncols=cols.filter(c=>!c.sum).length*NS+cols.filter(c=>c.sum).length+1;
   const head2=lab=>`<tr><th rowspan="2" style="position:sticky;left:0;z-index:2">${lab}</th>${cols.map(c=>{ if(c.sum) return sumHead(c).replace('<th ','<th rowspan="2" '); const d=c.d, dt=pd(d), we=[0,6].includes(dt.getDay()); return `<th colspan="${NS}" class="c rs-d0 ${d===td?'rs-td':''}" style="${we?'color:var(--red)':''}">${WD[(dt.getDay()+6)%7]}<br>${dt.getDate()}.${String(dt.getMonth()+1).padStart(2,'0')}</th>`; }).join('')}</tr>
     <tr class="rs-sub">${cols.filter(c=>!c.sum).map(c=>SL.map((x,k)=>`<th class="c ${k?'rs-dn':'rs-d0'} ${c.d===td?'rs-td':''}">${x}</th>`).join('')).join('')}</tr>`;
-  const rows=ps.map((p,i)=>(i===0||personCat(ps[i-1])!==personCat(p)?`<tr class="rs-grp"><td colspan="${ncols}"><b>${esc(PCATS.find(c=>c.id===personCat(p))?.name||'')}</b> <span class="muted">· ${ps.filter(x=>personCat(x)===personCat(p)).length} чел.</span></td></tr>`:'')+`<tr><td class="rs-name ${p.team&&ps[ps.indexOf(p)-1]?.team!==p.team?'rs-team':''}"><b>${p.team?`<span class="tag t-blue" style="margin-right:4px">${esc(p.team)}</span>`:''}${esc(p.name)}</b><small>${esc(p.position||'')}${areas().map(a=>p.qual?.[a.id]?` · ${esc(a.name.split(/\s+/)[0])}:${p.qual[a.id][0]}`:'').join('')}</small></td>${cols.map(c=>{
+  const rows=ps.map((p,i)=>(i===0||personCat(ps[i-1])!==personCat(p)?`<tr class="rs-grp"><td colspan="${ncols}"><b>${esc(PCATS.find(c=>c.id===personCat(p))?.name||'')}</b> <span class="muted">· ${ps.filter(x=>personCat(x)===personCat(p)).length} чел.</span></td></tr>`:'')+`<tr><td class="rs-name ${ps[ps.indexOf(p)-1]&&personCat(ps[ps.indexOf(p)-1])===personCat(p)&&personDir(ps[ps.indexOf(p)-1])!==personDir(p)?'rs-team':''}"><b><span class="tag t-blue" style="margin-right:4px">${esc(dirName(personDir(p)))}</span>${esc(p.name)}</b><small>${esc(p.position||'')}${areas().map(a=>p.qual?.[a.id]?` · ${esc(a.name.split(/\s+/)[0])}:${p.qual[a.id][0]}`:'').join('')}</small></td>${cols.map(c=>{
       if(c.sum){ const h=rosterHours(p.id,c.days); return `<td class="rs-c rs-sum" data-tip="${esc(p.name)} · ${mName(c.sum)}<br>Смен по графику: ${h.n}<br>Часов к оплате: ${Q(h.paid,1)} (смена минус обед)<br>Из них ночных: ${Q(h.night,1)}">${h.n?`<b>${Q(h.paid,0)} ч</b><small>${h.n} см · ночь ${Q(h.night,0)}</small>`:'<span class="muted">—</span>'}</td>`; }
       const d=c.d, r=rmap[d+'|'+p.id], v=r?(r.absence?'abs|'+r.absence:r.lineId+'|'+r.shift):'', tdc=d===td?'rs-td':'';
       const absOpts=Object.entries(ABS).map(([k,n])=>`<option value="abs|${k}" ${v==='abs|'+k?'selected':''}>${k} · ${n}</option>`).join('');
       if(r&&r.absence){ const ac=absColor(r.absence), opt2=ABS[r.absence]?absOpts:absOpts+`<option value="abs|${esc(r.absence)}" selected>${esc(r.absence)} · ${esc(absName(r.absence))}</option>`;
         return `<td class="rs-c abs rs-d0 ${tdc}" colspan="${NS}" title="${esc(absName(r.absence))}">${ce?`<select style="background:${ac};color:${txtOn(ac)}" onchange="setRoster('${d}','${p.id}',this.value)"><option value="">—</option>${opt2}</select>`:`<span class="tag" style="background:${ac};color:${txtOn(ac)}">${esc(r.absence)}</span>`}</td>`; }
       return Array.from({length:NS},(_,k)=>{ const n=k+1, mine=r&&+r.shift===n, sl=slots(d).filter(x=>+x.n===n), cur=mine?r.lineId+(r.alt?'+'+r.alt:'')+'|'+n:'';
-        const lbl=mine?esc(rosterLbl(r)):'', isOp=personCat(p)==='op', combos=isOp?sl.filter(x=>x.l.id!=='*').flatMap(({l})=>lineMates(l.id).filter(m=>DB.lines.indexOf(byId(DB.lines,m))>DB.lines.indexOf(l)&&sl.some(y=>y.l.id===m)).map(m=>({v:l.id+'+'+m,t:lineShort(l)+'/'+lineShort(byId(DB.lines,m))}))):[];
-        return `<td class="rs-c ${mine?'on':''} ${mine&&r.alt?'flex':''} ${k?'rs-dn':'rs-d0'} ${tdc}">${ce?`<select title="${SL[k]}-смена" onchange="setRoster('${d}','${p.id}',this.value,${n},${mine?1:0})"><option value="">—</option>${sl.map(({l,off})=>`<option value="${l.id}|${n}" ${cur===l.id+'|'+n?'selected':''}>${esc(lineShort(l))}${off?' · линия не по графику':''}</option>`).join('')}${combos.map(c=>`<option value="${c.v}|${n}" ${cur===c.v+'|'+n?'selected':''}>${esc(c.t)} · переход</option>`).join('')}${mine&&!sl.some(({l})=>cur===l.id+'|'+n)&&!combos.some(c=>cur===c.v+'|'+n)?`<option value="${cur}" selected>${lbl} ⚠</option>`:''}${k===0?absOpts:''}</select>`:(lbl||'—')}</td>`; }).join(''); }).join('')}</tr>`).join('');
+        const arOpts=areas().filter(a=>areaLineIds(a.id).length>1&&areaLineIds(a.id).some(id=>dayShifts(id,d,LIVE).includes(n))).map(a=>({v:'@'+a.id,t:a.name}));
+        const lbl=mine?esc(rosterLbl(r)):'', isOp=personCat(p)!=='handler', combos=isOp?sl.filter(x=>x.l.id!=='*').flatMap(({l})=>lineMates(l.id).filter(m=>DB.lines.indexOf(byId(DB.lines,m))>DB.lines.indexOf(l)&&sl.some(y=>y.l.id===m)).map(m=>({v:l.id+'+'+m,t:lineShort(l)+'/'+lineShort(byId(DB.lines,m))}))):[];
+        return `<td class="rs-c ${mine?'on':''} ${mine&&(r.alt||isAreaRef(r.lineId))?'flex':''} ${k?'rs-dn':'rs-d0'} ${tdc}">${ce?`<select title="${SL[k]}-смена" onchange="setRoster('${d}','${p.id}',this.value,${n},${mine?1:0})"><option value="">—</option>${arOpts.map(c=>`<option value="${c.v}|${n}" ${cur===c.v+'|'+n?'selected':''}>${esc(c.t)}</option>`).join('')}${sl.map(({l,off})=>`<option value="${l.id}|${n}" ${cur===l.id+'|'+n?'selected':''}>${esc(lineShort(l))}${off?' · линия не по графику':''}</option>`).join('')}${combos.map(c=>`<option value="${c.v}|${n}" ${cur===c.v+'|'+n?'selected':''}>${esc(c.t)} · переход</option>`).join('')}${mine&&!sl.some(({l})=>cur===l.id+'|'+n)&&!combos.some(c=>cur===c.v+'|'+n)&&!arOpts.some(c=>cur===c.v+'|'+n)?`<option value="${cur}" selected>${lbl} ⚠</option>`:''}${k===0?absOpts:''}</select>`:(lbl||'—')}</td>`; }).join(''); }).join('')}</tr>`).join('');
   // покрытие: по каждой линии/смене — сколько людей и хватает ли квалификации под план
   // покрытие: одна строка на линию, в каждом дне — по ячейке на смену (2 при 12-часовой схеме, 3 при 8-часовой)
   const cover=DB.lines.map(l=>{ const defs=lineShiftDefs(l.id), two=defs.length===2;
@@ -3930,7 +3946,7 @@ function renderPeople(){
       return `<td class="rs-c rs-cov ${d===td?'rs-td':''}"><div class="cv">${defs.map(s=>{ const lab=two?(s.n===1?'Д':'Н'):s.n;
         if(!ws.includes(+s.n)) return `<span class="cv-s off" title="${s.n}-я смена ${s.from}–${s.to}: не работает"><i>${lab}</i>—</span>`;
         const [sa,sb]=shiftWindow(d,s.n,l.id), q0=shiftQual(l,d,s.n,sa,sb), q={...q0,lacks:q0.lacks.filter(x=>x.k!=='h')}, bad=q.lacks.length||(q.need.length&&!q.crew.length)||(shiftPlan(l.id,sa,sb).length&&!q.crew.length);
-        return `<span class="cv-s ${bad?'bad':q.crew.length?'ok':''}" data-tip="<b>${s.n}-я смена ${s.from}–${s.to}</b><br>${q.tip.replace(/"/g,'&quot;')}${q.lacks.length?'<br><b style=&quot;color:#e5484d&quot;>Не хватает: '+q.lacks.map(x=>x.w+' — '+x.q).join(', ')+'</b>':''}"><i>${lab}${q.best?' · '+QUALS[q.best-1][0]:''}${bad?' ⚠':''}</i>${q.crew.length?q.crew.map(p=>{ const rr=DB.roster.find(r=>r.date===d&&r.staffId===p.id); return `<b>${esc(surname(p))}${rr?.alt?` <small style="opacity:.7">${esc(rosterLbl(rr))}</small>`:''}</b>`; }).join(''):'<b>—</b>'}${q.others.length?`<em>+${q.others.filter(p=>personCat(p)==='handler').length?q.others.filter(p=>personCat(p)==='handler').length+' H':''}${q.others.filter(p=>personCat(p)==='lab').length?' '+q.others.filter(p=>personCat(p)==='lab').length+' Лаб':''}</em>`:''}</span>`; }).join('')}</div></td>`; }).join('')}</tr>`; }).join('');
+        return `<span class="cv-s ${bad?'bad':q.crew.length?'ok':''}" data-tip="<b>${s.n}-я смена ${s.from}–${s.to}</b><br>${q.tip.replace(/"/g,'&quot;')}${q.lacks.length?'<br><b style=&quot;color:#e5484d&quot;>Не хватает: '+q.lacks.map(x=>x.w+' — '+x.q).join(', ')+'</b>':''}"><i>${lab}${q.best?' · '+QUALS[q.best-1][0]:''}${bad?' ⚠':''}</i>${q.crew.length?q.crew.map(p=>{ const rr=DB.roster.find(r=>r.date===d&&r.staffId===p.id); return `<b>${esc(surname(p))}${rr&&(rr.alt||isAreaRef(rr.lineId))?` <small style="opacity:.7">${esc(rosterLbl(rr))}</small>`:''}</b>`; }).join(''):'<b>—</b>'}${q.others.length?`<em>+${q.others.filter(p=>personCat(p)==='handler').length?q.others.filter(p=>personCat(p)==='handler').length+' H':''}${q.others.filter(p=>personCat(p)==='lab').length?' '+q.others.filter(p=>personCat(p)==='lab').length+' Лаб':''}</em>`:''}</span>`; }).join('')}</div></td>`; }).join('')}</tr>`; }).join('');
   const gdefs=lineShiftDefs('*'), gtwo=gdefs.length===2;
   const coverShop=`<tr><td class="rs-name"><b>Handler — весь цех</b><small>есть в смене / пик потребности всех линий</small></td>${cols.map(c=>{ if(c.sum) return '<td class="rs-c rs-sum"></td>'; const d=c.d;
       return `<td class="rs-c rs-cov ${d===td?'rs-td':''}"><div class="cv">${gdefs.map(s=>{ const lab=gtwo?(s.n===1?'Д':'Н'):s.n, [a,b]=shiftWindow(d,s.n,'*'), h=handlerShop(a,b), lb=shiftCrew('*',d,s.n,true).filter(p=>personCat(p)!=='handler'), bad=h.short.length;
@@ -3961,10 +3977,10 @@ function shiftPay(r){
   return {len,paid,night:Math.min(night,paid)};
 }
 function rosterHours(sid,days){ const set=new Set(days); let n=0,paid=0,night=0; DB.roster.forEach(r=>{ if(r.staffId!==sid||!set.has(r.date)||r.absence||!r.lineId) return; const x=shiftPay(r); n++; paid+=x.paid; night+=x.night; }); return {n,paid,night}; }
-function shiftClosed(r){ return DB.output.some(o=>o.date===r.date&&(r.lineId==='*'||o.lineId===r.lineId)&&+o.shift===+r.shift&&o.approved!==false); }
+function shiftClosed(r){ const ls=r.lineId==='*'?null:rosterLines(r); return DB.output.some(o=>o.date===r.date&&(!ls||ls.includes(o.lineId))&&+o.shift===+r.shift&&o.approved!==false); }
 function rosterFact(sid,days){ const set=new Set(days), now=Date.now(); let n=0,paid=0,night=0,open=0,planN=0; const abs=[], openList=[];
   DB.roster.forEach(r=>{ if(r.staffId!==sid||!set.has(r.date)) return; if(r.absence){ abs.push(r.absence); return; } if(!r.lineId) return; planN++;
-    if(shiftClosed(r)){ const x=shiftPay(r); n++; paid+=x.paid; night+=x.night; } else if(shiftWindow(r.date,r.shift,r.lineId)[1]<=now){ open++; openList.push(`${fdate(r.date)} ${esc(lineShort(byId(DB.lines,r.lineId)))}·${r.shift}`); } });
+    if(shiftClosed(r)){ const x=shiftPay(r); n++; paid+=x.paid; night+=x.night; } else if(shiftWindow(r.date,r.shift,r.lineId)[1]<=now){ open++; openList.push(`${fdate(r.date)} ${esc(rosterLbl(r))}·${r.shift}`); } });
   return {n,paid,night,open,openList,planN,abs}; }
 async function setRoster(d,sid,v,n,mine){
   const id=fbKey(d+'_'+sid);
@@ -3988,12 +4004,12 @@ function openPerson(id){
   modal(id?'Сотрудник':'Новый сотрудник',`<div class="fg"><label class="fl">ФИО</label><input class="fi" name="name" value="${esc(p.name)}" autofocus></div>
     <div class="fg"><label class="fl">Категория в графике</label><select class="fi" name="cat">${PCATS.map(c=>`<option value="${c.id}" ${personCat(p)===c.id?'selected':''}>${c.name}</option>`).join('')}</select></div>
     <div class="fg"><label class="fl">Должность</label><input class="fi" name="position" list="posList" value="${esc(p.position||'')}"><datalist id="posList">${POSITIONS.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
-    <div class="fg"><label class="fl">Бригада</label><input class="fi" name="team" list="teamList" value="${esc(p.team||'')}" placeholder="например C1-A"><datalist id="teamList">${[...new Set(DB.people.map(x=>x.team).filter(Boolean))].sort().map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
+    <div class="fg"><label class="fl">Направление <span class="muted" style="font-weight:500">(список — в «Настройках»)</span></label><select class="fi" name="dir">${dirs().map(d=>`<option value="${esc(d.id)}" ${personDir(p)===d.id?'selected':''}>${esc(d.name)}</option>`).join('')}</select></div>
     <div class="frow3">${areas().map(a=>`<div class="fg"><label class="fl">Квалификация · ${esc(a.name)}</label>${qs(a.id)}</div>`).join('')}</div>
     <div class="fg"><label class="fl">Заметка</label><input class="fi" name="note" value="${esc(p.note||'')}" placeholder="Допуски, ограничения…"></div>
     <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" name="active" ${p.active!==false?'checked':''}> Работает</label>`,
   async f=>{ if(!f.name.trim()){ toast('Укажите ФИО'); return false; }
-    await Store.put('people',{...(id?clone(p):{}),id:id||uid(),name:f.name.trim(),position:f.position.trim(),cat:f.cat||'op',team:(f.team||'').trim(),qual:Object.fromEntries([...Object.entries(p.qual||{}),...areas().map(a=>[a.id,f['q_'+a.id]||''])]),note:f.note,active:!!f.active}); },'Сохранить',
+    await Store.put('people',{...(id?clone(p):{}),id:id||uid(),name:f.name.trim(),position:f.position.trim(),cat:f.cat||'op',dir:f.dir||'',qual:Object.fromEntries([...Object.entries(p.qual||{}),...areas().map(a=>[a.id,f['q_'+a.id]||''])]),note:f.note,active:!!f.active}); },'Сохранить',
   id?`<button class="btn btn-d" type="button" onclick="if(confirm('Удалить сотрудника? Его смены в графике тоже удалятся.')){ closeModal(); Store.batch([{col:'people',id:'${id}',del:true},...DB.roster.filter(r=>r.staffId==='${id}').map(r=>({col:'roster',id:r.id,del:true}))]); }">Удалить</button>`:'');
 }
 
@@ -4106,6 +4122,8 @@ function renderSettings(){
     <div class="frow"><div class="fg"><label class="fl">Причины брака</label><textarea class="fi" id="sR" rows="7">${esc((s.defectReasons||[]).join('\n'))}</textarea></div>
     <div class="fg"><label class="fl">Причины простоев линии (для плана)</label><textarea class="fi" id="sDR" rows="7">${esc((s.downReasons||DEFAULT_SETTINGS.downReasons).join('\n'))}</textarea></div></div>
     <div class="fg"><label class="fl">Параметры машины для тех. отчёта</label><textarea class="fi" id="sM" rows="5">${esc((s.machineParams||[]).join('\n'))}</textarea></div></div>
+  <div class="card row-gap"><div class="card-h"><div class="card-t">Направления сотрудников</div><div class="card-s">группировка в списке сотрудников и графике</div><div class="sp"></div><button class="btn btn-s btn-sm" onclick="document.getElementById('dirL').insertAdjacentHTML('beforeend',dirRow({id:'',name:''}))">+ Направление</button></div>
+    <div id="dirL">${dirs().map(dirRow).join('')}</div><div class="hint" style="margin-top:6px">Например Coating, Printing, Handler, Лаборатория, Технологи. Направление выбирается в карточке сотрудника.</div></div>
   <div class="card row-gap"><div class="card-h"><div class="card-t">Отсутствия в графике работы</div><div class="card-s">код в ячейке, название, цвет</div><div class="sp"></div><button class="btn btn-s btn-sm" onclick="document.getElementById('absL').insertAdjacentHTML('beforeend',absRow({code:'',name:'',color:'#888888'}))">+ Тип</button></div>
     <div id="absL">${absTypes().map(absRow).join('')}</div><div class="hint" style="margin-top:6px">Код показывается в ячейке графика (например D, Day Off, NV, NH). Уже внесённые отметки сохраняют свой код.</div></div>
   <div class="card row-gap"><div class="card-h"><div class="card-t">Операции маршрута — справочник</div><div class="card-s">по одной в строке; в проекте можно вписать и свою</div></div>
@@ -4119,6 +4137,7 @@ function renderSettings(){
   <div style="position:sticky;bottom:12px;margin-top:14px;display:flex;justify-content:flex-end"><button class="btn btn-p" style="box-shadow:0 6px 20px rgba(226,70,44,.35)" onclick="saveSettings()">Сохранить настройки</button></div>`;
   scRenumAll();
 }
+const dirRow=d=>`<div class="dir-row" data-id="${esc(d.id||'')}" style="display:flex;gap:6px;margin-bottom:6px;align-items:center"><input class="fi dir-n" style="flex:1" value="${esc(d.name)}" placeholder="название направления"><span class="muted" style="font-size:12px;min-width:60px">${d.id?DB.people.filter(p=>personDir(p)===d.id).length+' чел.':''}</span><button class="btn btn-s btn-sm" type="button" onclick="this.parentNode.remove()">✕</button></div>`;
 const absRow=a=>`<div class="act-row abs-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center"><input class="fi abs-c" style="width:90px" value="${esc(a.code)}" placeholder="код"><input class="fi abs-n" style="flex:1" value="${esc(a.name)}" placeholder="название"><input class="fi abs-col" type="color" style="width:46px;height:38px;padding:3px" value="${a.color||'#888888'}"><button class="btn btn-s btn-sm" type="button" onclick="this.parentNode.remove()">✕</button></div>`;
 function scRenumAll(){ document.querySelectorAll('.scheme').forEach(scRenum); }
 async function saveSettings(){
@@ -4130,7 +4149,7 @@ async function saveSettings(){
   const activities=[...document.querySelectorAll('.act-row:not(.area-row):not(.abs-row)')].map(r=>({id:r.dataset.id||('a'+uid()),name:r.querySelector('.act-n').value.trim(),cat:r.querySelector('.act-c').value})).filter(a=>a.name);
   if(!activities.some(a=>a.cat==='work')) return toast('Нужен хотя бы один вид с категорией «Работа»');
   const s={...DB.settings,orgName:$('#sOrg').value.trim(),currency:$('#sCur').value,planFactor:+$('#sK').value||.85,setupTarget:+$('#sSet').value||5,defectTarget:+$('#sDef').value||2,
-    workDays:[...document.querySelectorAll('.sWD:checked')].map(x=>+x.value),payBreakMin:+String($('#sPayBrk').value).replace(',','.')||0,nightFrom:$('#sNf').value||'22:00',nightTo:$('#sNt').value||'06:00',defectReasons:lines('#sR'),downReasons:lines('#sDR'),machineParams:lines('#sM'),shiftSchemes:schemes,activities,areas:areasL,opNames:lines('#sOps'),absTypes:[...document.querySelectorAll('.abs-row')].map(r=>({code:r.querySelector('.abs-c').value.trim(),name:r.querySelector('.abs-n').value.trim(),color:r.querySelector('.abs-col').value})).filter(a=>a.code),projTabs:Object.fromEntries(PTABS.map(t=>[t.id,Object.fromEntries([...document.querySelectorAll('.ptm-s[data-t="'+t.id+'"]')].map(x=>[x.dataset.r,x.value]))]))};
+    workDays:[...document.querySelectorAll('.sWD:checked')].map(x=>+x.value),payBreakMin:+String($('#sPayBrk').value).replace(',','.')||0,nightFrom:$('#sNf').value||'22:00',nightTo:$('#sNt').value||'06:00',defectReasons:lines('#sR'),downReasons:lines('#sDR'),machineParams:lines('#sM'),shiftSchemes:schemes,activities,areas:areasL,opNames:lines('#sOps'),dirs:[...document.querySelectorAll('.dir-row')].map(r=>({id:r.dataset.id||('d'+uid()),name:r.querySelector('.dir-n').value.trim()})).filter(d=>d.name),absTypes:[...document.querySelectorAll('.abs-row')].map(r=>({code:r.querySelector('.abs-c').value.trim(),name:r.querySelector('.abs-n').value.trim(),color:r.querySelector('.abs-col').value})).filter(a=>a.code),projTabs:Object.fromEntries(PTABS.map(t=>[t.id,Object.fromEntries([...document.querySelectorAll('.ptm-s[data-t="'+t.id+'"]')].map(x=>[x.dataset.r,x.value]))]))};
   delete s.shifts;
   await Store.settings(s); toast('Настройки сохранены');
 }
