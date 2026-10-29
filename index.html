@@ -1454,14 +1454,20 @@ async function saveSemi(){
 // ═════════════════════════════════════════════
 const PSTATUS=['Разработка','Активный','Архив'];
 function renderProjects(){
-  const q=state.q.toLowerCase();
-  const list=DB.projects.filter(p=>!q||(p.name+' '+(p.client||'')).toLowerCase().includes(q)).sort((a,b)=>(a.status==='Архив')-(b.status==='Архив')||a.name.localeCompare(b.name));
-  $('#content').innerHTML=`<div class="toolbar">${searchBox('Поиск проекта или клиента')}<span class="muted" style="font-weight:600">${DB.projects.filter(p=>p.status==='Активный').length} активных · ${DB.projects.length} всего</span><div class="sp"></div>${canOrder()?`<button class="btn btn-p" onclick="openProject()">+ Новый проект</button>`:''}</div>
-  <div class="card">${list.length?`<div class="tw flush"><table><tr><th>Проект</th><th>Линия</th><th>Станции (последовательность)</th><th class="num">Скорость</th><th class="num">Наладка</th>${ptView('cost')?'<th class="num">Себест. / 1000 шт</th>':''}<th>Маршрут</th><th>Готовность</th><th>Последняя наработка</th><th>Статус</th></tr>
+  const q=state.q.toLowerCase().trim(), st=state.prSt||'all', so=state.prSort||{k:'name',d:1};
+  const hay=p=>[p.name,p.client,lineName(p.lineId),p.status,p.tareId?rawName(p.tareId):'',...A(p.ops).map(o=>o.name+' '+opLines(o).map(lineShort).join(' ')),...DB.orders.filter(o=>o.projectId===p.id).map(o=>[o.no,o.salesOrder,o.artNo,o.visualNo].join(' '))].join(' ').toLowerCase();
+  const val={name:p=>p.name.toLowerCase(),line:p=>lineName(p.lineId),speed:p=>+p.speed||0,setup:p=>+p.setupMin||0,cost:p=>projectCost1000(p)||0,ready:p=>{ const r=projReady(p); return r?r.ok/(r.total||1):0; },last:p=>{ const lr=lastRun(p.id); return lr?(lr.dateTo||lr.dateFrom||''):''; },status:p=>PSTATUS.indexOf(p.status)};
+  const cmp=(a,b)=>{ const x=val[so.k](a), y=val[so.k](b); return (typeof x==='number'?x-y:String(x).localeCompare(String(y),'ru',{numeric:true}))*so.d; };
+  const list=DB.projects.filter(p=>(st==='all'?p.status!=='Архив':p.status===st)&&(!q||q.split(/\s+/).every(w=>hay(p).includes(w)))).sort((a,b)=>cmp(a,b)||a.name.localeCompare(b.name));
+  const th=(k,t,cls='')=>`<th class="${cls}" style="cursor:pointer;user-select:none;white-space:nowrap" onclick="state.prSort={k:'${k}',d:(state.prSort?.k==='${k}'?-(state.prSort.d):1)};render()" title="Сортировать">${t}${so.k===k?(so.d>0?' ▲':' ▼'):''}</th>`;
+  const cnt=k=>DB.projects.filter(p=>k==='all'?p.status!=='Архив':p.status===k).length;
+  const seg=`<div class="seg">${[['all','Все рабочие'],...PSTATUS.map(x=>[x,x])].map(([k,l])=>`<button class="${st===k?'on':''}" onclick="state.prSt='${k}';render()">${l} <span class="muted">${cnt(k)}</span></button>`).join('')}</div>`;
+  $('#content').innerHTML=`<div class="toolbar">${searchBox('Поиск: проект, клиент, заказ, SO, артикул, операция, линия')}${seg}<span class="muted" style="font-weight:600">найдено ${list.length}</span><div class="sp"></div>${canOrder()?`<button class="btn btn-p" onclick="openProject()">+ Новый проект</button>`:''}</div>
+  <div class="card">${list.length?`<div class="tw flush"><table><tr>${th('name','Проект')}${th('line','Линия')}<th>Станции (последовательность)</th>${th('speed','Скорость','num')}${th('setup','Наладка','num')}${ptView('cost')?th('cost','Себест. / 1000 шт','num'):''}<th>Маршрут</th>${th('ready','Готовность')}${th('last','Последняя наработка')}${th('status','Статус')}</tr>
   ${list.map(p=>{ const lr=lastRun(p.id); return `<tr class="click" onclick="openProject('${p.id}')"><td><div style="display:flex;gap:10px;align-items:center">${projThumb(p,38)}<div><b>${esc(p.name)}</b><div class="muted" style="font-size:12px">${esc(p.client||'')}${p.tareId?' · '+esc(rawName(p.tareId)):''}</div></div></div></td>
-    <td>${esc(lineName(p.lineId))}</td><td>${stationDots(p)} <span class="muted" style="font-size:12px">${A(p.stations).length}</span></td><td class="num">${N(p.speed)} шт/мин</td><td class="num">${N(p.setupMin)} мин</td>${ptView('cost')?`<td class="num">${money(projectCost1000(p))}</td>`:''}<td style="font-size:12px;max-width:220px">${A(p.ops).length?A(p.ops).map(o=>esc(o.name)).join(' → '):'<span class="muted">—</span>'}</td><td>${readyTag(p)}</td>
+    <td>${esc(lineName(p.lineId))}</td><td>${stationDots(p)} <span class="muted" style="font-size:12px">${A(p.stations).length}</span></td><td class="num">${N(p.speed)} шт/мин</td><td class="num">${N(p.setupMin)} мин</td>${ptView('cost')?`<td class="num">${money(projectCost1000(p))}</td>`:''}<td style="font-size:12px;min-width:220px;max-width:320px;white-space:normal;line-height:1.35">${A(p.ops).length?A(p.ops).map(o=>esc(o.name)).join(' → '):'<span class="muted">—</span>'}</td><td>${readyTag(p)}</td>
     <td>${lr?fdate(lr.dateTo||lr.dateFrom)+' · '+esc(lineName(lr.lineId)):'<span class="muted">—</span>'}</td><td><span class="tag ${p.status==='Активный'?'t-green':p.status==='Архив'?'t-gray':'t-blue'}">${esc(p.status||'')}</span></td></tr>`; }).join('')}
-  </table></div>`:'<div class="empty">Проектов пока нет</div>'}</div>`;
+  </table></div>`:`<div class="empty">${DB.projects.length?'Ничего не найдено — измените поиск или фильтр':'Проектов пока нет'}</div>`}</div>`;
 }
 const blankStation = () => ({semiId:'',norm:'',visc:'',press:'',nozzle:'',note:''});
 function openProject(id){
