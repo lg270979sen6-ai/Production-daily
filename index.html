@@ -1012,10 +1012,15 @@ function renderDashboard(){
     return `<div class="hb"><div class="hb-top"><b>${esc(l.name)}</b><span>${N(g)} шт · ${P(pct,0)}</span></div><div class="track"><div class="fill" style="width:${Math.min(pct,100)}%;background:${pct>=100?'var(--green)':pct>=85?'var(--brand)':'var(--amber)'}"></div></div></div>`;
   }).join('')||'<div class="empty">Нет линий</div>';
   // сегодня по действующему плану
-  const d0=new Date(); d0.setHours(0,0,0,0); const t0=d0.getTime(), t1=t0+864e5, now=Date.now();
-  const today=DB.plan.filter(it=>itemStart(it)<t1&&endMs(it)>t0).sort((a,b)=>itemStart(a)-itemStart(b));
-  const todayRows=today.map(it=>{ const p=byId(DB.projects,it.projectId), a=itemStart(it), b=endMs(it), pr=Math.max(0,Math.min(1,(now-a)/(b-a)));
-    return `<div class="hb"><div class="hb-top"><b><span class="sw" style="background:${pColor(p)}"></span>${esc(p?.name||'—')}${projQNotes(p)?` <span class="tag t-amber" data-tip="${esc(projQNotes(p)).replace(/\n/g,'<br>')}">⚠ качество</span>`:''}</b><span>${esc(lineName(it.lineId))} · ${fdt(a)} → ${fdt(b)}</span></div><div class="track"><div class="fill" style="width:${pr*100}%;background:${pColor(p)}"></div></div></div>`; }).join('');
+  // «сегодня» = производственные сутки: от начала 1-й смены (например 07:00) до начала 1-й смены завтра — как колонки Д+Н на доске
+  const now=Date.now(), refL=DB.lines[0]?.id; let t0=refL?shiftWindow(iso(new Date()),1,refL)[0]:new Date().setHours(0,0,0,0); if(now<t0) t0-=864e5; const t1=t0+864e5;
+  const todayIt=DB.plan.filter(it=>!isChange(it)&&itemStart(it)<t1&&endMs(it)>t0);
+  const grp={}; todayIt.forEach(it=>{ const k=it.orderId||('—'+it.projectId); (grp[k]=grp[k]||[]).push(it); });
+  const todayRows=Object.entries(grp).map(([k,its])=>({k,its,a:Math.min(...its.map(i=>itemStart(i))),b:Math.max(...its.map(i=>endMs(i)))})).sort((x,y)=>x.a-y.a).map(({k,its,a,b})=>{
+    const it0=its[0], p=byId(DB.projects,it0.projectId), o=byId(DB.orders,it0.orderId), pr=Math.max(0,Math.min(1,(now-a)/(b-a)));
+    const ops=its.slice().sort((x,y)=>itemStart(x)-itemStart(y)).map(it=>{ const op=it.opId?orderOps(o||{},p).find(x=>x.id===it.opId):null, run=itemStart(it)<=now&&endMs(it)>now;
+      return `<span style="white-space:nowrap;${run?'font-weight:700;color:var(--text)':''}">${esc(lineShort(byId(DB.lines,it.lineId)))}${op?' '+esc(op.name):''} ${hhmm(Math.max(itemStart(it),t0))}–${endMs(it)>t1?'дальше':hhmm(endMs(it))}${run?' ▶':''}</span>`; }).join(' · ');
+    return `<div class="hb"><div class="hb-top"><b><span class="sw" style="background:${pColor(p)}"></span>${o?esc(o.no)+' · ':''}${esc(p?.name||'—')}${projQNotes(p)?` <span class="tag t-amber" data-tip="${esc(projQNotes(p)).replace(/\n/g,'<br>')}">⚠ качество</span>`:''}</b><span>${fdt(a)} → ${fdt(b)}</span></div><div class="muted" style="font-size:12px;margin:2px 0 5px">${ops}</div><div class="track"><div class="fill" style="width:${pr*100}%;background:${pColor(p)}"></div></div></div>`; }).join('');
   const wd=Array(7).fill(0).map(()=>({s:0,days:new Set()}));
   recs.forEach(r=>{ const i=(pd(r.date).getDay()+6)%7; wd[i].s+=+r.good||0; wd[i].days.add(r.date); });
   const wavg=wd.map(x=>x.days.size?x.s/x.days.size:0), wmax=Math.max(1,...wavg);
@@ -1034,7 +1039,7 @@ function renderDashboard(){
     ${kpi('','Выработка за смену',N(m.perShift),'шт',delta(m.perShift,pm.perShift))}
   </div>
   <div class="grid g2 row-gap">
-    <div class="card"><div class="card-h"><div class="card-t">Сегодня по действующему плану</div><div class="sp"></div><button class="btn btn-s btn-sm" onclick="go('plan')">Открыть план</button></div>${todayRows||'<div class="empty">На сегодня в плане ничего нет</div>'}</div>
+    <div class="card"><div class="card-h"><div><div class="card-t">Сегодня по действующему плану</div><div class="card-s">${fdt(t0)} — ${fdt(t1)} · по заказам, ▶ — идёт сейчас</div></div><div class="sp"></div><button class="btn btn-s btn-sm" onclick="go('plan')">Открыть план</button></div>${todayRows||'<div class="empty">На сегодня в плане ничего нет</div>'}</div>
     <div class="card"><div class="card-h"><div class="card-t">Дефицит сырья</div><div class="sp"></div><button class="btn btn-s btn-sm" onclick="go('demand')">Потребность</button></div>${defRows||'<div class="empty">Сырья хватает на весь план</div>'}</div>
   </div>
   <div class="card row-gap">
@@ -1242,7 +1247,8 @@ async function odSave(){
       operator:od.operator,ts:Date.now(),by:state.me.id,approved:canApprove(),approvedBy:canApprove()?state.me.name:'',approvedAt:canApprove()?Date.now():0}});
   });
   oldRecs.filter(r=>!projs.includes(r.projectId)).forEach(r=>list.push({col:'output',id:r.id,del:true}));
-  await Store.batch(list); toast(canApprove()?'Отчёт за смену сохранён и подтверждён':'Отчёт за смену сохранён — ждёт проверки технолога');
+  await Store.batch(list); const ch=canApprove()?await factReline([od.lineId],list[0]?.obj):0;
+  toast(canApprove()?'Отчёт за смену сохранён и подтверждён'+(ch?` · план пересчитан, сдвинуто позиций: ${ch}`:''):'Отчёт за смену сохранён — ждёт проверки технолога');
 }
 async function odDelete(){ if(!confirm('Удалить отчёт за смену?')) return; const list=state.od.recs.map(id=>({col:'output',id,del:true})); closeModal(); await Store.batch(list); toast('Удалено'); }
 function miniTL(r){
@@ -3127,11 +3133,17 @@ function planGrid(days){
     }).join(''); }).join('');
   return `<div class="tw flush"><table class="sg"><tr><th rowspan="2">Дата</th><th rowspan="2">Линия</th>${heads}</tr><tr>${Array.from({length:nSh},()=>'<th>План</th><th>Факт</th>').join('')}</tr>${body}</table></div>`;
 }
+// после подтверждённого факта: остаток позиции планируется от конца отчётной смены, следующие проекты линии
+// и следующие операции заказов на других линиях сдвигаются (отстаём — позже, опережаем — раньше)
+async function factReline(lineIds,r){ if(!can('edit')) return 0; try{ _factMap=null; _sch.clear();
+  const ch=await qCommit(DB.plan.map(clone),lineIds,[],(w,c)=>{ const n=w.filter(x=>{ const o=byId(DB.plan,x.id); return o&&o.start!==x.start; }).length; return n?`Факт смены ${r?.date?fdate(r.date):''} ${lineIds.map(l=>lineShort(byId(DB.lines,l))).join(', ')}: план пересчитан по факту, сдвинуто позиций ${n}`:''; });
+  return ch.length; }catch(e){ console.warn(e); return 0; } }
 async function approveOutput(rid){
   if(!canApprove()) return toast('Подтверждает технолог');
   const rs=DB.output.filter(r=>(r.reportId||r.id)===rid); if(!rs.length) return;
   await Store.batch(rs.map(r=>({col:'output',obj:{...clone(r),approved:true,approvedBy:state.me.name,approvedAt:Date.now()}})));
-  toast('Отчёт смены подтверждён — факт в плане');
+  const ch=await factReline([...new Set(rs.map(r=>r.lineId))],rs[0]);
+  toast('Отчёт смены подтверждён — факт в плане'+(ch?` · план пересчитан, сдвинуто позиций: ${ch}`:''));
 }
 
 // ─── 3. график по дням: сутки 07 → 07, по каждой линии полоса плана и равноценная полоса факта
