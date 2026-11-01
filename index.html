@@ -2306,6 +2306,7 @@ function openLineModal(id){
     <div class="fg"><label class="fl">Рабочие дни</label><div style="display:flex;gap:6px;flex-wrap:wrap">${[1,2,3,4,5,6,0].map(x=>`<label class="chip ${wd.includes(x)?'on':''}" style="cursor:pointer"><input type="checkbox" name="d_${x}" style="display:none" ${wd.includes(x)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${DAYN[x]}</label>`).join('')}</div></div>
     <div class="frow"><div class="fg"><label class="fl">Мощность, шт/смену</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="cap" value="${l.cap}"><div class="hint" style="margin-top:4px">Для плана по умолчанию, пока месяц не утверждён.</div></div>
     <div class="fg"><label class="fl">Участок (для квалификации персонала)</label><select class="fi" name="area">${areas().map(a=>`<option value="${esc(a.id)}" ${lineArea(l)===a.id?'selected':''}>${esc(a.name)}</option>`).join('')}<option value="none" ${lineArea(l)==='none'?'selected':''}>— без проверки квалификации —</option></select><div class="hint" style="margin-top:4px">Список участков — в «Настройках».</div></div></div>
+    <div class="fg"><label style="display:flex;gap:8px;align-items:flex-start;font-size:13px"><input type="checkbox" name="fixedQueue" ${l.fixedQueue?'checked':''} style="margin-top:3px"><span><b>Фиксированная очередь</b> — порядок проектов на линии меняется только вручную (стрелками в очереди линии). Если следующая операция ещё не готова (охлаждение, маска), линия ждёт, а не переставляет проекты. Удобно для step 1 → step 2.</span></label></div>
     <div class="fg"><label class="fl">Стандартные паузы линии — учитываются в каждом проекте на этой линии</label>
       <div class="ex-head"><span>Что</span><span>Минут</span><span>Во сколько</span><span></span><span></span></div>
       <div id="lpRows">${A(l.pauses).map(lpRow).join('')}</div>
@@ -2319,7 +2320,7 @@ function openLineModal(id){
     if(id) for(const x of DB.lines.filter(x=>A(x.crewWith).includes(id)&&!crewWith.includes(x.id))) await Store.put('lines',{...x,crewWith:A(x.crewWith).filter(y=>y!==id)});
     const sc=shiftSchemes().find(x=>x.id===f.scheme)||shiftSchemes()[0], workShifts=A(sc.shifts).map((_,i)=>i+1).filter(n=>f['sh_'+n]), workDays=[0,1,2,3,4,5,6].filter(x=>f['d_'+x]);
     if(!workShifts.length||!workDays.length){ toast('Выберите хотя бы одну смену и один день'); return false; }
-    await Store.put('lines',{...(id?l:{}),id:id||uid(),name:f.name.trim(),type:f.type,stations:+f.stations||1,cap:+f.cap||0,shifts:workShifts.length,scheme:sc.id,workShifts,workDays,area:f.area,color:f.color||'',code:(f.code||'').trim(),kind:f.oven?'oven':'',crewWith,pauses});
+    await Store.put('lines',{...(id?l:{}),id:id||uid(),name:f.name.trim(),type:f.type,stations:+f.stations||1,cap:+f.cap||0,shifts:workShifts.length,scheme:sc.id,workShifts,workDays,area:f.area,color:f.color||'',code:(f.code||'').trim(),kind:f.oven?'oven':'',crewWith,pauses,fixedQueue:!!f.fixedQueue});
     if(id&&JSON.stringify(A(l.pauses))!==JSON.stringify(pauses)&&DB.plan.some(i=>i.lineId===id)){ _sch.clear(); await qCommit(DB.plan.map(clone),[id],[],`${lineName(id)}: стандартные паузы — ${pauses.map(e=>e.kind+' '+e.min+' мин'+(e.time?' в '+e.time:'')).join(', ')||'нет'}`); } });
 }
 function lineShiftChips(schemeId,active){ const sc=shiftSchemes().find(x=>x.id===schemeId)||shiftSchemes()[0];
@@ -2378,19 +2379,27 @@ const isoWeek=dt=>{ const d=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.
 function bdRange(){ const t=new Date(); if(!state.bdFrom) state.bdFrom=iso(addD(t,-3)); if(!state.bdTo) state.bdTo=iso(addD(t,17)); if(state.bdTo<state.bdFrom) state.bdTo=state.bdFrom;
   const days=[]; for(let d=pd(state.bdFrom); iso(d)<=state.bdTo&&days.length<62; d=addD(d,1)) days.push(iso(d)); return days; }
 // ▲▼ на доске: меняет приоритет заказов и порядок в очередях всех линий, где оба заказа ещё не начаты
+// порядок на доске = порядок в очередях линий: не начатые позиции заказов на каждой линии
+// выстраиваются по порядку заказов на доске (свободные места в очереди занимают в этом порядке)
+function alignQueues(work,rank){ const now=Date.now(), lines=new Set();
+  DB.lines.forEach(l=>{ if(l.fixedQueue) return; const li=work.filter(i=>i.lineId===l.id).sort((a,b)=>seqOf(a)-seqOf(b)||tms(a.start)-tms(b.start)); li.forEach((x,k)=>x.seq=k);
+    const free=li.filter(i=>!i.withId&&i.orderId&&rank.has(i.orderId)&&!hasOutputs(i)&&itemStart(byId(DB.plan,i.id)||i,LIVE)>now); if(free.length<2) return;
+    const slots=free.map(i=>i.seq), srt=free.slice().sort((a,b)=>rank.get(a.orderId)-rank.get(b.orderId)||a.seq-b.seq);
+    let ch=false; srt.forEach((it,k)=>{ if(it.seq!==slots[k]){ it.seq=slots[k]; ch=true; } });
+    if(ch){ li.filter(i=>i.withId).forEach(f=>{ const L=li.find(x=>x.id===f.withId); if(L) f.seq=L.seq+0.1; }); free.forEach(i=>{ if(i.notBefore&&i.pinNb==='') i.notBefore=''; }); lines.add(l.id); } });
+  return lines; }
 async function bdMove(oid,dir){ if(!can('edit')) return; const L=state._bdRows||[], k=L.indexOf(oid), j=k+dir; if(k<0||j<0||j>=L.length) return;
   const other=L[j], arr=L.slice(); [arr[k],arr[j]]=[arr[j],arr[k]]; const extra=[]; arr.forEach((id,i)=>{ const o=byId(DB.orders,id); if(o&&+o.prio!==i*10) extra.push({col:'orders',obj:{...clone(o),prio:i*10}}); });
-  const work=DB.plan.map(clone), lines=new Set(), moved=[];
-  DB.lines.forEach(l=>{ const li=work.filter(i=>i.lineId===l.id).sort((a,b)=>seqOf(a)-seqOf(b)), free=i=>!itemStarted(byId(DB.plan,i.id)||i);
-    const X=li.filter(i=>i.orderId===oid&&free(i)&&!i.withId), Y=li.filter(i=>i.orderId===other&&free(i)&&!i.withId); if(!X.length||!Y.length) return;
-    const need=dir<0?li.indexOf(X[0])>li.indexOf(Y[0]):li.indexOf(X[X.length-1])<li.indexOf(Y[Y.length-1]); if(!need) return;
-    const fol=li.filter(i=>i.withId&&X.some(x=>x.id===i.withId)), mv=[...X,...fol], rest=li.filter(i=>!mv.includes(i));
-    let at=dir<0?rest.indexOf(Y[0]):rest.indexOf(Y[Y.length-1])+1; while(dir>0&&rest[at]&&rest[at].withId&&Y.some(y=>y.id===rest[at].withId)) at++;
-    rest.splice(at,0,...mv); rest.forEach((it,i)=>{ it.seq=i; if(mv.includes(it)&&it.notBefore){ it.notBefore=''; } }); lines.add(l.id); moved.push(lineShort(l)); });
-  const a=byId(DB.orders,oid)?.no, b=byId(DB.orders,other)?.no;
-  if(lines.size) await qCommit(work,[...lines],extra,`Доска: заказ ${a} ${dir<0?'выше':'ниже'} ${b} — очереди ${moved.join(', ')} переставлены`);
+  const work=DB.plan.map(clone), rank=new Map(arr.map((id,i)=>[id,i])), lines=alignQueues(work,rank);
+  const a=byId(DB.orders,oid)?.no, b=byId(DB.orders,other)?.no, moved=[...lines].map(l=>lineShort(byId(DB.lines,l)));
+  if(lines.size) await qCommit(work,[...lines],extra,`Доска: заказ ${a} ${dir<0?'выше':'ниже'} ${b} — очереди ${moved.join(', ')} выстроены по доске`);
   else if(extra.length) await Store.batch(extra);
-  if(lines.size) toast(`Очереди переставлены: ${moved.join(', ')}`); }
+  if(lines.size) toast(`Очереди выстроены по доске: ${moved.join(', ')}`); }
+async function bdAlignAll(){ if(!can('edit')) return; const L=state._bdRows||[]; if(!L.length) return;
+  const extra=[]; L.forEach((id,i)=>{ const o=byId(DB.orders,id); if(o&&+o.prio!==i*10) extra.push({col:'orders',obj:{...clone(o),prio:i*10}}); });
+  const work=DB.plan.map(clone), lines=alignQueues(work,new Map(L.map((id,i)=>[id,i])));
+  if(lines.size){ await qCommit(work,[...lines],extra,`Доска: очереди линий ${[...lines].map(l=>lineShort(byId(DB.lines,l))).join(', ')} выстроены по порядку заказов`); toast('Очереди линий выстроены по доске'); }
+  else { if(extra.length) await Store.batch(extra); toast('Очереди уже совпадают с порядком на доске'); } }
 function bdToggle(oid){ state.bdOpen=state.bdOpen||{}; const cur=state.bdOpen[oid]!=null?state.bdOpen[oid]:(state.bdAll!==false&&!!state._bdAct?.has(oid)); state.bdOpen[oid]=!cur; render(); }
 function renderBoard(tabs){
   const days=bdRange(), ref=DB.lines[0]?.id, defs=lineShiftDefs(ref), NSb=defs.length, SLb=NSb===2?['Д','Н']:defs.map(s=>String(s.n)), now=Date.now(), td=iso(new Date());
@@ -2502,7 +2511,7 @@ function renderBoard(tabs){
       <input class="fi" style="width:200px" placeholder="Поиск: заказ, SO, проект, клиент" value="${esc(state.bdQ||'')}" onchange="state.bdQ=this.value;render()">
       <label class="chip ${showIdle?'on':''}" style="cursor:pointer"><input type="checkbox" style="display:none" ${showIdle?'checked':''} onchange="state.bdIdle=this.checked;render()">Открытые заказы без плана</label>
       <label class="chip ${state.bdAll!==false?'on':''}" style="cursor:pointer"><input type="checkbox" style="display:none" ${state.bdAll!==false?'checked':''} onchange="state.bdAll=this.checked;state.bdOpen={};render()">Операции по заказам</label>
-      <div class="sp"></div>${can('edit')?`<button class="btn btn-p" onclick="openOrderPlan()">+ Заказ в план</button>`:''}</div>
+      <div class="sp"></div>${can('edit')&&DB.plan.some(notStarted)?`<button class="btn btn-sm" style="background:var(--redBg);color:var(--red)" onclick="resetNotStarted('*')" title="Позиции, у которых время начала прошло, а отчётов смен нет — перенести на текущий момент (все линии)">⏭ Не стартовали (${DB.plan.filter(notStarted).length}) → на сейчас</button>`:''}${can('edit')?`<button class="btn btn-s" onclick="bdAlignAll()" title="Не начатые позиции на каждой линии встанут в порядке заказов на доске (сверху вниз)">⇅ Линии по доске</button><button class="btn btn-p" onclick="openOrderPlan()">+ Заказ в план</button>`:''}</div>
     <div class="toolbar" style="margin-top:-4px;gap:12px;flex-wrap:wrap">${legend}<span class="bd-leg"><span class="bd-cell" style="background:#888;width:22px;height:14px;display:inline-block"></span>впереди</span><span class="bd-leg"><span class="bd-cell past" style="background:#888;width:22px;height:14px;display:inline-block"></span>время прошло</span><span class="bd-leg"><span class="bd-cell miss" style="background:#888;width:22px;height:14px;display:inline-block"></span>прошло, отчёта нет</span><span class="bd-leg"><b>S</b> наладка · <b>У</b> упаковано · <b>О</b> отгружено · ⏱ выдержка · цифра — шт · ▸ / ▾ — операции заказа</span></div>
     <div class="card" style="padding:0;min-width:0"><div class="bd-wrap"><table class="bd" style="--np:${NP}%;table-layout:fixed;width:${642+cols.length*34}px"><colgroup>${[92,250,52,68,84,96].map(w=>`<col style="width:${w}px">`).join('')}${cols.map(()=>'<col style="width:34px">').join('')}</colgroup>${head}${rows||`<tr><td colspan="${cols.length+6}" class="empty">В периоде нет заказов</td></tr>`}<tr class="bd-sep" style="--lb:${nL*LH}px"><td class="bd-sepn" colspan="4">Линии</td><td colspan="${cols.length+2}"></td></tr>${lineRows}</table></div></div>
     <div class="hint" style="margin-top:8px">Доска собирается из плана и отчётов — вручную не раскрашивается. Цвет — линия (как в легенде); заштриховано — время смены уже прошло; красная рамка — смена прошла, а отчёта нет; в ячейке — факт, если смена закрыта, иначе план. Две линии в смену — ячейка делится по диагонали. Клик по заказу — карточка заказа, по ячейке — позиция плана.</div>`;
@@ -2906,7 +2915,7 @@ function planQueue(chk){
   const rows=DB.lines.map(l=>{
     const all=lineQueue(l.id), li=all.filter(i=>endMs(i,LIVE)>=from);
     const last=all[all.length-1];
-    const head=`<tr class="q-line"><td colspan="9"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:14px">${esc(l.name)}</b><span class="muted">${esc(shiftLabel(l.id,LIVE))}</span><span class="muted">· в очереди ${li.filter(i=>endMs(i,LIVE)>now).length}${last?` · линия занята до ${fdt(endMs(last,LIVE))}`:''}</span>${ce?`<button class="btn btn-s btn-sm" onclick="openOrderPlan(null,'${l.id}')">+ Заказ в эту линию</button>${isOven(l)&&ce?` <button class="btn btn-s btn-sm" onclick="openChange('${l.id}')">⚙ Перестройка печи</button>`:''}`:''}</div></td></tr>`;
+    const head=`<tr class="q-line"><td colspan="9"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:14px">${esc(l.name)}</b><span class="muted">${esc(shiftLabel(l.id,LIVE))}</span><span class="muted">· в очереди ${li.filter(i=>endMs(i,LIVE)>now).length}${last?` · линия занята до ${fdt(endMs(last,LIVE))}`:''}</span>${ce?`<button class="btn btn-s btn-sm" onclick="openOrderPlan(null,'${l.id}')">+ Заказ в эту линию</button>${isOven(l)&&ce?` <button class="btn btn-s btn-sm" onclick="openChange('${l.id}')">⚙ Перестройка печи</button>`:''}${all.some(notStarted)?` <button class="btn btn-sm" style="background:var(--redBg);color:var(--red)" onclick="resetNotStarted('${l.id}')" title="Позиции, у которых время начала прошло, а отчётов смен нет — перенести на текущий момент">⏭ Не стартовали (${all.filter(notStarted).length}) → на сейчас</button>`:''}${l.fixedQueue?' <span class="tag t-blue" title="порядок меняется только вручную">🔒 фикс. очередь</span>':''}`:''}</div></td></tr>`;
     const body=li.map(it=>{
       const k=all.indexOf(it), prev=all[k-1], next=all[k+1], p=byId(DB.projects,it.projectId), o=byId(DB.orders,it.orderId), a=itemStart(it,LIVE), e=endMs(it,LIVE), started=itemStarted(it);
       const canUp=ce&&!started&&prev&&!itemStarted(prev), canDn=ce&&!started&&next, ob=o?orderBal(o,it.lineId,it.opId):null;
@@ -3032,7 +3041,7 @@ function openQItem(id){
     const old=sched(it,LIVE);
     await qCommit(work,[it.lineId,r.lineId],[],(w,c)=>{ const x=w.find(i=>i.id===r.id), s=sched(x,c); return qiDiff(it,x)+` · окончание ${fdt(old.end)} → ${fdt(s.end)}`; });
     toast('План обновлён');
-  },ce?'Сохранить':'Закрыть',ce?`<button class="btn btn-d" type="button" onclick="delPlanItem('${id}')">🗑 Удалить</button> <button class="btn btn-s" type="button" onclick="openQSplit('${id}')">⏸ Остановить / разделить</button>`:'');
+  },ce?'Сохранить':'Закрыть',ce?`<button class="btn btn-d" type="button" onclick="delPlanItem('${id}')">🗑 Удалить</button> <button class="btn btn-s" type="button" onclick="openQSplit('${id}')">⏸ Остановить / разделить</button>${notStarted(it)?` <button class="btn btn-s" type="button" style="color:var(--red)" onclick="closeModal();resetNotStarted(null,'${id}')" title="Время начала прошло, отчётов смен нет">⏭ Не стартовал → на сейчас</button>`:''}`:'');
   $('#modalC').classList.add('wide');
   setTimeout(()=>{ qiOrd(); qiCalc(); },0);
 }
@@ -3074,7 +3083,22 @@ function qiDiff(o,n){
 }
 
 // ставит позицию в очередь линии по времени начала (среди ещё не начатых)
+// «Не стартовал → на сейчас»: позиции без единого отчёта смены, у которых время начала уже прошло
+const notStarted = it => !isChange(it)&&!hasOutputs(it)&&itemStart(it,LIVE)<Date.now()-15*60e3;
+async function resetNotStarted(lineId,id){ if(!can('edit')) return; const now=Date.now(), t=Math.ceil(now/300e3)*300e3;
+  const work=DB.plan.map(clone), sel=work.filter(i=>id?i.id===id:((lineId==='*'||i.lineId===lineId)&&byId(DB.plan,i.id)&&notStarted(byId(DB.plan,i.id)))).filter(i=>byId(DB.plan,i.id)&&notStarted(byId(DB.plan,i.id)));
+  if(!sel.length) return toast('Нет позиций, которые должны были начаться, но без отчётов смен');
+  const names=sel.map(i=>`${byId(DB.orders,i.orderId)?.no||projName(i.projectId)}`).join(', ');
+  if(!confirm(`Перенести на сейчас (${fdt(t)}) — не стартовали, отчётов смен нет:\n${names}\n\nПорядок в очереди сохранится, следующие проекты сдвинутся.`)) return;
+  const lines=new Set(sel.map(i=>i.lineId)); sel.forEach(i=>{ i.start=toDT(t); if(i.notBefore&&tms(i.notBefore)<t){ i.notBefore=''; i.pinNb=''; } });
+  // встают в очередь сразу после того, что сейчас реально идёт (есть отчёты или уже началось), в прежнем порядке
+  lines.forEach(l=>{ const li=work.filter(i=>i.lineId===l).sort((a,b)=>seqOf(a)-seqOf(b)||tms(a.start)-tms(b.start)); li.forEach((x,k)=>x.seq=k);
+    const mine=li.filter(i=>sel.includes(i)), anc=li.filter(i=>!sel.includes(i)&&!i.withId&&(hasOutputs(i)||itemStart(byId(DB.plan,i.id)||i,LIVE)<=now)).pop();
+    if(anc) mine.forEach((i,k)=>{ i.seq=anc.seq+0.001*(k+1); }); });
+  await qCommit(work,[...lines],[],`Не стартовали → перенесены на ${fdt(t)}: ${names}`); toast(`Перенесено позиций: ${sel.length}`); }
+const lineFixed = id => !!byId(DB.lines,id)?.fixedQueue;
 function placeByTime(work,w){
+  if(lineFixed(w.lineId)){ if(w.seq==null||!isFinite(+w.seq)){ const li=work.filter(x=>x.lineId===w.lineId&&x.id!==w.id); w.seq=li.length?Math.max(...li.map(seqOf))+1:0; } return; } // фиксированная очередь: позиция не переставляется, линия ждёт
   const li=work.filter(x=>x.lineId===w.lineId&&x.id!==w.id).sort((a,b)=>seqOf(a)-seqOf(b)||tms(a.start)-tms(b.start)); li.forEach((x,k)=>x.seq=k);
   const t=tms(w.notBefore||w.start), tgt=li.find(x=>{ const o=byId(DB.plan,x.id); return !(o&&itemStarted(o))&&(o?itemStart(o,LIVE):tms(x.start))>=t; });
   w.seq=tgt?tgt.seq-0.5:li.length;
