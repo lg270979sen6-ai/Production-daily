@@ -1586,7 +1586,7 @@ function renderProjectEdit(){
   if(state.draftSnap==null) state.draftSnap=JSON.stringify(d);
   $('#content').innerHTML=`<div class="toolbar ptb-sticky"><button class="btn btn-s" onclick="go('projects')">← Проекты</button>${projThumb(d,34)}<div class="card-t">${esc(d.name||'Новый проект')}</div>${d.id?`<span class="tag ${d.status==='Активный'?'t-green':'t-blue'}">${esc(d.status)}</span> ${readyTag(d)}`:''}<div class="sp"></div>
     ${d.id&&ptView('tech')?`<button class="btn btn-s" onclick="printProject('${d.id}')">🖨 Печать рецептуры</button>`:''}
-    ${anyEdit?`<span class="dirty-note" id="dirtyNote"></span><button class="btn btn-p" id="projSave" onclick="saveProject()">Сохранить</button>`:''}</div>
+    ${d.id&&can('admin')?`<button class="btn btn-d btn-sm" onclick="deleteProject('${d.id}')" title="Удалить проект полностью">🗑 Удалить</button>`:''}${anyEdit?`<span class="dirty-note" id="dirtyNote"></span><button class="btn btn-p" id="projSave" onclick="saveProject()">Сохранить</button>`:''}</div>
   <div style="margin-bottom:14px">${projTabBtns(d)}</div>${body}`;
   updDirty();
 }
@@ -1908,9 +1908,30 @@ function demoBottle(p,variant){
     return {data:c.toDataURL('image/jpeg',.8),thumb:t.toDataURL('image/jpeg',.72)}; }catch(e){ return null; }
 }
 
+// защита от дублей: одинаковое название (без учёта регистра, кавычек, лишних пробелов)
+const normName = s => String(s||'').toLowerCase().replace(/[«»"'`„“”]/g,'').replace(/\s+/g,' ').trim();
+const projDup = (name,id) => DB.projects.find(x=>x.id!==id&&normName(x.name)===normName(name));
+// полное удаление проекта со всем, что к нему привязано
+async function deleteProject(pid){
+  if(!can('admin')) return toast('Удалять проекты может администратор');
+  const p=byId(DB.projects,pid); if(!p) return;
+  const ords=DB.orders.filter(o=>o.projectId===pid), oids=new Set(ords.map(o=>o.id));
+  const plan=DB.plan.filter(i=>i.projectId===pid), outs=DB.output.filter(r=>r.projectId===pid), runs=DB.runs.filter(r=>r.projectId===pid);
+  const ops=DB.opLog.filter(r=>r.projectId===pid||oids.has(r.orderId)), moves=DB.moves.filter(m=>m.projectId===pid||oids.has(m.orderId)), tabs=DB.ptab.filter(t=>String(t.id).startsWith(pid+'__'));
+  const txt=`Удалить проект «${p.name}» полностью?\n\nВместе с ним удалится:\n• заказы: ${ords.length}\n• позиции плана: ${plan.length}\n• отчёты смен (выпуск): ${outs.length}\n• тех. отчёты: ${runs.length}\n• отметки операций и движения склада: ${ops.length+moves.length}\n• вкладки служб и визуалы\n\nОтменить будет нельзя.${outs.length?'\nПо проекту уже есть выпуск — если он нужен для отчётов, лучше поставить статус «Архив».':''}`;
+  if(!confirm(txt)) return;
+  if(outs.length||ords.length){ const v=prompt(`Для подтверждения введите название проекта:\n${p.name}`); if(normName(v)!==normName(p.name)) return toast('Название не совпало — проект не удалён'); }
+  const lines=[...new Set(plan.map(i=>i.lineId))];
+  const del=(col,arr)=>arr.map(x=>({col,id:x.id,del:true}));
+  await Store.batch([...del('plan',plan),...del('output',outs),...del('runs',runs),...del('opLog',ops),...del('moves',moves),...del('ptab',tabs),...del('orders',ords),{col:'projects',id:pid,del:true},logEntry(`Проект «${p.name}» удалён полностью (заказов ${ords.length}, позиций плана ${plan.length}, отчётов смен ${outs.length})`)]);
+  try{ if(state.mode==='fb') await fdb.ref(`${ROOT}/images/${pid}`).remove(); else if(DB.images) delete DB.images[pid]; }catch(e){ console.warn(e); }
+  if(lines.length){ try{ await qCommit(DB.plan.map(clone),lines,[],null); }catch(e){} }
+  state.draft=null; state.sec='projects'; render(); toast('Проект удалён');
+}
 async function saveProject(){
   const d=state.draft, coreOk=(can('edit')&&(ptEdit('main')||ptEdit('tech')))||(state.me.role==='sales'&&!d.id);
   if(coreOk&&!d.name.trim()) return toast('Введите название проекта');
+  if(coreOk){ const dup=projDup(d.name,d.id); if(dup){ if(confirm(`Проект «${dup.name}» уже есть${dup.client?' (клиент '+dup.client+')':''}, статус: ${dup.status||'—'}.\nДва проекта с одинаковым названием создавать нельзя — измените название.\n\nОткрыть существующий проект?`)) openProject(dup.id); return; } }
   if(!d.id&&!coreOk) return toast('Нет прав создавать проекты');
   const list=[]; let pid=d.id;
   if(coreOk){
