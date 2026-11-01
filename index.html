@@ -1632,7 +1632,7 @@ function pTabTech(d){
     return `<tr class="${main?'op-main':''}"><td><span class="stn">${i+1}</span></td>
     <td><input class="fi" list="opList" style="width:150px" value="${esc(o.name)}" ${ro?'disabled':''} oninput="OPV(${i},'name',this.value)" onchange="renderProjectEdit()" placeholder="операция">${main?'<div class="hint" style="margin:2px 0 0">основная линия → план</div>':''}</td>
     <td><select class="fi" style="width:140px" ${ro?'disabled':''} onchange="OPV(${i},'lineId',this.value);renderProjectEdit()">${opts(DB.lines,o.lineId,l=>l.name,'— без линии —')}</select>${A(o.altLines).length?`<div class="hint" style="margin:2px 0 0">или ${A(o.altLines).map(x=>esc(lineShort(byId(DB.lines,x)))).join(', ')}</div>`:''}</td>
-    ${nIn('waitH','ч',!!o.lineId,o.lineId?'выдержка задаётся у операции без линии (охлаждение)':'')}${nIn('defT','%')}
+    ${nIn('waitH','ч',!!o.lineId,o.lineId?'выдержка задаётся у операции без линии (охлаждение)':'')}${nIn('rateH','шт/ч',!!o.lineId,o.lineId?'скорость линии задаётся в деталях операции':'производительность ручной операции, шт/час')}${nIn('defT','%')}
     <td>${qSel(i,'qualSetup',o.qualSetup)}</td><td>${qSel(i,'qualRun',o.qualRun)}</td>
     ${nIn('operators','0')}${nIn('handlers','0')}
     <td style="white-space:nowrap">${ro?'':`<button class="btn btn-s btn-sm" onclick="opMove(${i},-1)">↑</button> <button class="btn btn-s btn-sm" onclick="opMove(${i},1)">↓</button> <button class="btn btn-s btn-sm" onclick="opDel(${i})">✕</button>`}</td></tr>`; }).join('');
@@ -1640,7 +1640,7 @@ function pTabTech(d){
   return `<div class="card row-gap"><div class="card-h"><div class="card-t">1. Маршрут операций и потребность в людях</div><div class="card-s">по порядку выполнения · ${tot.op} операторов и ${tot.h} Handler${sumT?` · сумма целей по браку ${Q(sumT,1)}%`:''}</div><div class="sp"></div>
     ${ro?'':`<button class="btn btn-s btn-sm" onclick="opRoute()" title="${esc(ROUTE_DEF.join(' → '))}">Типовой маршрут</button> <button class="btn btn-s btn-sm" onclick="opAdd('')">+ Операция</button>`}</div>
     <datalist id="opList">${opNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
-    <div class="tw ed opt"><table><tr><th>№</th><th>Операция</th><th>Линия</th><th title="для операции без линии: охлаждение, сушка — следующая операция на линии начинается не раньше">Выдержка<br>ч</th><th title="внутренняя цель по браку на этой стадии">Цель<br>брака, %</th><th>Наладка<br>уровень</th><th>Пр-во<br>уровень</th><th>Опера-<br>торов</th><th>Handler</th><th></th></tr>${opRows||'<tr><td colspan="10" class="empty">Операций нет — нажмите «Типовой маршрут» или «+ Операция»</td></tr>'}</table></div>
+    <div class="tw ed opt"><table><tr><th>№</th><th>Операция</th><th>Линия</th><th title="для операции без линии: охлаждение, сушка — следующая операция на линии начинается не раньше">Выдержка<br>ч</th><th title="для ручной операции без линии (поклейка маски, чистка горла, упаковка): сколько штук в час — по ней считается длительность и сдвигаются следующие операции">Произв.<br>шт/ч</th><th title="внутренняя цель по браку на этой стадии">Цель<br>брака, %</th><th>Наладка<br>уровень</th><th>Пр-во<br>уровень</th><th>Опера-<br>торов</th><th>Handler</th><th></th></tr>${opRows||'<tr><td colspan="11" class="empty">Операций нет — нажмите «Типовой маршрут» или «+ Операция»</td></tr>'}</table></div>
     <div class="hint" style="margin-top:8px">Здесь — порядок, линии, выдержки, цели по браку и люди. Ниже по каждой операции — детали: скорость, оснастка, комментарий для руководства, а для основных линий — рецептуры. Уровни и число людей сравниваются с графиком смен (⚠ в «Покрытии смен» и плане).</div></div>
   ${d.ops.map((o,i)=>opDetail(d,o,i,ro,showCost)).join('')}`;
 }
@@ -1936,7 +1936,7 @@ async function saveProject(){
   const list=[]; let pid=d.id;
   if(coreOk){
     const nz=v=>v===''||v==null?'':+String(v).replace(',','.')||0;
-    const ops=A(d.ops).filter(o=>(o.name||'').trim()).map(o=>({id:o.id||uid(),name:o.name.trim(),lineId:o.lineId||'',qualSetup:o.qualSetup||'',qualRun:o.qualRun||'',operators:nz(o.operators),handlers:nz(o.handlers),speed:o.lineId?nz(o.speed):'',setupMin:o.lineId?nz(o.setupMin):'',waitH:o.lineId?'':nz(o.waitH),defT:nz(o.defT),note:o.note||'',mgmtNote:o.mgmtNote||'',...(isOven(o.lineId)?{mode:o.mode||'',temp:nz(o.temp),group:(o.group||'').trim()}:{}),altLines:o.lineId?A(o.altLines).filter(x=>x!==o.lineId&&byId(DB.lines,x)):[],
+    const ops=A(d.ops).filter(o=>(o.name||'').trim()).map(o=>({id:o.id||uid(),name:o.name.trim(),lineId:o.lineId||'',qualSetup:o.qualSetup||'',qualRun:o.qualRun||'',operators:nz(o.operators),handlers:nz(o.handlers),speed:o.lineId?nz(o.speed):'',setupMin:o.lineId?nz(o.setupMin):'',waitH:o.lineId?'':nz(o.waitH),rateH:o.lineId?'':nz(o.rateH),defT:nz(o.defT),note:o.note||'',mgmtNote:o.mgmtNote||'',...(isOven(o.lineId)?{mode:o.mode||'',temp:nz(o.temp),group:(o.group||'').trim()}:{}),altLines:o.lineId?A(o.altLines).filter(x=>x!==o.lineId&&byId(DB.lines,x)):[],
       tooling:A(o.tooling).filter(t=>(t.type||'').trim()||+t.sets).map(t=>({type:(t.type||'').trim(),sets:nz(t.sets),note:t.note||''})),
       ...(isRecipeOp(o)&&A(o.recipes).length?{activeRecipe:o.activeRecipe||o.recipes[0].id,recipes:o.recipes.map(r=>({id:r.id,name:(r.name||'').trim()||'Рецептура',note:r.note||'',created:r.created||iso(new Date()),by:r.by||'',...(r.copiedFrom?{copiedFrom:r.copiedFrom}:{}),...(r.legacy?{legacy:true}:{}),
         stations:A(r.stations).map(st=>({semiId:st.semiId||'',norm:+String(st.norm).replace(',','.')||0,visc:st.visc||'',press:st.press||'',nozzle:st.nozzle||'',note:st.note||''}))}))}:{})}));
@@ -2411,6 +2411,11 @@ function renderBoard(tabs){
   const colLen=cols.length>1?cols[1].a-cols[0].a:12*H;
   // по каждой операции маршрута — ячейки: линия из плана/факта, выдержка — сдвиг, операции без линии — вслед за предыдущей, отгрузка — срок + факт склада
   function opCells(o,p){ const ops=orderOps(o,p), oid=o.id, out=[]; let basis=null, firstLine=null; const pend=[];
+    // окна операций без линии по реальному плану (выдержка, ручные операции с производительностью, ручная настройка в заказе)
+    const its0=DB.plan.filter(i=>i.orderId===oid&&!isChange(i)), Sst=(()=>{ try{ return orderStages(o).st; }catch(_){ return []; } })(), qt=ops.map((op,i)=>Sst[i]?.launch||o.qty), wins={};
+    { let s=null,e=null; ops.forEach((op,k)=>{ if(op.lineId){ const li=its0.filter(i=>itemOpIx(o,ops,i)===k); if(li.length){ s=Math.min(...li.map(i=>itemStart(i,LIVE))); e=Math.max(...li.map(i=>endMs(i,LIVE))); } else { s=e=null; } return; }
+      const r=opChain(o,ops,k,k+1,s,e,qt,(i,ws,we)=>{ wins[i]=[ws,we]; }); if(r){ s=r.s; e=r.e; } }); }
+    const spread=([ws,we],q)=>{ const m=new Map(), L=Math.max(we-ws,1); cols.forEach((c,ci)=>{ const ov=Math.min(c.b,Math.max(we,ws+1))-Math.max(c.a,ws); if(ov>0) m.set(ci,{plan:Math.round(q*ov/L),win:[ws,we]}); }); return m; };
     ops.forEach((op,i)=>{ const m=new Map();
       if(opIsShip(op)){ const di=cols.findIndex(c=>c.d===o.due); if(di>=0) m.set(di,{due:true}); cols.forEach((c,ci)=>{ if(ci%NSb) return; const q=ship[oid+'|'+c.d]; if(q){ const e=m.get(ci)||{}; e.fact=q; m.set(ci,e); } }); out.push({op,m,kind:'ship'}); return; }
       const set=opLineSet(op,o);
@@ -2424,8 +2429,8 @@ function renderBoard(tabs){
             const dn=ctxDowns(LIVE).find(x=>x.lineId===i.lineId&&tms(x.start)<c.b&&tms(x.end)>c.a); if(dn) return `${nm}: простой${dn.reason?' «'+dn.reason+'»':''}`; return `${nm}: пауза в позиции`; }))];
           const w=why.filter(Boolean); if(w.length) m.set(ci,{gap:w,it:sp[0]}); });
         basis=new Map([...m].filter(([ci,e])=>!e.gap).map(([ci,e])=>[ci,e.fact||e.plan])); if(!firstLine) firstLine=basis; out.push({op,m,kind:'line'}); pend.splice(0).forEach(x=>{ x.m=shiftM(basis,-1,x.op); }); return; }
-      if(opIsWait(op)){ const sh=Math.max(1,Math.ceil(+op.waitH*H/colLen)); const mm=basis?shiftM(basis,sh,op,true):new Map(); out.push({op,m:mm,kind:'wait'}); if(basis) basis=new Map([...mm].map(([ci,e])=>[ci,e.plan])); return; }
-      const row={op,m:new Map(),kind:'man'}; if(basis) row.m=shiftM(basis,0,op); else pend.push(row); out.push(row); });
+      if(opIsWait(op)&&!(o.mplan&&o.mplan[op.id])&&!(+op.rateH>0)){ const sh=Math.max(1,Math.ceil(+op.waitH*H/colLen)); const mm=basis?shiftM(basis,sh,op,true):new Map(); out.push({op,m:mm,kind:'wait'}); if(basis) basis=new Map([...mm].map(([ci,e])=>[ci,e.plan])); return; }
+      const row={op,m:new Map(),kind:'man'}; if(!opIsShip(op)&&wins[i]&&(+op.rateH>0||(o.mplan&&o.mplan[op.id])||opIsWait(op))) row.m=spread(wins[i],qt[i]); else if(basis) row.m=shiftM(basis,0,op); else pend.push(row); out.push(row); });
     // факт ручных операций (мастер, склад)
     out.forEach(r=>{ if(r.kind!=='man') return; cols.forEach((c,ci)=>{ const f=opF[oid+'|'+r.op.id+'|'+ci]; if(f){ const e=r.m.get(ci)||{}; e.fact=f.q; e.def=f.d; r.m.set(ci,e); } }); });
     return out; }
@@ -2460,7 +2465,7 @@ function renderBoard(tabs){
   const open=oid=>state.bdOpen[oid]!=null?state.bdOpen[oid]:(state.bdAll!==false&&activeSet.has(oid));
   const OPC=n=>/обжиг/i.test(n)?'#f4b183':/охлажд/i.test(n)?'#bfe3ff':/чистк/i.test(n)?'#98f5ed':/печ|запек/i.test(n)?'#f8cbad':/контрол|отк|лаб/i.test(n)?'#d8eb71':/упаков/i.test(n)?'#c189f7':/отгруз/i.test(n)?'#1d2433':'#d0d4dc';
   const opRowsHtml=(o,p)=>{ const S=orderStages(o).st; return opCells(o,p).map((r,k)=>{ const st=S[k], g=opProgress(r.op,o), pc=g.total?Math.min(100,g.done/g.total*100):0, col=r.kind==='line'?null:OPC(r.op.name);
-    return `<tr class="bd-op"><td class="bd-c bd-c1">${opIsWait(r.op)?'':`<div class="bd-opn" title="${esc(r.op.name)}: ${N(g.done)} из ${N(g.total)}"><span class="bd-hb ${pc>=100?'full':''}"><i style="width:${pc}%"></i></span><em class="bd-hp ${pc>=100?'full':pc>0?'part':''}">${Math.floor(pc)}%</em></div>`}</td><td class="bd-c bd-c2"><div class="bd-opn"><span class="bd-lsw" style="background:${col||lineColor(byId(DB.lines,r.op.lineId))}"></span><span class="bd-opt">${k+1}. ${esc(r.op.name)}${r.op.lineId?` <small style="display:inline">${esc(opLines(r.op).map(x=>lineShort(byId(DB.lines,x))).join('/'))}</small>`:''}${opIsWait(r.op)?` <small style="display:inline">⏱ ${Q(+r.op.waitH,1)} ч</small>`:''}</span></div></td>
+    return `<tr class="bd-op"><td class="bd-c bd-c1">${opIsWait(r.op)?'':`<div class="bd-opn" title="${esc(r.op.name)}: ${N(g.done)} из ${N(g.total)}"><span class="bd-hb ${pc>=100?'full':''}"><i style="width:${pc}%"></i></span><em class="bd-hp ${pc>=100?'full':pc>0?'part':''}">${Math.floor(pc)}%</em></div>`}</td><td class="bd-c bd-c2" ${!r.op.lineId&&!opIsShip(r.op)&&can('edit')?`onclick="openManOp('${o.id}','${r.op.id}')" style="cursor:pointer" title="Сдвинуть / изменить длительность"`:''}><div class="bd-opn"><span class="bd-lsw" style="background:${col||lineColor(byId(DB.lines,r.op.lineId))}"></span><span class="bd-opt">${k+1}. ${esc(r.op.name)}${r.op.lineId?` <small style="display:inline">${esc(opLines(r.op).map(x=>lineShort(byId(DB.lines,x))).join('/'))}</small>`:''}${opIsWait(r.op)?` <small style="display:inline">⏱ ${Q(+r.op.waitH,1)} ч</small>`:''}</span></div></td>
       <td class="bd-c bd-c3"><small>${st&&!opIsWait(r.op)&&!opIsShip(r.op)?'зап. '+short(st.launch):''}</small></td><td class="bd-c bd-c4">${r.kind==='line'&&!DB.plan.some(i=>i.orderId===o.id&&opLineSet(r.op,o)?.has(i.lineId))?'<small style="color:var(--amber)">не в плане</small>':''}</td><td class="bd-c bd-c5"><small>${+r.op.defT?'цель '+P(+r.op.defT,1):''}</small></td><td class="bd-c bd-c6"><small>${opIsWait(r.op)?'':`${short(g.done)} из ${short(g.total)}`}</small></td>
       ${cols.map((c,ci)=>{ const e=r.m.get(ci), cls=`bd-x ${ci%NSb?'':'bd-d0'}${!(ci%NSb)&&pd(c.d).getDay()===1?' bd-w0':''} ${c.d===td?'bd-td':''}${c===nowCol?' bd-now':''}`; if(!e) return `<td class="${cls}"></td>`;
         if(r.kind==='line'&&e.gap) return `<td class="${cls}" data-tip="${esc(r.op.name)} · ${c.d.split('-').reverse().join('.')} ${SLb[ci%NSb]}<br><b>Перерыв в работе</b><br>${e.gap.map(esc).join('<br>')}${can('edit')?'<br><span style=&quot;opacity:.7&quot;>включить смену — «Действующий план», клетка смены линии</span>':''}"><div class="bd-cell bd-gap">${e.gap.some(x=>/простой/.test(x))?'⛔':e.gap.some(x=>/выключена/.test(x))?'выкл':'пауза'}</div></td>`;
@@ -2468,7 +2473,7 @@ function renderBoard(tabs){
           return `<td class="${cls}" data-tip="${esc(r.op.name)} · ${c.d.split('-').reverse().join('.')} ${SLb[ci%NSb]}<br>план ${N(e.plan)}${e.fact?' · факт '+N(e.fact):e.past&&e.plan?' · отчёта нет':''}${A(e.pl).length?'<br>'+timesTip(e.pl).replace(/"/g,'&quot;'):''}" ${e.it&&can('edit')?`onclick="openQItem('${e.it.id}')" style="cursor:pointer"`:''}><div class="bd-cell ${c.b<=now?'past':''} ${e.past&&!done&&e.plan?'miss':''}" style="--bg:${lineColor(ls[0])};background:${bg};color:${txtOn(lineColor(ls[0]))}">${e.setup?'<i>S</i>':''}<b>${ls.map(l=>esc(lineShort(l))).join('+')}</b><small>${short(e.fact||e.plan)}</small>${spanBar(A(e.pl),c)}</div></td>`; }
         if(r.kind==='ship') return `<td class="${cls}" data-tip="${e.due?'срок отгрузки':''}${e.fact?'<br>отгружено '+N(e.fact):''}">${e.fact?`<div class="bd-cell fact" style="background:#1d2433;color:#fff"><b>О</b><small>${short(e.fact)}</small></div>`:''}${e.due?'<div class="bd-due">срок</div>':''}</td>`;
         const done=e.fact!=null, txt=r.kind==='wait'?'⏱':(done?short(e.fact):short(e.plan));
-        return `<td class="${cls}" data-tip="${esc(r.op.name)} · ${c.d.split('-').reverse().join('.')} ${SLb[ci%NSb]}<br>${r.kind==='wait'?'выдержка (охлаждение) партии':'ожидается ~'+N(e.plan||0)}${done?`<br><b>факт ${N(e.fact)}${e.def?' · брак '+N(e.def):''}</b>`:''}"><div class="bd-cell ${c.b<=now?'past':''}" style="--bg:${col};background:${col};color:${txtOn(col)}"><small>${txt}</small></div></td>`; }).join('')}</tr>`; }).join(''); };
+        return `<td class="${cls}" data-tip="${esc(r.op.name)} · ${c.d.split('-').reverse().join('.')} ${SLb[ci%NSb]}<br>${r.kind==='wait'?'выдержка (охлаждение) партии':'ожидается ~'+N(e.plan||0)}${e.win?`<br>${fdt(e.win[0])} → ${fdt(e.win[1])}`:''}${o.mplan&&o.mplan[r.op.id]?'<br><b>настроено вручную</b>':''}${done?`<br><b>факт ${N(e.fact)}${e.def?' · брак '+N(e.def):''}</b>`:''}${can('edit')&&!opIsShip(r.op)?'<br><span style=&quot;opacity:.7&quot;>нажмите — сдвинуть / изменить длительность</span>':''}" ${can('edit')&&!opIsShip(r.op)?`onclick="openManOp('${o.id}','${r.op.id}')" style="cursor:pointer"`:''}><div class="bd-cell ${c.b<=now?'past':''}" style="--bg:${col};background:${col};color:${txtOn(col)}"><small>${txt}</small></div></td>`; }).join('')}</tr>`; }).join(''); };
   const rows=rowsO.map(oid=>{ const o=byId(DB.orders,oid), p=byId(DB.projects,o?.projectId||oid.slice(1)); if(!p) return '';
     const dd=o?orderDefects(o):null, chkR=projReady(p), tech=projTechOk(p), late=o&&DB.plan.some(i=>i.orderId===o.id&&endMs(i,LIVE)>pd(o.due).getTime()+864e5);
     const sbits=o?orderStages(o):null, ops=o?orderOps(o,p):[];
@@ -2539,15 +2544,29 @@ function orderSeqFix(work,lineId){ const li=work.filter(i=>i.lineId===lineId).so
   Object.entries(byO).forEach(([oid,its])=>{ if(its.length<2) return; const o=byId(DB.orders,oid); if(!o) return; const ops=orderOps(o), slots=its.map(i=>i.seq), srt=its.slice().sort((a,b)=>(itemOpIx(o,ops,a)-itemOpIx(o,ops,b))||(a.seq-b.seq));
     srt.forEach((it,k)=>{ if(it.seq!==slots[k]){ it.seq=slots[k]; ch=true; } }); });
   return ch; }
+// операции без линии между операциями на линиях: выдержка (охлаждение), ручные (поклейка маски, чистка горла…)
+// с производительностью шт/ч, и ручная настройка в заказе (o.mplan[opId] = {nb: не раньше, hours: длительность})
+function manOpParams(o,op,qty){ const mp=(o&&o.mplan&&o.mplan[op.id])||{}, nb=mp.nb?tms(mp.nb):0;
+  const ovr=mp.hours!==''&&mp.hours!=null&&isFinite(+mp.hours); const dur=ovr?+mp.hours*H:(+op.rateH>0&&qty>0?qty/(+op.rateH)*H:0);
+  return {nb,dur,wait:!ovr&&!(+op.rateH>0)?(+op.waitH||0)*H:0,ovr}; }
+function opChain(o,ops,a,b,s,e,qtys,onWin){
+  for(let i=a;i<b;i++){ const op=ops[i]; if(op.lineId||opIsShip(op)) continue; const m=manOpParams(o,op,qtys?.[i]||o?.qty||0);
+    if(s==null){ if(!m.nb) continue; s=e=m.nb; }
+    const ws=Math.max(s,m.nb);
+    if(m.wait){ const we=Math.max(e,m.nb)+m.wait; onWin&&onWin(i,ws,we); s=ws+m.wait; e=we; }
+    else { const we=Math.max(e,ws+m.dur); onWin&&onWin(i,ws,we); s=ws; e=we; } }
+  return s==null?null:{s,e}; }
 function depPass(work,ctx){
   const changed=new Set(), byO={}; work.forEach(i=>{ if(i.orderId&&!isChange(i)) (byO[i.orderId]=byO[i.orderId]||[]).push(i); });
   Object.entries(byO).forEach(([oid,its])=>{ const o=byId(DB.orders,oid); if(!o) return; const ops=orderOps(o); if(ops.length<2) return;
-    const ix=it=>itemOpIx(o,ops,it);
+    const ix=it=>itemOpIx(o,ops,it); let qtys=null; try{ const S=orderStages(o).st; qtys=ops.map(op=>S.find(x=>x.op.id===op.id)?.launch||o.qty); }catch(_){ }
     its.forEach(B=>{ if(B.withId||hasOutputs(B)) return; const k=ix(B); if(k<0) return;
       if(B.pinNb===undefined) B.pinNb=/· запуск/.test(B.note||'')?'':(B.notBefore||'');
-      let need=0; if(k>0){ let j=k-1,W=0; while(j>=0&&!ops[j].lineId){ if(opIsWait(ops[j])) W+=+ops[j].waitH||0; j--; }
-        const prev=j>=0?its.filter(i=>i!==B&&ix(i)===j):[];
-        if(prev.length){ const aS=Math.min(...prev.map(i=>sched(i,ctx).start)), aE=Math.max(...prev.map(i=>sched(i,ctx).end)), sb=sched(B,ctx), dur=Math.max(0,sb.end-sb.start); need=Math.max(aS+W*H,aE+W*H-dur); } }
+      let need=0; if(k>0){ let j=k-1; while(j>=0&&!ops[j].lineId) j--;
+        const prev=j>=0?its.filter(i=>i!==B&&ix(i)===j):[]; let s=null,e=null;
+        if(prev.length){ s=Math.min(...prev.map(i=>sched(i,ctx).start)); e=Math.max(...prev.map(i=>sched(i,ctx).end)); }
+        const r=opChain(o,ops,j+1,k,s,e,qtys);
+        if(r){ const sb=sched(B,ctx), dur=Math.max(0,sb.end-sb.start); need=Math.max(r.s,r.e-dur); } }
       const nb=Math.max(B.pinNb?tms(B.pinNb):0,need), v=nb?toDT(nb):'';
       if((B.notBefore||'')!==v){ B.notBefore=v; if(v&&tms(B.start)<nb) B.start=v; changed.add(B.lineId); } }); });
   return changed;
@@ -2778,7 +2797,7 @@ async function oplSave(f){
 
 // ─── прогресс заказа по операциям маршрута проекта
 // маршрут заказа: собственная копия (фиксируется при первой правке маршрута в заказе или при постановке в план) либо текущая техкарта проекта
-const OPF=['id','name','lineId','altLines','mode','temp','group','waitH','defT','qualSetup','qualRun','operators','handlers','speed','setupMin','note','tooling','activeRecipe'];
+const OPF=['id','name','lineId','altLines','mode','temp','group','waitH','rateH','defT','qualSetup','qualRun','operators','handlers','speed','setupMin','note','tooling','activeRecipe'];
 const opSnap=op=>Object.fromEntries(OPF.filter(k=>op[k]!==undefined).map(k=>[k,clone(op[k])]));
 function orderRouteAll(o,p){ p=p||byId(DB.projects,o?.projectId); return A(o?.ops).length?A(o.ops):A(p?.ops); }
 function orderOps(o,p){ const skip=new Set(A(o?.skipOps)); return orderRouteAll(o,p).filter(x=>!skip.has(x.id)); }
@@ -3162,6 +3181,22 @@ function planGrid(days){
 }
 // после подтверждённого факта: остаток позиции планируется от конца отчётной смены, следующие проекты линии
 // и следующие операции заказов на других линиях сдвигаются (отстаём — позже, опережаем — раньше)
+// ручная настройка операции без линии в заказе: начать не раньше + длительность → следующие операции маршрута сдвигаются
+function openManOp(oid,opId){ if(!can('edit')) return; const o=byId(DB.orders,oid), p=byId(DB.projects,o?.projectId); if(!o) return;
+  const ops=orderOps(o,p), k=ops.findIndex(x=>x.id===opId), op=ops[k]; if(!op) return;
+  const S=(()=>{ try{ return orderStages(o).st; }catch(_){ return []; } })(), qty=S[k]?.launch||o.qty, mp=(o.mplan||{})[opId]||{}, def=manOpParams({},op,qty);
+  const defTxt=+op.rateH>0?`по технологии: ${N(op.rateH)} шт/ч × ${N(qty)} шт = ${Q(def.dur/H,1)} ч`:+op.waitH>0?`по технологии: выдержка ${Q(+op.waitH,1)} ч`:'в технологии не задана производительность — идёт потоком вместе с предыдущей операцией';
+  modal(`${esc(op.name)} · заказ ${esc(o.no)}`,`<div class="hint" style="margin:-4px 0 12px">${esc(p?.name||'')} · ${N(qty)} шт · ${defTxt}</div>
+    <div class="frow"><div class="fg"><label class="fl">Начать не раньше</label><input class="fi" type="datetime-local" name="nb" value="${esc(mp.nb||'')}"><div class="hint" style="margin-top:4px">Пусто — сразу, как будет готова предыдущая операция</div></div>
+    <div class="fg"><label class="fl">Длительность для этого заказа, ч</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="hours" value="${mp.hours??''}" placeholder="${Q(def.dur/H||+op.waitH||0,1)} — по технологии"><div class="hint" style="margin-top:4px">Пусто — по производительности из технологии</div></div></div>
+    <div class="note" style="background:var(--blueBg)">Следующие операции маршрута (например «Коатинг step 2») начнутся не раньше, чем будет готова эта, и сдвинутся в плане автоматически.</div>`,
+  async f=>{ const nb=f.nb||'', hours=String(f.hours||'').trim()===''?'':+String(f.hours).replace(',','.');
+    const mpl={...(o.mplan||{})}; if(!nb&&hours==='') delete mpl[opId]; else mpl[opId]={nb,hours};
+    await Store.batch([{col:'orders',obj:{...clone(o),mplan:mpl}}]);
+    const lines=[...new Set(DB.plan.filter(i=>i.orderId===oid).map(i=>i.lineId))];
+    if(lines.length) await qCommit(DB.plan.map(clone),lines,[],`Заказ ${o.no}: «${op.name}» — ${nb?'не раньше '+fdt(tms(nb)):'сразу после предыдущей'}${hours!==''?', '+hours+' ч':''}; следующие операции пересчитаны`);
+    toast('Сохранено — план пересчитан'); },'Сохранить',(o.mplan||{})[opId]?`<button class="btn btn-s" type="button" onclick="(async()=>{ const o=byId(DB.orders,'${oid}'), m={...(o.mplan||{})}; delete m['${opId}']; closeModal(); await Store.batch([{col:'orders',obj:{...clone(o),mplan:m}}]); const ls=[...new Set(DB.plan.filter(i=>i.orderId==='${oid}').map(i=>i.lineId))]; if(ls.length) await qCommit(DB.plan.map(clone),ls,[],null); toast('Ручная настройка снята'); })()">Сбросить к технологии</button>`:'');
+}
 async function factReline(lineIds,r){ if(!can('edit')) return 0; try{ _factMap=null; _sch.clear();
   const ch=await qCommit(DB.plan.map(clone),lineIds,[],(w,c)=>{ const n=w.filter(x=>{ const o=byId(DB.plan,x.id); return o&&o.start!==x.start; }).length; return n?`Факт смены ${r?.date?fdate(r.date):''} ${lineIds.map(l=>lineShort(byId(DB.lines,l))).join(', ')}: план пересчитан по факту, сдвинуто позиций ${n}`:''; });
   return ch.length; }catch(e){ console.warn(e); return 0; } }
