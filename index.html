@@ -2580,9 +2580,29 @@ function depPass(work,ctx){
       if((B.notBefore||'')!==v){ B.notBefore=v; if(v&&tms(B.start)<nb) B.start=v; changed.add(B.lineId); } }); });
   return changed;
 }
+// заполнение простоев: если первый по порядку проект ждёт предыдущую операцию (печь, коатинг, охлаждение),
+// а следующий готов и успевает закончить до этого времени — он встаёт раньше. Более важный по порядку проект при этом не задерживается.
+function backfill(work,lineId,ctx){ if(lineFixed(lineId)||isOven(lineId)) return false; const now=Date.now();
+  const li=work.filter(i=>i.lineId===lineId).sort((a,b)=>seqOf(a)-seqOf(b)||tms(a.start)-tms(b.start));
+  const isFree=i=>!i.withId&&!isChange(i)&&!hasOutputs(i)&&tms(i.start)>now-60e3;
+  const k0=li.findIndex(isFree); if(k0<0) return false; if(li.slice(k0).some(i=>!isFree(i)&&!i.withId)) return false;
+  const pre=li.slice(0,k0).filter(i=>!i.withId); let T=Math.max(now,...pre.map(i=>sched(i,ctx).end));
+  const F=li.slice(k0).filter(i=>!i.withId), out=[], nbOf=i=>i.notBefore?tms(i.notBefore):0;
+  const endAt=(i,t)=>{ const sv=i.start; i.start=toDT(t); const e=sched(i,ctx).end; i.start=sv; return e; };
+  while(F.length){ const f=F[0], n0=nbOf(f); let pick=f;
+    if(n0>T){ const x=F.slice(1).find(i=>nbOf(i)<=T&&endAt(i,T)<=n0); if(x) pick=x;
+      else { // все ждут: первым идёт тот, кто раньше освободится (при равенстве — кто раньше готов, потом по порядку)
+        const stAt=i=>{ const sv=i.start; i.start=toDT(Math.max(T,nbOf(i))); const r=sched(i,ctx).start; i.start=sv; return r; }, s0=stAt(f);
+        const y=F.slice(1).map(i=>({i,st:stAt(i)})).filter(z=>z.st<s0||(z.st===s0&&nbOf(z.i)<n0)).sort((a,b)=>a.st-b.st||nbOf(a.i)-nbOf(b.i))[0]; if(y) pick=y.i; } }
+    pick.start=toDT(Math.max(T,nbOf(pick))); T=sched(pick,ctx).end; out.push(pick); F.splice(F.indexOf(pick),1); }
+  const base=pre.length?seqOf(pre[pre.length-1])+1:0; let ch=false;
+  out.forEach((it,k)=>{ if(it.seq!==base+k){ it.seq=base+k; ch=true; } });
+  li.filter(i=>i.withId).forEach(f=>{ const L=li.find(x=>x.id===f.withId); if(L) f.seq=seqOf(L)+0.1; });
+  return ch; }
 async function qCommit(work,lineIds,extra=[],log){
-  const wctx={id:'tmp'+uid(),items:work}; [...new Set(lineIds)].forEach(l=>{ orderSeqFix(work,l); relineChain(work,l,wctx); });
-  for(let k=0;k<12;k++){ const ch=depPass(work,wctx); if(!ch.size) break; ch.forEach(l=>{ const li=work.filter(i=>i.lineId===l&&!i.withId&&!hasOutputs(i)); li.forEach(it=>{ if(it.notBefore) placeByTime(work,it); }); orderSeqFix(work,l); relineChain(work,l,wctx); }); }
+  const wctx={id:'tmp'+uid(),items:work}, auto=l=>!lineFixed(l)&&!isOven(l);
+  [...new Set(lineIds)].forEach(l=>{ orderSeqFix(work,l); relineChain(work,l,wctx); if(auto(l)&&backfill(work,l,wctx)){ orderSeqFix(work,l); relineChain(work,l,wctx); } });
+  for(let k=0;k<12;k++){ const ch=depPass(work,wctx); if(!ch.size) break; ch.forEach(l=>{ const li=work.filter(i=>i.lineId===l&&!i.withId&&!hasOutputs(i)); li.forEach(it=>{ if(it.notBefore) placeByTime(work,it); }); orderSeqFix(work,l); relineChain(work,l,wctx); if(auto(l)&&backfill(work,l,wctx)){ orderSeqFix(work,l); relineChain(work,l,wctx); } }); }
   const ch=work.filter(w=>{ const o=byId(DB.plan,w.id); return !o||JSON.stringify(o)!==JSON.stringify(w); });
   const txt=typeof log==='function'?log(work,wctx):log;
   await Store.batch([...ch.map(x=>({col:'plan',obj:x})),...extra,...(txt?[logEntry(txt)]:[])]);
