@@ -2566,7 +2566,7 @@ function opChain(o,ops,a,b,s,e,qtys,onWin){
     else { const we=Math.max(e,ws+m.dur); onWin&&onWin(i,ws,we); s=ws; e=we; } }
   return s==null?null:{s,e}; }
 function depPass(work,ctx){
-  const changed=new Set(), byO={}; work.forEach(i=>{ if(i.orderId&&!isChange(i)) (byO[i.orderId]=byO[i.orderId]||[]).push(i); });
+  const changed=new Set(), byO={}, routeNeed=new Map(); work.forEach(i=>{ if(i.orderId&&!isChange(i)) (byO[i.orderId]=byO[i.orderId]||[]).push(i); });
   Object.entries(byO).forEach(([oid,its])=>{ const o=byId(DB.orders,oid); if(!o) return; const ops=orderOps(o); if(ops.length<2) return;
     const ix=it=>itemOpIx(o,ops,it); let qtys=null; try{ const S=orderStages(o).st; qtys=ops.map(op=>S.find(x=>x.op.id===op.id)?.launch||o.qty); }catch(_){ }
     its.forEach(B=>{ if(B.withId||hasOutputs(B)) return; const k=ix(B); if(k<0) return;
@@ -2576,8 +2576,14 @@ function depPass(work,ctx){
         if(prev.length){ s=Math.min(...prev.map(i=>sched(i,ctx).start)); e=Math.max(...prev.map(i=>sched(i,ctx).end)); }
         const r=opChain(o,ops,j+1,k,s,e,qtys);
         if(r){ const sb=sched(B,ctx), dur=Math.max(0,sb.end-sb.start); need=Math.max(r.s,r.e-dur); } }
-      const nb=Math.max(B.pinNb?tms(B.pinNb):0,need), v=nb?toDT(nb):'';
-      if((B.notBefore||'')!==v){ B.notBefore=v; if(v&&tms(B.start)<nb) B.start=v; changed.add(B.lineId); } }); });
+      routeNeed.set(B.id,need); }); });
+  // итог: ручное «не раньше» + маршрут заказа + «после выбранной операции» (любой проект, любая линия)
+  work.forEach(B=>{ if(B.withId||isChange(B)||hasOutputs(B)) return;
+    if(B.pinNb===undefined) B.pinNb=/· запуск/.test(B.note||'')?'':(B.notBefore||'');
+    let need=routeNeed.get(B.id)||0; const A0=B.after?work.find(x=>x.id===B.after):null; if(A0) need=Math.max(need,sched(A0,ctx).end);
+    if(!routeNeed.has(B.id)&&!A0&&!B.after&&(B.notBefore||'')===(B.pinNb||'')) return;
+    const nb=Math.max(B.pinNb?tms(B.pinNb):0,need), v=nb?toDT(nb):'';
+    if((B.notBefore||'')!==v){ B.notBefore=v; if(v&&tms(B.start)<nb) B.start=v; changed.add(B.lineId); } });
   return changed;
 }
 // заполнение простоев: если первый по порядку проект ждёт предыдущую операцию (печь, коатинг, охлаждение),
@@ -3026,6 +3032,11 @@ const exRow = e => `<div class="ex-row"><input class="fi ex-k" list="pauseKinds"
   <input class="fi ex-t" type="time" value="${e.time||''}" onchange="qiCalc()" title="Время начала паузы (необязательно)">
   <label class="ex-e-l"><input type="checkbox" class="ex-e" ${e.every?'checked':''} onchange="qiCalc()"> каждую смену</label>
   <button type="button" class="btn btn-s btn-sm" onclick="this.parentNode.remove();qiCalc()">✕</button></div>`;
+// кандидаты для «После операции…»: не законченные позиции плана, кроме самой и тех, что сами ждут её
+const afterChainHas=(x,id)=>{ for(let k=0,c=x;c&&k<30;k++){ if(c.id===id) return true; c=c.after?byId(DB.plan,c.after):null; } return false; };
+const afterCands = it => DB.plan.filter(x=>x.id!==it.id&&!isChange(x)&&endMs(x,LIVE)>Date.now()-864e5&&!afterChainHas(x,it.id)).sort((a,b)=>endMs(a,LIVE)-endMs(b,LIVE));
+const afterLbl = x => { const o=byId(DB.orders,x.orderId), p=byId(DB.projects,x.projectId), op=x.opId&&o?orderOps(o,p).find(y=>y.id===x.opId):null;
+  return `${o?o.no+' · ':''}${p?.name||'—'}${op?' · '+op.name:''} · ${lineShort(byId(DB.lines,x.lineId))} · до ${fdt(endMs(x,LIVE))}`; };
 function openQItem(id){
   const it=byId(DB.plan,id); if(!it) return; const ce=can('edit'), p=byId(DB.projects,it.projectId), now=Date.now(), started=hasOutputs(it);
   const f=itemFact(it), s=sched(it,LIVE);
@@ -3039,7 +3050,13 @@ function openQItem(id){
     <div class="frow3"><div class="fg"><label class="fl">Количество, шт</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="qty" value="${it.qty}" ${ro} oninput="qiCalc()"></div>
     <div class="fg"><label class="fl">Скорость, шт/мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="speed" value="${itemSpeed(it)}" ${ro} oninput="qiCalc()"></div>
     <div class="fg"><label class="fl">Первичная наладка, мин</label><input class="fi" type="text" inputmode="decimal" data-num="1" name="setup" value="${itemSetup(it)}" ${ro} oninput="qiCalc()"></div></div>
-    <div class="frow"><div class="fg"><label class="fl">${started?'Начало (уже в работе)':'Начало вручную (пусто — сразу за предыдущим)'}</label>${started?`<input class="fi" type="datetime-local" name="start" value="${esc(it.start)}" ${ro} onchange="qiCalc()">`:`<input class="fi" type="datetime-local" name="notBefore" value="${esc(it.notBefore||'')}" ${ro} onchange="qiCalc()">`}</div>
+    ${started?`<div class="frow"><div class="fg"><label class="fl">Начало (уже в работе)</label><input class="fi" type="datetime-local" name="start" value="${esc(it.start)}" ${ro} onchange="qiCalc()"></div>`:(()=>{ const mode=it.after&&byId(DB.plan,it.after)?'after':(it.pinNb!==undefined?it.pinNb:it.notBefore)?'time':'prev';
+      const cand=afterCands(it), cur=byId(DB.plan,it.after);
+      return `<div class="fg"><label class="fl">Когда начинать</label><div class="seg" style="margin-bottom:8px">${[['prev','Сразу за предыдущим в очереди'],['time','С даты и времени'],['after','После операции…']].map(([k,l])=>`<label class="chip ${mode===k?'on':''}" style="cursor:pointer"><input type="radio" name="startMode" value="${k}" ${mode===k?'checked':''} ${ro} style="display:none" onchange="document.querySelectorAll('[name=startMode]').forEach(x=>x.parentNode.classList.toggle('on',x.checked));document.getElementById('smTime').style.display=this.value==='time'?'':'none';document.getElementById('smAfter').style.display=this.value==='after'?'':'none';qiCalc()">${l}</label>`).join('')}</div>
+        <div id="smTime" style="${mode==='time'?'':'display:none'}"><input class="fi" type="datetime-local" name="notBefore" value="${esc((it.pinNb!==undefined?it.pinNb:it.notBefore)||'')}" ${ro} onchange="qiCalc()" style="max-width:260px"></div>
+        <div id="smAfter" style="${mode==='after'?'':'display:none'}"><select class="fi" name="after" ${ro} onchange="qiCalc()"><option value="">— выберите проект и стадию —</option>${cand.map(x=>`<option value="${x.id}" ${x.id===it.after?'selected':''}>${esc(afterLbl(x))}</option>`).join('')}${it.after&&!cur?'<option selected value="">(операция уже удалена)</option>':''}</select>
+          <div class="hint" style="margin-top:4px">Позиция начнётся, когда закончится выбранная операция (любой проект, любая линия). Если та сдвинется — эта сдвинется следом.</div></div></div>`; })()}
+    <div class="frow">
     <div class="fg" style="align-self:end"><label style="display:flex;gap:8px;align-items:center;font-size:13px;padding-bottom:10px"><input type="checkbox" name="noSetup" ${it.noSetup?'checked':''} ${ro} onchange="qiCalc()"> Без наладки (продолжение того же проекта)</label></div></div>
     <div style="display:flex;align-items:center;margin:4px 0 8px"><b style="font-size:14px">Паузы и детали</b><span class="muted" style="font-size:12px;margin-left:8px">обед, уборка, пересменка, подсчёт материалов…</span></div>
     <div class="ex-head"><span>Что</span><span>Минут</span><span>Во сколько</span><span></span><span></span></div>
@@ -3056,8 +3073,7 @@ function openQItem(id){
     const r=qiRead(it); if(!(r.qty>0)||!(r.speedPlan>0)){ toast('Укажите количество и скорость'); return false; }
     const work=DB.plan.map(clone).map(x=>x.id===r.id?r:x);
     if(r.lineId!==it.lineId){ const li=work.filter(i=>i.lineId===r.lineId&&i.id!==r.id); r.seq=li.length?Math.max(...li.map(seqOf))+1:0; }
-    if(r.notBefore!==it.notBefore) r.pinNb=r.notBefore||'';
-    if(r.notBefore&&!itemStarted(it)&&r.notBefore!==it.notBefore){ r.start=r.notBefore; placeByTime(work,r); }
+    if(r.notBefore&&!itemStarted(it)&&(r.notBefore!==it.notBefore||r.after!==it.after)){ r.start=r.notBefore; placeByTime(work,r); }
     const old=sched(it,LIVE);
     await qCommit(work,[it.lineId,r.lineId],[],(w,c)=>{ const x=w.find(i=>i.id===r.id), s=sched(x,c); return qiDiff(it,x)+` · окончание ${fdt(old.end)} → ${fdt(s.end)}`; });
     toast('План обновлён');
@@ -3072,7 +3088,12 @@ function qiRead(it){
   const F=$('#mForm').elements;
   const ex=[...document.querySelectorAll('#exRows .ex-row')].map(r=>({kind:r.querySelector('.ex-k').value.trim()||'Пауза',min:nv(r.querySelector('.ex-m').value),time:r.querySelector('.ex-t').value||'',every:r.querySelector('.ex-e').checked})).filter(e=>e.min>0);
   const r={...clone(it),lineId:F.lineId.value,orderId:F.orderId.value||'',qty:nv(F.qty.value),speedPlan:nv(F.speed.value),setupPlan:nv(F.setup.value),noSetup:F.noSetup.checked,noLinePauses:!!(F.noLinePauses&&F.noLinePauses.checked),extras:ex,note:F.note.value};
-  if(F.start&&F.start.value) r.start=F.start.value; if(F.notBefore) r.notBefore=F.notBefore.value||'';
+  if(F.start&&F.start.value) r.start=F.start.value;
+  if(F.startMode){ const m=[...document.querySelectorAll('[name=startMode]')].find(x=>x.checked)?.value||'prev';
+    if(m==='time'){ r.after=''; r.pinNb=F.notBefore.value||''; r.notBefore=r.pinNb; }
+    else if(m==='after'){ r.after=F.after.value||''; r.pinNb=''; const A0=byId(DB.plan,r.after); r.notBefore=A0?toDT(endMs(A0,LIVE)):''; }
+    else { r.after=''; r.pinNb=''; r.notBefore=''; } }
+  else if(F.notBefore) r.notBefore=F.notBefore.value||'';
   return r;
 }
 function qiCalc(){
